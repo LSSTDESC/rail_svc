@@ -1,0 +1,211 @@
+[project]
+# https://packaging.python.org/en/latest/specifications/declaring-project-metadata/
+name = "pz-rail-svc"
+description = "RAIL service to generate photometric redshifts
+license = { file = "LICENSE" }
+readme = "README.md"
+# https://pypi.org/classifiers/
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Operating System :: POSIX",
+    "Typing :: Typed",
+]
+requires-python = ">=3.13"
+dynamic = ["version"]
+
+dependencies = [
+    "click",
+    "dotenv",
+    "httpx>=0.27.2",
+    "pre-commit>=4.0.1",
+    "setuptools",
+    "pydantic",
+    "pydantic-settings",
+    "tabulate==0.9.*",
+]
+
+[project.optional-dependencies]
+server = [
+]
+
+dev = [
+    "pytest-cov>=6.0.0",
+    "pytest-timeout>=2.3.1",
+    "qp-prob[full]",
+    "ruff>=0.8.0",
+    "types-pyyaml>=6.0.12.20240917",
+    "types-tabulate>=0.9.0.20240106",
+]
+
+docs = [
+    "nbsphinx",
+    "sphinx", # Used to automatically generate documentation
+    "sphinx-autodoc-typehints",
+    "sphinx_rtd_theme", # Used to render documentation
+    "sphinx-autoapi", # Used to automatically generate api documentation
+    "sphinx-tabs", # Used to create tabbed content within the docs
+    "sphinx-click", # Used for command line interface docs
+]
+
+all = [
+    "pz-rail-svc",
+    "pz-rail-svc[server]",
+    "pz-rail-svc[dev]",
+    "pz-rail-svc[docs]",
+]
+
+[project.scripts]
+
+[project.urls]
+Source = "https://github.com/LSSTDESC/rail_pz_svc"
+
+[tool.uv]
+
+[build-system]
+requires = ["setuptools>=62", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+write_to = "src/rail_svc/_version.py"
+
+[tool.coverage.run]
+parallel = true
+#branch = true
+source = ["rail_pz_service"]
+concurrency = ['greenlet', 'thread']
+omit = [
+    # omit everything in web_app, worker, main
+    "web_app.py",
+    "worker.py",
+    "main.py",
+    # omit test_files
+    "test_files.py",
+    # omit healthz
+    "healthz.py",
+]
+
+[tool.coverage.paths]
+source = ["src"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "except .* as msg",
+    "except .* as failed_import",
+    "except .* as failed_request",
+    "except .* as failed_read",
+    "except .* as missing_stage",
+    "except .* missing_key",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
+
+[tool.ruff]
+exclude = [
+    "__init__.py",
+]
+line-length = 110
+target-version = "py313"
+
+[tool.ruff.lint]
+ignore = [
+    "COM812",  # missing-trailing-comma
+    "N802",  # invalid-function-name
+    "N803",  # invalid-argument-name
+    "N806",  # non-lowercase-variable-in-function
+    "N812",  # lowercase-imported-as-non-lowercase
+    "N813",  # camelcase-imported-as-constant
+    "N815",  # mixed-case-variable-in-class-scope
+    "N816",  # mixed-case-variable-in-global-scope
+]
+select = [
+    "E",  # pycodestyle
+    "F",  # pyflakes
+    "N",  # pep8-naming
+    "W",  # pycodestyle
+    "COM", # pyflakes-commas
+    "FBT", # flake8-boolean-trap
+    "UP", # pyupgrade
+    "ASYNC", # flake8-async
+]
+extend-select = [
+    "RUF100", # Warn about unused noqa
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["rail_svc", "tests"]
+
+[tool.ruff.lint.pycodestyle]
+max-doc-length = 88
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope="function"
+# The python_files setting is not for test detection (pytest will pick up any
+# test files named *_test.py without this setting) but to enable special
+# assert processing in any non-test supporting files under tests.  We
+# conventionally put test support functions under tests.support and may
+# sometimes use assert in test fixtures in conftest.py, and pytest only
+# enables magical assert processing (showing a full diff on assert failures
+# with complex data structures rather than only the assert message) in files
+# listed in python_files.
+python_files = ["tests/*.py", "tests/*/*.py"]
+addopts = [
+    "--cov=src",
+    "--cov-report=html",
+]
+
+[tool.mypy]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+ignore_missing_imports = true
+local_partial_types = true
+no_implicit_reexport = true
+show_error_codes = true
+strict_equality = true
+warn_redundant_casts = true
+warn_unreachable = true
+warn_unused_ignores = true
+plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
+
+[tool.pydocstyle]
+convention = "numpy"
+add_select = [
+    "D212" # Multi-line docstring summary should start at the first line
+]
+add-ignore = [
+    "D105", # Missing docstring in magic method
+    "D102", # Missing docstring in public method (needed for docstring inheritance)
+    "D100", # Missing docstring in public module
+    # Below are required to allow multi-line summaries.
+    "D200", # One-line docstring should fit on one line with quotes
+    "D205", # 1 blank line required between summary line and description
+    "D400", # First line should end with a period
+    # Properties shouldn't be written in imperative mode. This will be fixed
+    # post 6.1.1, see https://github.com/PyCQA/pydocstyle/pull/546
+    "D401",
+    # To avoid all the pydantic config class giving errors
+    "D106",
+]
+
+
+[tool.pylint.'MESSAGES CONTROL']
+max-line-length = 120
+disable = "W0718, C0116, C0114, C0103, R0902, R0903, R0912, R0913, R0917, R0914, R0915, R0801, R1735"
