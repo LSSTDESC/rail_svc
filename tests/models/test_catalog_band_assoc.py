@@ -27,7 +27,7 @@ class TestCatalogBandAssocBase:
     def test_catalog_band_assoc_base_realistic_magnitudes(self):
         """Test with realistic limiting magnitude values"""
         realistic_mags = [21.0, 23.5, 24.8, 26.2, 27.5]
-        
+
         for mag in realistic_mags:
             assoc = CatalogBandAssocBase(limiting_mag=mag)
             assert assoc.limiting_mag == mag
@@ -131,7 +131,7 @@ class TestCatalogBandAssocCreate:
             ("lsst_dp02", "z_band", 23.3),
             ("lsst_dp02", "y_band", 22.1),
         ]
-        
+
         for catalog, band, lim_mag in lsst_bands:
             assoc = CatalogBandAssocCreate(
                 limiting_mag=lim_mag,
@@ -271,6 +271,7 @@ class TestCatalogBandAssoc:
 
     def test_catalog_band_assoc_from_attributes(self):
         """Test that from_attributes config works"""
+
         # Simulate an ORM object with attributes
         class MockORMObject:
             id = 10
@@ -294,7 +295,9 @@ class TestCatalogBandAssoc:
         """Test that field descriptions are set"""
         schema = CatalogBandAssoc.model_json_schema()
         assert "Five sigma limiting magnitude" in schema["properties"]["limiting_mag"]["description"]
-        assert "Foreign key referencing CatalogTag.id" in schema["properties"]["catalog_tag_id"]["description"]
+        assert (
+            "Foreign key referencing CatalogTag.id" in schema["properties"]["catalog_tag_id"]["description"]
+        )
         assert "Foreign key referencing Band.id" in schema["properties"]["band_id"]["description"]
 
     def test_catalog_band_assoc_realistic_survey_data(self):
@@ -308,7 +311,7 @@ class TestCatalogBandAssoc:
             (1, 5, 23.3),  # z band
             (1, 6, 22.1),  # y band
         ]
-        
+
         for idx, (cat_id, band_id, lim_mag) in enumerate(lsst_dp02_bands, start=1):
             assoc = CatalogBandAssoc(
                 id=idx,
@@ -324,14 +327,14 @@ class TestCatalogBandAssoc:
         """Test same band in different catalogs with different limiting mags"""
         # g-band in different surveys
         g_band_id = 2
-        
+
         surveys = [
             (1, "LSST", 25.0),
             (2, "HSC", 26.5),
             (3, "DES", 24.3),
             (4, "SDSS", 23.0),
         ]
-        
+
         for idx, (cat_id, name, lim_mag) in enumerate(surveys, start=1):
             assoc = CatalogBandAssoc(
                 id=idx,
@@ -350,13 +353,13 @@ class TestCatalogBandAssoc:
             catalog_tag_id=3,
             band_id=5,
         )
-        
+
         # Serialize to JSON
         json_str = original.model_dump_json()
-        
+
         # Deserialize from JSON
         restored = CatalogBandAssoc.model_validate_json(json_str)
-        
+
         assert restored.id == original.id
         assert restored.limiting_mag == original.limiting_mag
         assert restored.catalog_tag_id == original.catalog_tag_id
@@ -364,4 +367,3 @@ class TestCatalogBandAssoc:
 
     def test_catalog_band_assoc_floating_point_precision(self):
         """Test that floating point limiting magnitudes preserve precision"""
-        precise_mag = 24

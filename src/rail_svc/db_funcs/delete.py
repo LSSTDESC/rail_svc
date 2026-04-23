@@ -11,8 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_scoped_session
 import structlog
 
-from rail_svc.db.base import Base, ensure_base_inheritance, T
-
+from rail_svc.db.base import ensure_base_inheritance, T
 
 logger = structlog.get_logger(__name__)
 
@@ -21,6 +20,7 @@ async def delete_row(
     the_class: type[T],
     session: async_scoped_session,
     row_id: int,
+    *,
     capture_data: bool = True,
 ) -> dict[str, Any] | None:
     """Delete a single row by primary key.
@@ -56,60 +56,53 @@ async def delete_row(
         If deletion violates database constraints (e.g., foreign key)
     Exception
         If pre or post-delete hooks raise an exception
-        
+
     Notes
     -----
     - Pre-delete hook is called before deletion with access to the row object
     - Post-delete hook is called after deletion but before commit
     - If any hook raises an exception, the deletion is rolled back
-    
+
     Examples
     --------
     >>> # Delete with data capture
     >>> deleted_data = await delete_row(User, session, 123)
     >>> print(f"Deleted user: {deleted_data['username']}")
-    >>> 
+    >>>
     >>> # Delete without data capture (faster)
     >>> await delete_row(User, session, 123, capture_data=False)
     """
     ensure_base_inheritance(the_class)
-    
+
     logger.debug("Deleting row", table=the_class.__name__, row_id=row_id)
 
     # First verify the row exists and get the full object
     row = await session.get(the_class, row_id)
     if row is None:
-        logger.warning(
-            "Cannot delete - row not found",
-            table=the_class.__name__,
-            row_id=row_id
-        )
+        logger.warning("Cannot delete - row not found", table=the_class.__name__, row_id=row_id)
         raise KeyError(f"{the_class.__name__} {row_id} not found")
 
     # Capture row data before deletion if requested
     row_data: dict[str, Any] | None = None
     if capture_data:
-        row_data = {
-            column.name: getattr(row, column.name)
-            for column in the_class.__table__.columns
-        }
+        row_data = {column.name: getattr(row, column.name) for column in the_class.__table__.columns}
 
     try:
         # Call the pre-delete hook BEFORE deletion so it has access to row
         await the_class.pre_delete_hook(session, row)
-        
+
         # Delete the row (synchronous method, no await)
         session.delete(row)
-        
+
         # Flush to catch integrity errors
         await session.flush()
-        
+
         # Call the after-delete hook AFTER deletion but before commit
         await the_class.after_delete_hook(session, row_id, row_data)
-        
+
         # Commit the transaction
         await session.commit()
-        
+
     except IntegrityError as err:
         await session.rollback()
         logger.error(
@@ -129,9 +122,9 @@ async def delete_row(
             error=str(e),
         )
         raise
-        
+
     logger.info("Row deleted successfully", table=the_class.__name__, row_id=row_id)
-    
+
     return row_data
 
 
@@ -139,13 +132,14 @@ async def delete_rows(
     the_class: type[T],
     session: async_scoped_session,
     row_ids: list[int],
+    *,
     capture_data: bool = False,
 ) -> list[dict[str, Any]] | None:
     """Delete multiple rows atomically.
-    
+
     All rows are deleted in a single transaction - if any deletion fails,
     all deletions are rolled back.
-    
+
     Parameters
     ----------
     the_class
@@ -172,26 +166,22 @@ async def delete_rows(
         If any row ID is not found
     IntegrityError
         If any deletion violates constraints
-        
+
     Examples
     --------
     >>> deleted = await delete_rows(User, session, [1, 2, 3], capture_data=True)
     >>> print(f"Deleted {len(deleted)} users")
     """
     ensure_base_inheritance(the_class)
-    
+
     if not row_ids:
         raise ValueError("row_ids cannot be empty")
-    
-    logger.debug(
-        "Deleting multiple rows",
-        table=the_class.__name__,
-        count=len(row_ids)
-    )
-    
+
+    logger.debug("Deleting multiple rows", table=the_class.__name__, count=len(row_ids))
+
     all_data: list[dict[str, Any]] = [] if capture_data else []
     rows_to_delete: list[T] = []
-    
+
     try:
         # Phase 1: Fetch all rows and capture data
         for row_id in row_ids:
@@ -200,54 +190,51 @@ async def delete_rows(
                 logger.warning(
                     "Cannot delete - row not found",
                     table=the_class.__name__,
-                    row_id=row_id
+                    row_id=row_id,
                 )
                 raise KeyError(f"{the_class.__name__} {row_id} not found")
-            
+
             # Capture data if requested
             if capture_data:
-                row_data = {
-                    column.name: getattr(row, column.name)
-                    for column in the_class.__table__.columns
-                }
+                row_data = {column.name: getattr(row, column.name) for column in the_class.__table__.columns}
                 all_data.append(row_data)
-            
+
             rows_to_delete.append(row)
-        
+
         # Phase 2: Call pre-delete hooks
         for row in rows_to_delete:
             await the_class.pre_delete_hook(session, row)
-        
+
         # Phase 3: Delete all rows
         for row in rows_to_delete:
             session.delete(row)
-        
+
         # Flush to catch integrity errors
         await session.flush()
-        
+
         # Phase 4: Call after-delete hooks
         for idx, row_id in enumerate(row_ids):
             row_data = all_data[idx] if capture_data else None
             await the_class.after_delete_hook(session, row_id, row_data)
-        
+
         # Commit the transaction
         await session.commit()
-        
+
         logger.info(
             "Multiple rows deleted successfully",
             table=the_class.__name__,
-            count=len(row_ids)
+            count=len(row_ids),
         )
-        
+
         return all_data if capture_data else None
-        
+
     except IntegrityError as err:
         await session.rollback()
         logger.error(
             "Integrity error during bulk delete",
             table=the_class.__name__,
             row_count=len(row_ids),
-            error=str(err)
+            error=str(err),
         )
         raise
     except Exception as e:
@@ -256,7 +243,7 @@ async def delete_rows(
             "Error during bulk delete",
             table=the_class.__name__,
             row_count=len(row_ids),
-            error=str(e)
+            error=str(e),
         )
         raise
 
@@ -267,10 +254,10 @@ async def bulk_delete_rows(
     row_ids: list[int],
 ) -> int:
     """Delete multiple rows using bulk SQL operation.
-    
+
     This is much faster than delete_rows() but does NOT call hooks
     and does NOT return deleted row data.
-    
+
     Parameters
     ----------
     the_class
@@ -293,14 +280,14 @@ async def bulk_delete_rows(
         If row_ids is empty
     IntegrityError
         If deletion violates constraints
-        
+
     Notes
     -----
     - Does NOT call pre/post-delete hooks
     - Does NOT verify rows exist before deleting
     - Does NOT capture deleted row data
     - Much faster for large deletions
-    
+
     Examples
     --------
     >>> # Delete 10,000 rows efficiently
@@ -308,38 +295,34 @@ async def bulk_delete_rows(
     >>> print(f"Deleted {count} users")
     """
     ensure_base_inheritance(the_class)
-    
+
     if not row_ids:
         raise ValueError("row_ids cannot be empty")
-    
-    logger.debug(
-        "Bulk deleting rows",
-        table=the_class.__name__,
-        count=len(row_ids)
-    )
-    
+
+    logger.debug("Bulk deleting rows", table=the_class.__name__, count=len(row_ids))
+
     try:
         # Use SQL DELETE statement for maximum performance
         stmt = delete(the_class).where(the_class.id.in_(row_ids))
         result = await session.execute(stmt)
         await session.commit()
-        
+
         deleted_count = result.rowcount
-        
+
         logger.info(
             "Bulk delete completed",
             table=the_class.__name__,
             requested=len(row_ids),
-            deleted=deleted_count
+            deleted=deleted_count,
         )
-        
+
         return deleted_count
-        
+
     except IntegrityError as err:
         await session.rollback()
         logger.error(
             "Integrity error during bulk delete",
             table=the_class.__name__,
-            error=str(err)
+            error=str(err),
         )
         raise

@@ -65,13 +65,13 @@ class TestEstimatorBase:
 
     def test_estimator_base_config_must_be_dict_or_none(self):
         """Test that config must be a dict or None"""
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(ValidationError):
             EstimatorBase(name="test", config="not a dict")
-        
-        with pytest.raises(ValidationError) as exc_info:
+
+        with pytest.raises(ValidationError):
             EstimatorBase(name="test", config=123)
-        
-        with pytest.raises(ValidationError) as exc_info:
+
+        with pytest.raises(ValidationError):
             EstimatorBase(name="test", config=["list", "not", "dict"])
 
 
@@ -109,7 +109,7 @@ class TestEstimatorCreate:
 
     def test_estimator_create_inherits_validation(self):
         """Test that EstimatorCreate inherits validation from EstimatorBase"""
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(ValidationError):
             EstimatorCreate(
                 name="test",
                 config="invalid",
@@ -283,6 +283,7 @@ class TestEstimator:
 
     def test_estimator_from_attributes(self):
         """Test that from_attributes config works"""
+
         # Simulate an ORM object with attributes
         class MockORMObject:
             id = 5

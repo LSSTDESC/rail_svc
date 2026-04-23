@@ -69,14 +69,14 @@ class LoggingConfiguration(BaseModel):
         title="Application logging profile",
     )
 
-    @field_validator('level')
+    @field_validator("level")
     @classmethod
     def validate_log_level(cls, v: str) -> str:
         """Validate and normalize log level"""
-        valid_levels = {'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'}
+        valid_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
         v_upper = v.upper()
         if v_upper not in valid_levels:
-            raise ValueError(f'Log level must be one of {valid_levels}')
+            raise ValueError(f"Log level must be one of {valid_levels}")
         return v_upper
 
 
@@ -123,12 +123,14 @@ class DatabaseConfiguration(BaseModel):
         description="SQLAlchemy engine echo setting for the rail-svc database",
     )
 
-    @field_validator('url')
+    @field_validator("url")
     @classmethod
     def validate_url(cls, v: str) -> str:
         """Validate database URL scheme"""
-        if v and not v.startswith(('postgresql://', 'sqlite://', 'mysql://', 'postgresql+psycopg2://')):
-            raise ValueError('Database URL must start with a valid scheme (postgresql://, sqlite://, mysql://)')
+        if v and not v.startswith(("postgresql://", "sqlite://", "mysql://", "postgresql+psycopg2://")):
+            raise ValueError(
+                "Database URL must start with a valid scheme (postgresql://, sqlite://, mysql://)"
+            )
         return v
 
 
@@ -148,7 +150,7 @@ class StorageConfiguration(BaseModel):
         description="The path for the import area for files for rail-svc database",
     )
 
-    @field_validator('archive', 'import_area')
+    @field_validator("archive", "import_area")
     @classmethod
     def ensure_path_exists(cls, v: str) -> str:
         """Ensure storage path exists"""

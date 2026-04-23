@@ -14,9 +14,8 @@ from sqlalchemy.orm import DeclarativeBase
 
 from ..config import config
 
-
 # Define TypeVar for generic typing
-T = TypeVar('T', bound='Base')
+T = TypeVar("T", bound="Base")
 
 # Default pagination limit - can be overridden per-table if needed
 DEFAULT_PAGINATION_LIMIT = 100
@@ -27,29 +26,28 @@ NAMING_CONVENTION = {
     "uq": "uq_%(table_name)s_%(column_0_name)s",
     "ck": "ck_%(table_name)s_%(constraint_name)s",
     "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-    "pk": "pk_%(table_name)s"
+    "pk": "pk_%(table_name)s",
 }
 
 
 class Base(DeclarativeBase):
     """Declarative base for all database models.
-    
+
     Provides:
         - Schema assignment from configuration
         - Consistent constraint naming for migrations
         - Shared metadata for all models
         - Required interface for Pydantic integration
     """
-    
+
     metadata: ClassVar[MetaData] = MetaData(
-        schema=config.db.table_schema or None,
-        naming_convention=NAMING_CONVENTION
+        schema=config.db.table_schema or None, naming_convention=NAMING_CONVENTION
     )
 
     @classmethod
     def class_string(cls) -> str:
         """Name to use for help functions and descriptions.
-        
+
         Returns
         -------
         str
@@ -61,10 +59,10 @@ class Base(DeclarativeBase):
     @abstractmethod
     def pydantic_model_class(cls) -> type[BaseModel]:
         """Pydantic model class for this table.
-        
+
         Subclasses must implement this to specify their associated
         Pydantic model for serialization/validation.
-        
+
         Returns
         -------
         type[BaseModel]
@@ -107,7 +105,7 @@ class Base(DeclarativeBase):
         ...         return kwargs
         """
         return kwargs
-        
+
     @classmethod
     def get_pagination_limit(cls) -> int:
         """Get the default pagination limit for this table.
@@ -211,32 +209,29 @@ class Base(DeclarativeBase):
         """
         return
 
-    
 
 def ensure_base_inheritance(cls: type) -> None:
     """Raise TypeError if a class does not inherit from Base.
-    
+
     Parameters
     ----------
     cls
         The class to check for Base inheritance
-        
+
     Raises
     ------
     TypeError
         If cls does not inherit from Base
-        
+
     Examples
     --------
     >>> class MyModel(Base):
     ...     pass
     >>> ensure_base_inheritance(MyModel)  # No error
-    >>> 
+    >>>
     >>> class BadModel:
     ...     pass
     >>> ensure_base_inheritance(BadModel)  # Raises TypeError
     """
     if not issubclass(cls, Base):
-        raise TypeError(
-            f"Class {cls.__name__} must inherit from rail_svc.db.base.Base"
-        )
+        raise TypeError(f"Class {cls.__name__} must inherit from rail_svc.db.base.Base")

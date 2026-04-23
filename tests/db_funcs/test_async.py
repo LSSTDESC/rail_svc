@@ -4,6 +4,7 @@ import pytest_asyncio
 
 import asyncio
 
+
 @pytest_asyncio.fixture
 async def simple_fixture():
     return "test"

@@ -5,7 +5,7 @@ from typing import ClassVar
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-class AlgorithmBase(BaseModel):    
+class AlgorithmBase(BaseModel):
     """Algorithm parameters that are in DB tables and also used to create new rows"""
 
     #: Name for this Algorithm, unique
@@ -14,12 +14,12 @@ class AlgorithmBase(BaseModel):
     #: Name for the python class implementing the algorithm
     class_name: str = Field(..., description="Fully qualified Python class name")
 
-    @field_validator('class_name')
+    @field_validator("class_name")
     @classmethod
     def validate_class_name(cls, v: str) -> str:
         # Ensure it's a valid dotted path (e.g., "rail.estimation.SOMEstimator")
-        if not all(part.isidentifier() for part in v.split('.')):
-            raise ValueError('class_name must be a valid Python module path')
+        if not all(part.isidentifier() for part in v.split(".")):
+            raise ValueError("class_name must be a valid Python module path")
         return v
 
 

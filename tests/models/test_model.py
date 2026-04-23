@@ -187,6 +187,7 @@ class TestModel:
 
     def test_model_from_attributes(self):
         """Test that from_attributes config works"""
+
         # Simulate an ORM object with attributes
         class MockORMObject:
             id = 5
@@ -214,4 +215,6 @@ class TestModel:
         assert "Unique name for this model" in schema["properties"]["name"]["description"]
         assert "File path to the stored model" in schema["properties"]["path"]["description"]
         assert "Foreign key referencing Algorithm.id" in schema["properties"]["algo_id"]["description"]
-        assert "Foreign key referencing CatalogTag.id" in schema["properties"]["catalog_tag_id"]["description"]
+        assert (
+            "Foreign key referencing CatalogTag.id" in schema["properties"]["catalog_tag_id"]["description"]
+        )

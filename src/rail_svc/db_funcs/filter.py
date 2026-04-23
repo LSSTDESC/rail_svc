@@ -5,43 +5,43 @@ with support for various comparison operators, logical operators, and
 efficient streaming for large result sets.
 """
 
-from typing import Any, AsyncIterator, Sequence
-from enum import Enum
+from typing import Any
+from collections.abc import AsyncIterator, Sequence
+from enum import StrEnum
 
-from sqlalchemy import Select, and_, or_, not_, asc, desc, select
+from sqlalchemy import Select, or_, asc, desc, select
 from sqlalchemy.ext.asyncio import async_scoped_session
 import structlog
 
-from rail_svc.db.base import Base, ensure_base_inheritance, T
-
+from rail_svc.db.base import ensure_base_inheritance, T
 
 logger = structlog.get_logger(__name__)
 
 
-class FilterOp(str, Enum):
+class FilterOp(StrEnum):
     """Comparison operators for filtering."""
-    
-    EQ = "eq"           # Equal (==)
-    NE = "ne"           # Not equal (!=)
-    LT = "lt"           # Less than (<)
-    LE = "le"           # Less than or equal (<=)
-    GT = "gt"           # Greater than (>)
-    GE = "ge"           # Greater than or equal (>=)
-    IN = "in"           # In list
-    NOT_IN = "not_in"   # Not in list
-    LIKE = "like"       # SQL LIKE pattern matching
-    ILIKE = "ilike"     # Case-insensitive LIKE
-    IS_NULL = "is_null" # IS NULL
+
+    EQ = "eq"  # Equal (==)
+    NE = "ne"  # Not equal (!=)
+    LT = "lt"  # Less than (<)
+    LE = "le"  # Less than or equal (<=)
+    GT = "gt"  # Greater than (>)
+    GE = "ge"  # Greater than or equal (>=)
+    IN = "in"  # In list
+    NOT_IN = "not_in"  # Not in list
+    LIKE = "like"  # SQL LIKE pattern matching
+    ILIKE = "ilike"  # Case-insensitive LIKE
+    IS_NULL = "is_null"  # IS NULL
     IS_NOT_NULL = "is_not_null"  # IS NOT NULL
-    BETWEEN = "between" # BETWEEN two values
+    BETWEEN = "between"  # BETWEEN two values
     CONTAINS = "contains"  # Array contains (for PostgreSQL arrays)
     STARTS_WITH = "starts_with"  # String starts with
-    ENDS_WITH = "ends_with"      # String ends with
+    ENDS_WITH = "ends_with"  # String ends with
 
 
 class Filter:
     """Represents a single filter condition.
-    
+
     Parameters
     ----------
     field
@@ -50,7 +50,7 @@ class Filter:
         Comparison operator to use
     value
         Value to compare against (not needed for IS_NULL/IS_NOT_NULL)
-        
+
     Examples
     --------
     >>> Filter("age", FilterOp.GT, 18)
@@ -58,7 +58,7 @@ class Filter:
     >>> Filter("deleted_at", FilterOp.IS_NULL)
     >>> Filter("name", FilterOp.LIKE, "John%")
     """
-    
+
     def __init__(
         self,
         field: str,
@@ -68,31 +68,31 @@ class Filter:
         self.field = field
         self.op = op
         self.value = value
-    
+
     def __repr__(self) -> str:
         return f"Filter({self.field} {self.op} {self.value})"
 
 
 class OrderBy:
     """Represents an ordering directive.
-    
+
     Parameters
     ----------
     field
         Name of the column to order by
     descending
         If True, order descending; if False, order ascending
-        
+
     Examples
     --------
     >>> OrderBy("created_at", descending=True)  # Most recent first
     >>> OrderBy("name", descending=False)       # Alphabetical
     """
-    
-    def __init__(self, field: str, descending: bool = False):
+
+    def __init__(self, field: str, *, descending: bool = False):
         self.field = field
         self.descending = descending
-    
+
     def __repr__(self) -> str:
         direction = "DESC" if self.descending else "ASC"
         return f"OrderBy({self.field} {direction})"
@@ -104,7 +104,7 @@ def _apply_filter(
     filter_obj: Filter,
 ) -> Select:
     """Apply a single filter to a query.
-    
+
     Parameters
     ----------
     query
@@ -113,12 +113,12 @@ def _apply_filter(
         The model class being queried
     filter_obj
         Filter to apply
-        
+
     Returns
     -------
     Select
         Modified query with filter applied
-        
+
     Raises
     ------
     AttributeError
@@ -128,75 +128,73 @@ def _apply_filter(
     """
     # Verify field exists
     if not hasattr(the_class, filter_obj.field):
-        raise AttributeError(
-            f"{the_class.__name__} does not have field '{filter_obj.field}'"
-        )
-    
+        raise AttributeError(f"{the_class.__name__} does not have field '{filter_obj.field}'")
+
     field = getattr(the_class, filter_obj.field)
-    
+
     # Apply operator
     if filter_obj.op == FilterOp.EQ:
         query = query.where(field == filter_obj.value)
-    
+
     elif filter_obj.op == FilterOp.NE:
         query = query.where(field != filter_obj.value)
-    
+
     elif filter_obj.op == FilterOp.LT:
         query = query.where(field < filter_obj.value)
-    
+
     elif filter_obj.op == FilterOp.LE:
         query = query.where(field <= filter_obj.value)
-    
+
     elif filter_obj.op == FilterOp.GT:
         query = query.where(field > filter_obj.value)
-    
+
     elif filter_obj.op == FilterOp.GE:
         query = query.where(field >= filter_obj.value)
-    
+
     elif filter_obj.op == FilterOp.IN:
         if not isinstance(filter_obj.value, (list, tuple, set)):
             raise ValueError(f"IN operator requires list/tuple/set, got {type(filter_obj.value)}")
         query = query.where(field.in_(filter_obj.value))
-    
+
     elif filter_obj.op == FilterOp.NOT_IN:
         if not isinstance(filter_obj.value, (list, tuple, set)):
             raise ValueError(f"NOT_IN operator requires list/tuple/set, got {type(filter_obj.value)}")
         query = query.where(field.not_in(filter_obj.value))
-    
+
     elif filter_obj.op == FilterOp.LIKE:
         query = query.where(field.like(filter_obj.value))
-    
+
     elif filter_obj.op == FilterOp.ILIKE:
         query = query.where(field.ilike(filter_obj.value))
-    
+
     elif filter_obj.op == FilterOp.IS_NULL:
         query = query.where(field.is_(None))
-    
+
     elif filter_obj.op == FilterOp.IS_NOT_NULL:
         query = query.where(field.is_not(None))
-    
+
     elif filter_obj.op == FilterOp.BETWEEN:
         if not isinstance(filter_obj.value, (list, tuple)) or len(filter_obj.value) != 2:
             raise ValueError("BETWEEN operator requires list/tuple of exactly 2 values")
         query = query.where(field.between(filter_obj.value[0], filter_obj.value[1]))
-    
+
     elif filter_obj.op == FilterOp.CONTAINS:
         # PostgreSQL array contains
         query = query.where(field.contains(filter_obj.value))
-    
+
     elif filter_obj.op == FilterOp.STARTS_WITH:
         if not isinstance(filter_obj.value, str):
             raise ValueError("STARTS_WITH operator requires string value")
         query = query.where(field.like(f"{filter_obj.value}%"))
-    
+
     elif filter_obj.op == FilterOp.ENDS_WITH:
         if not isinstance(filter_obj.value, str):
             raise ValueError("ENDS_WITH operator requires string value")
         query = query.where(field.like(f"%{filter_obj.value}"))
-    
+
     else:
         raise ValueError(f"Unknown filter operator: {filter_obj.op}")
-    
+
     return query
 
 
@@ -206,7 +204,7 @@ def _apply_ordering(
     order_by: OrderBy | list[OrderBy],
 ) -> Select:
     """Apply ordering to a query.
-    
+
     Parameters
     ----------
     query
@@ -215,12 +213,12 @@ def _apply_ordering(
         The model class being queried
     order_by
         Single OrderBy or list of OrderBy directives
-        
+
     Returns
     -------
     Select
         Modified query with ordering applied
-        
+
     Raises
     ------
     AttributeError
@@ -229,16 +227,14 @@ def _apply_ordering(
     # Normalize to list
     if not isinstance(order_by, list):
         order_by = [order_by]
-    
+
     for order in order_by:
         if not hasattr(the_class, order.field):
-            raise AttributeError(
-                f"{the_class.__name__} does not have field '{order.field}'"
-            )
-        
+            raise AttributeError(f"{the_class.__name__} does not have field '{order.field}'")
+
         field = getattr(the_class, order.field)
         query = query.order_by(desc(field) if order.descending else asc(field))
-    
+
     return query
 
 
@@ -252,10 +248,10 @@ async def filter_rows(
     limit: int | None = None,
 ) -> Sequence[T]:
     """Filter rows based on conditions with pagination.
-    
+
     Note: This method loads all results into memory. For large result sets,
     consider using filter_rows_streaming() instead.
-    
+
     Parameters
     ----------
     the_class
@@ -265,7 +261,7 @@ async def filter_rows(
     filters
         List of Filter objects to apply. If None, returns all rows.
     logical_op
-        How to combine multiple filters: "and" (all must match) or 
+        How to combine multiple filters: "and" (all must match) or
         "or" (any must match). Default is "and".
     order_by
         Single OrderBy or list of OrderBy directives for sorting results
@@ -288,7 +284,7 @@ async def filter_rows(
         If any filter references a non-existent field
     ValueError
         If logical_op is not "and" or "or", or filter values are invalid
-        
+
     Examples
     --------
     >>> # Find all active users over 18
@@ -302,7 +298,7 @@ async def filter_rows(
     ...     order_by=OrderBy("created_at", descending=True),
     ...     limit=10
     ... )
-    >>> 
+    >>>
     >>> # Find users with specific usernames (OR logic)
     >>> users = await filter_rows(
     ...     User,
@@ -313,7 +309,7 @@ async def filter_rows(
     ...     ],
     ...     logical_op="or"
     ... )
-    >>> 
+    >>>
     >>> # Find users created in date range
     >>> from datetime import datetime
     >>> users = await filter_rows(
@@ -328,13 +324,13 @@ async def filter_rows(
     ... )
     """
     ensure_base_inheritance(the_class)
-    
+
     if logical_op not in ("and", "or"):
         raise ValueError("logical_op must be 'and' or 'or'")
-    
+
     if limit is None:
         limit = the_class.get_pagination_limit()
-    
+
     logger.debug(
         "Filtering rows",
         table=the_class.__name__,
@@ -343,10 +339,10 @@ async def filter_rows(
         skip=skip,
         limit=limit,
     )
-    
+
     # Start with base query
     query = select(the_class)
-    
+
     # Apply filters
     if filters:
         if logical_op == "and":
@@ -363,27 +359,23 @@ async def filter_rows(
                 # Extract the WHERE clause
                 if temp_query.whereclause is not None:
                     conditions.append(temp_query.whereclause)
-            
+
             if conditions:
                 query = query.where(or_(*conditions))
-    
+
     # Apply ordering
     if order_by:
         query = _apply_ordering(query, the_class, order_by)
-    
+
     # Apply pagination
     query = query.offset(skip).limit(limit)
-    
+
     # Execute query
     results = await session.scalars(query)
     rows = results.all()
-    
-    logger.debug(
-        "Filtered rows retrieved",
-        table=the_class.__name__,
-        result_count=len(rows)
-    )
-    
+
+    logger.debug("Filtered rows retrieved", table=the_class.__name__, result_count=len(rows))
+
     return rows
 
 
@@ -432,7 +424,7 @@ async def filter_rows_streaming(
         If any filter references a non-existent field
     ValueError
         If logical_op is not "and" or "or", or filter values are invalid
-        
+
     Examples
     --------
     >>> # Process large result set without loading all into memory
@@ -445,13 +437,13 @@ async def filter_rows_streaming(
     ...     await process_user(user)
     """
     ensure_base_inheritance(the_class)
-    
+
     if logical_op not in ("and", "or"):
         raise ValueError("logical_op must be 'and' or 'or'")
-    
+
     if limit is None:
         limit = the_class.get_pagination_limit()
-    
+
     logger.debug(
         "Streaming filtered rows",
         table=the_class.__name__,
@@ -460,10 +452,10 @@ async def filter_rows_streaming(
         skip=skip,
         limit=limit,
     )
-    
+
     # Start with base query
     query = select(the_class)
-    
+
     # Apply filters
     if filters:
         if logical_op == "and":
@@ -476,20 +468,20 @@ async def filter_rows_streaming(
                 temp_query = _apply_filter(temp_query, the_class, filter_obj)
                 if temp_query.whereclause is not None:
                     conditions.append(temp_query.whereclause)
-            
+
             if conditions:
                 query = query.where(or_(*conditions))
-    
+
     # Apply ordering
     if order_by:
         query = _apply_ordering(query, the_class, order_by)
-    
+
     # Apply pagination
     query = query.offset(skip).limit(limit)
-    
+
     # Stream results
     result = await session.stream_scalars(query)
-    
+
     async for row in result:
         yield row
 
@@ -501,9 +493,9 @@ async def count_filtered_rows(
     logical_op: str = "and",
 ) -> int:
     """Count rows matching filter criteria.
-    
+
     Useful for pagination metadata (e.g., "showing 10 of 245 results").
-    
+
     Parameters
     ----------
     the_class
@@ -528,7 +520,7 @@ async def count_filtered_rows(
         If any filter references a non-existent field
     ValueError
         If logical_op is not "and" or "or", or filter values are invalid
-        
+
     Examples
     --------
     >>> # Count active users
@@ -540,22 +532,22 @@ async def count_filtered_rows(
     >>> print(f"Found {count} active users")
     """
     ensure_base_inheritance(the_class)
-    
+
     if logical_op not in ("and", "or"):
         raise ValueError("logical_op must be 'and' or 'or'")
-    
+
     logger.debug(
         "Counting filtered rows",
         table=the_class.__name__,
         filter_count=len(filters) if filters else 0,
         logical_op=logical_op,
     )
-    
+
     from sqlalchemy import func
-    
+
     # Start with count query
     query = select(func.count()).select_from(the_class)
-    
+
     # Apply filters
     if filters:
         if logical_op == "and":
@@ -568,20 +560,16 @@ async def count_filtered_rows(
                 temp_query = _apply_filter(temp_query, the_class, filter_obj)
                 if temp_query.whereclause is not None:
                     conditions.append(temp_query.whereclause)
-            
+
             if conditions:
                 query = query.where(or_(*conditions))
-    
+
     # Execute count
     result = await session.execute(query)
     count = result.scalar_one()
-    
-    logger.debug(
-        "Filtered row count",
-        table=the_class.__name__,
-        count=count
-    )
-    
+
+    logger.debug("Filtered row count", table=the_class.__name__, count=count)
+
     return count
 
 
@@ -592,7 +580,7 @@ async def filter_one(
     logical_op: str = "and",
 ) -> T:
     """Filter for exactly one row matching criteria.
-    
+
     Parameters
     ----------
     the_class
@@ -619,7 +607,7 @@ async def filter_one(
         If logical_op is not "and" or "or", or filter values are invalid
     KeyError
         If no rows match the criteria or multiple rows match
-        
+
     Examples
     --------
     >>> # Get user by email (should be unique)
@@ -630,39 +618,29 @@ async def filter_one(
     ... )
     """
     ensure_base_inheritance(the_class)
-    
+
     logger.debug(
         "Filtering for single row",
         table=the_class.__name__,
         filter_count=len(filters),
         logical_op=logical_op,
     )
-    
+
     # Get up to 2 results to check for duplicates
-    results = await filter_rows(
-        the_class,
-        session,
-        filters=filters,
-        logical_op=logical_op,
-        skip=0,
-        limit=2
-    )
-    
+    results = await filter_rows(the_class, session, filters=filters, logical_op=logical_op, skip=0, limit=2)
+
     if len(results) == 0:
-        logger.warning(
-            "No rows found matching filters",
-            table=the_class.__name__
-        )
+        logger.warning("No rows found matching filters", table=the_class.__name__)
         raise KeyError(f"No {the_class.__name__} found matching filters")
-    
+
     if len(results) > 1:
         logger.warning(
             "Multiple rows found matching filters",
             table=the_class.__name__,
-            count=len(results)
+            count=len(results),
         )
         raise KeyError(f"Multiple {the_class.__name__} rows found matching filters")
-    
+
     return results[0]
 
 
@@ -673,10 +651,10 @@ async def filter_one_or_none(
     logical_op: str = "and",
 ) -> T | None:
     """Filter for at most one row matching criteria.
-    
+
     Similar to filter_one() but returns None instead of raising KeyError
     when no rows are found.
-    
+
     Parameters
     ----------
     the_class
@@ -703,7 +681,7 @@ async def filter_one_or_none(
         If logical_op is not "and" or "or", or filter values are invalid
     KeyError
         If multiple rows match the criteria
-        
+
     Examples
     --------
     >>> # Try to get user by username
@@ -716,39 +694,29 @@ async def filter_one_or_none(
     ...     print("User not found")
     """
     ensure_base_inheritance(the_class)
-    
+
     logger.debug(
         "Filtering for single row (or none)",
         table=the_class.__name__,
         filter_count=len(filters),
         logical_op=logical_op,
     )
-    
+
     # Get up to 2 results to check for duplicates
-    results = await filter_rows(
-        the_class,
-        session,
-        filters=filters,
-        logical_op=logical_op,
-        skip=0,
-        limit=2
-    )
-    
+    results = await filter_rows(the_class, session, filters=filters, logical_op=logical_op, skip=0, limit=2)
+
     if len(results) == 0:
-        logger.debug(
-            "No rows found matching filters",
-            table=the_class.__name__
-        )
+        logger.debug("No rows found matching filters", table=the_class.__name__)
         return None
-    
+
     if len(results) > 1:
         logger.warning(
             "Multiple rows found matching filters",
             table=the_class.__name__,
-            count=len(results)
+            count=len(results),
         )
         raise KeyError(f"Multiple {the_class.__name__} rows found matching filters")
-    
+
     return results[0]
 
 
@@ -762,10 +730,10 @@ async def find_by(
     **kwargs: Any,
 ) -> Sequence[T]:
     """Find rows by simple equality conditions.
-    
+
     This is a convenience wrapper around filter_rows() for the common case
     of filtering by exact field values.
-    
+
     Parameters
     ----------
     the_class
@@ -792,7 +760,7 @@ async def find_by(
         If the_class does not inherit from Base
     AttributeError
         If any field doesn't exist on the model
-        
+
     Examples
     --------
     >>> # Find all active users in a specific role
@@ -803,7 +771,7 @@ async def find_by(
     ...     role="admin",
     ...     order_by=OrderBy("username")
     ... )
-    >>> 
+    >>>
     >>> # Find users created by specific user
     >>> users = await find_by(
     ...     User,
@@ -813,13 +781,10 @@ async def find_by(
     ... )
     """
     ensure_base_inheritance(the_class)
-    
+
     # Convert kwargs to Filter objects
-    filters = [
-        Filter(field, FilterOp.EQ, value)
-        for field, value in kwargs.items()
-    ]
-    
+    filters = [Filter(field, FilterOp.EQ, value) for field, value in kwargs.items()]
+
     return await filter_rows(
         the_class,
         session,
@@ -837,9 +802,9 @@ async def find_one_by(
     **kwargs: Any,
 ) -> T:
     """Find exactly one row by simple equality conditions.
-    
+
     Convenience wrapper around filter_one() for exact field matches.
-    
+
     Parameters
     ----------
     the_class
@@ -862,31 +827,28 @@ async def find_one_by(
         If any field doesn't exist on the model
     KeyError
         If no rows match or multiple rows match
-        
+
     Examples
     --------
     >>> # Find user by email (should be unique)
     >>> user = await find_one_by(User, session, email="alice@example.com")
-    >>> 
+    >>>
     >>> # Find session by token
     >>> session_obj = await find_one_by(Session, session, token="abc123")
     """
     ensure_base_inheritance(the_class)
-    
-    filters = [
-        Filter(field, FilterOp.EQ, value)
-        for field, value in kwargs.items()
-    ]
-    
+
+    filters = [Filter(field, FilterOp.EQ, value) for field, value in kwargs.items()]
+
     return await filter_one(the_class, session, filters=filters)
 
 
 # Helper function to build complex filter combinations
 def and_filters(*filters: Filter) -> list[Filter]:
     """Combine filters with AND logic.
-    
+
     This is just a helper to make it explicit that filters will be ANDed.
-    
+
     Examples
     --------
     >>> filters = and_filters(
@@ -900,10 +862,10 @@ def and_filters(*filters: Filter) -> list[Filter]:
 
 def or_filters(*filters: Filter) -> list[Filter]:
     """Combine filters with OR logic.
-    
+
     Helper to make it explicit that filters will be ORed.
     Use with logical_op="or" parameter.
-    
+
     Examples
     --------
     >>> filters = or_filters(

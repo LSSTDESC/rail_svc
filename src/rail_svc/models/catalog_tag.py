@@ -14,12 +14,12 @@ class CatalogTagBase(BaseModel):
     #: Name for the python class implementing the catalog tag
     class_name: str = Field(..., description="Fully qualified Python class name")
 
-    @field_validator('class_name')
+    @field_validator("class_name")
     @classmethod
     def validate_class_name(cls, v: str) -> str:
         # Ensure it's a valid dotted path (e.g., "rail.utils.catalog_utils.LsstCatalog")
-        if not all(part.isidentifier() for part in v.split('.')):
-            raise ValueError('class_name must be a valid Python module path')
+        if not all(part.isidentifier() for part in v.split(".")):
+            raise ValueError("class_name must be a valid Python module path")
         return v
 
 

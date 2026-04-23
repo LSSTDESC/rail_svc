@@ -152,6 +152,7 @@ class TestCatalogTag:
 
     def test_catalog_tag_from_attributes(self):
         """Test that from_attributes config works"""
+
         # Simulate an ORM object with attributes
         class MockORMObject:
             id = 5
@@ -234,7 +235,7 @@ class TestCatalogTag:
             ("des_y3", "rail.utils.catalog_utils.DESCatalog"),
             ("cosmos", "rail.utils.catalog_utils.COSMOSCatalog"),
         ]
-        
+
         for idx, (name, class_name) in enumerate(examples, start=1):
             tag = CatalogTag(
                 id=idx,

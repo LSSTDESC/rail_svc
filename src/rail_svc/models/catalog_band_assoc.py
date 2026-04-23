@@ -2,7 +2,7 @@
 
 from typing import ClassVar
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CatalogBandAssocBase(BaseModel):
@@ -10,7 +10,7 @@ class CatalogBandAssocBase(BaseModel):
 
     #: Five sigma limiting magnitude for this Band in this Catalog
     limiting_mag: float = Field(
-        ..., 
+        ...,
         description="Five sigma limiting magnitude for this Band in the Catalog",
         gt=0,
     )

@@ -1,8 +1,6 @@
-
 """Unit tests for the Estimates Pydantic models"""
 
 import pytest
-from datetime import datetime
 from pydantic import ValidationError
 
 from rail_svc.models.estimates import Estimates, EstimatesBase, EstimatesCreate
@@ -38,7 +36,7 @@ class TestEstimatesBase:
             "s3://bucket/key/file.hdf5",
             "/data/pz_12345.hdf5",
         ]
-        
+
         for path in paths:
             estimates = EstimatesBase(qp_file_path=path)
             assert estimates.qp_file_path == path
@@ -196,6 +194,7 @@ class TestEstimates:
 
     def test_estimates_from_attributes(self):
         """Test that from_attributes config works"""
+
         # Simulate an ORM object with attributes
         class MockORMObject:
             id = 42
@@ -212,6 +211,7 @@ class TestEstimates:
 
     def test_estimates_from_attributes_no_path(self):
         """Test ORM object without qp_file_path"""
+
         class MockORMObject:
             id = 99
             qp_file_path = None
@@ -245,7 +245,7 @@ class TestEstimates:
             dataset_name="dp02_sample",
         )
         assert create_req.qp_file_path is None
-        
+
         # Step 2: Job pending (DB record created, no path)
         pending = Estimates(
             id=123,
@@ -254,7 +254,7 @@ class TestEstimates:
             qp_file_path=None,
         )
         assert pending.qp_file_path is None
-        
+
         # Step 3: Job completed (path added)
         completed = Estimates(
             id=123,
@@ -267,7 +267,7 @@ class TestEstimates:
     def test_estimates_various_file_extensions(self):
         """Test various qp file extensions"""
         extensions = [".hdf5", ".h5", ".qp", ".fits"]
-        
+
         for idx, ext in enumerate(extensions, start=1):
             estimates = Estimates(
                 id=idx,
@@ -285,13 +285,13 @@ class TestEstimates:
             dataset_id=20,
             qp_file_path="/results/pz_50.hdf5",
         )
-        
+
         # Serialize to JSON
         json_str = original.model_dump_json()
-        
+
         # Deserialize from JSON
         restored = Estimates.model_validate_json(json_str)
-        
+
         assert restored.id == original.id
         assert restored.estimator_id == original.estimator_id
         assert restored.dataset_id == original.dataset_id
@@ -300,13 +300,28 @@ class TestEstimates:
     def test_estimates_multiple_jobs_same_estimator(self):
         """Test multiple estimate jobs using same estimator but different datasets"""
         estimator_id = 5
-        
+
         jobs = [
-            Estimates(id=1, estimator_id=estimator_id, dataset_id=10, qp_file_path="/out/job1.hdf5"),
-            Estimates(id=2, estimator_id=estimator_id, dataset_id=11, qp_file_path="/out/job2.hdf5"),
-            Estimates(id=3, estimator_id=estimator_id, dataset_id=12, qp_file_path="/out/job3.hdf5"),
+            Estimates(
+                id=1,
+                estimator_id=estimator_id,
+                dataset_id=10,
+                qp_file_path="/out/job1.hdf5",
+            ),
+            Estimates(
+                id=2,
+                estimator_id=estimator_id,
+                dataset_id=11,
+                qp_file_path="/out/job2.hdf5",
+            ),
+            Estimates(
+                id=3,
+                estimator_id=estimator_id,
+                dataset_id=12,
+                qp_file_path="/out/job3.hdf5",
+            ),
         ]
-        
+
         for job in jobs:
             assert job.estimator_id == estimator_id
             assert job.qp_file_path is not None

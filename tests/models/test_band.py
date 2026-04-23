@@ -16,7 +16,7 @@ class TestBandBase:
         """Test creating a valid BandBase"""
         wavelengths = [400.0, 450.0, 500.0, 550.0, 600.0]
         transmission = [0.1, 0.5, 0.9, 0.5, 0.1]
-        
+
         band = BandBase(
             name="g_band",
             band_wavelengths=wavelengths,
@@ -40,7 +40,7 @@ class TestBandBase:
         """Test creating BandBase with many wavelength points"""
         wavelengths = list(range(300, 1100, 10))  # 80 points
         transmission = [0.5] * len(wavelengths)
-        
+
         band = BandBase(
             name="wide_band",
             band_wavelengths=wavelengths,
@@ -130,7 +130,7 @@ class TestBandBase:
         # Simplified g-band transmission curve
         wavelengths = [400, 425, 450, 475, 500, 525, 550]
         transmission = [0.0, 0.3, 0.7, 0.9, 0.8, 0.4, 0.0]
-        
+
         band = BandBase(
             name="lsst_g",
             band_wavelengths=wavelengths,
@@ -241,6 +241,7 @@ class TestBand:
 
     def test_band_from_attributes(self):
         """Test that from_attributes config works"""
+
         # Simulate an ORM object with attributes
         class MockORMObject:
             id = 5
@@ -264,7 +265,10 @@ class TestBand:
         """Test that field descriptions are set"""
         schema = Band.model_json_schema()
         assert "Unique name for this band" in schema["properties"]["name"]["description"]
-        assert "Wavelengths for band transmission grid" in schema["properties"]["band_wavelengths"]["description"]
+        assert (
+            "Wavelengths for band transmission grid"
+            in schema["properties"]["band_wavelengths"]["description"]
+        )
         assert "Transmission at given wavelengths" in schema["properties"]["band_transmission"]["description"]
 
     def test_band_realistic_lsst_filters(self):
@@ -277,7 +281,7 @@ class TestBand:
             ("z", [850, 900, 950, 1000], [0.0, 0.6, 0.7, 0.0]),
             ("y", [950, 1000, 1050, 1100], [0.0, 0.5, 0.6, 0.0]),
         ]
-        
+
         for idx, (filter_name, wavelengths, transmission) in enumerate(lsst_filters, start=1):
             band = Band(
                 id=idx,
@@ -296,13 +300,13 @@ class TestBand:
             band_wavelengths=[400.0, 500.0, 600.0],
             band_transmission=[0.1, 0.9, 0.1],
         )
-        
+
         # Serialize to JSON
         json_str = original.model_dump_json()
-        
+
         # Deserialize from JSON
         restored = Band.model_validate_json(json_str)
-        
+
         assert restored.id == original.id
         assert restored.name == original.name
         assert restored.band_wavelengths == original.band_wavelengths
@@ -310,22 +314,21 @@ class TestBand:
 
     def test_band_with_numpy_conversion(self):
         """Test that Band works with NumPy array conversion"""
-        import numpy as np
-        
+
         # Create with numpy arrays (converted to lists)
         wavelengths_np = np.array([400, 500, 600])
         transmission_np = np.array([0.1, 0.9, 0.1])
-        
+
         band = Band(
             id=1,
             name="numpy_band",
             band_wavelengths=wavelengths_np.tolist(),
             band_transmission=transmission_np.tolist(),
         )
-        
+
         # Verify can convert back to numpy
         wavelengths_restored = np.array(band.band_wavelengths)
         transmission_restored = np.array(band.band_transmission)
-        
+
         assert np.array_equal(wavelengths_restored, wavelengths_np)
         assert np.array_equal(transmission_restored, transmission_np)

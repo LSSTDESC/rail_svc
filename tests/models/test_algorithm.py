@@ -151,6 +151,7 @@ class TestAlgorithm:
 
     def test_algorithm_from_attributes(self):
         """Test that from_attributes config works"""
+
         # Simulate an ORM object with attributes
         class MockORMObject:
             id = 5

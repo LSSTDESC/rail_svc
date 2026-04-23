@@ -29,10 +29,7 @@ class TestDatasetBase:
     def test_dataset_base_missing_path(self):
         """Test that path is required"""
         with pytest.raises(ValidationError) as exc_info:
-            DatasetBase(
-                name="test_dataset",
-                n_objects=100
-            )
+            DatasetBase(name="test_dataset", n_objects=100)
         assert "path" in str(exc_info.value)
 
     def test_dataset_base_missing_n_objects(self):
@@ -43,6 +40,7 @@ class TestDatasetBase:
                 path="/path/to/data.parquet",
             )
         assert "n_objects" in str(exc_info.value)
+
 
 class TestDatasetCreate:
     """Tests for DatasetCreate model"""
@@ -65,7 +63,7 @@ class TestDatasetCreate:
         dataset = DatasetCreate(
             name="test",
             n_objects=10,
-            path="/data/catalog.parquet",            
+            path="/data/catalog.parquet",
             catalog_tag_name="lsst",
         )
         assert dataset.validate_file is False
@@ -126,6 +124,7 @@ class TestDataset:
 
     def test_dataset_from_attributes(self):
         """Test that from_attributes config works"""
+
         # Simulate an ORM object with attributes
         class MockORMObject:
             id = 10

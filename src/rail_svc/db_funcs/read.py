@@ -11,14 +11,13 @@ different access patterns and performance characteristics:
 - count_rows: Count total number of rows in a table
 """
 
-from typing import Any, AsyncIterator, Sequence
+from collections.abc import AsyncIterator, Sequence
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_scoped_session
 import structlog
 
-from rail_svc.db.base import Base, ensure_base_inheritance, T
-
+from rail_svc.db.base import ensure_base_inheritance, T
 
 logger = structlog.get_logger(__name__)
 
@@ -29,7 +28,7 @@ async def get_row(
     row_id: int,
 ) -> T:
     """Get a single row by primary key.
-    
+
     Parameters
     ----------
     the_class
@@ -50,21 +49,21 @@ async def get_row(
         If the_class does not inherit from Base
     KeyError
         If row with given ID does not exist
-        
+
     Examples
     --------
     >>> user = await get_row(User, session, 123)
     >>> print(user.username)
     """
     ensure_base_inheritance(the_class)
-    
+
     logger.debug("Getting row by ID", table=the_class.__name__, row_id=row_id)
     result = await session.get(the_class, row_id)
-    
+
     if result is None:
         logger.warning("Row not found", table=the_class.__name__, row_id=row_id)
         raise KeyError(f"{the_class.__name__} {row_id} not found")
-    
+
     return result
 
 
@@ -83,7 +82,7 @@ async def get_row_by_name(
         DB session manager
     name
         Name value to search for
-        
+
     Returns
     -------
     T
@@ -97,33 +96,31 @@ async def get_row_by_name(
         If the_class does not have a 'name' attribute
     KeyError
         If row with given name does not exist
-        
+
     Notes
     -----
     This function requires the model to have a 'name' attribute.
     For models without a name field, use get_row() or get_rows() with filters.
-    
+
     Examples
     --------
     >>> user = await get_row_by_name(User, session, "alice")
     >>> print(user.id)
     """
     ensure_base_inheritance(the_class)
-    
-    if not hasattr(the_class, 'name'):
-        raise AttributeError(
-            f"{the_class.__name__} does not have a 'name' attribute"
-        )
-    
+
+    if not hasattr(the_class, "name"):
+        raise AttributeError(f"{the_class.__name__} does not have a 'name' attribute")
+
     logger.debug("Getting row by name", table=the_class.__name__, name=name)
     query = select(the_class).where(the_class.name == name)
     rows = await session.scalars(query)
     row = rows.first()
-    
+
     if row is None:
         logger.warning("Row not found", table=the_class.__name__, name=name)
         raise KeyError(f"{the_class.__name__} '{name}' not found")
-    
+
     return row
 
 
@@ -137,7 +134,7 @@ async def get_rows(
 
     Note: This method loads all results into memory. For large result sets,
     consider using get_rows_streaming() instead.
-    
+
     Parameters
     ----------
     the_class
@@ -159,17 +156,17 @@ async def get_rows(
     ------
     TypeError
         If the_class does not inherit from Base
-        
+
     Examples
     --------
     >>> # Get first 10 users
     >>> users = await get_rows(User, session, skip=0, limit=10)
-    >>> 
+    >>>
     >>> # Get next 10 users
     >>> users = await get_rows(User, session, skip=10, limit=10)
     """
     ensure_base_inheritance(the_class)
-    
+
     if limit is None:
         limit = the_class.get_pagination_limit()
 
@@ -179,7 +176,7 @@ async def get_rows(
         skip=skip,
         limit=limit,
     )
-    
+
     q = select(the_class).offset(skip).limit(limit)
     results = await session.scalars(q)
     return results.all()
@@ -217,7 +214,7 @@ async def get_rows_streaming(
     ------
     TypeError
         If the_class does not inherit from Base
-        
+
     Examples
     --------
     >>> # Process large dataset without loading all into memory
@@ -225,7 +222,7 @@ async def get_rows_streaming(
     ...     await process_user(user)
     """
     ensure_base_inheritance(the_class)
-    
+
     if limit is None:
         limit = the_class.get_pagination_limit()
 
@@ -235,10 +232,10 @@ async def get_rows_streaming(
         skip=skip,
         limit=limit,
     )
-    
+
     q = select(the_class).offset(skip).limit(limit)
     result = await session.stream_scalars(q)
-    
+
     async for row in result:
         yield row
 
@@ -268,13 +265,13 @@ async def get_row_or_none(
         The matching row or None if it is not found
     """
     ensure_base_inheritance(the_class)
-    
+
     logger.debug("Getting row by ID (or None)", table=the_class.__name__, row_id=row_id)
     result = await session.get(the_class, row_id)
-    
+
     if result is None:
         logger.debug("Row not found", table=the_class.__name__, row_id=row_id)
-    
+
     return result
 
 
@@ -283,7 +280,7 @@ async def count_rows(
     session: async_scoped_session,
 ) -> int:
     """Count total number of rows in a table.
-    
+
     Useful for pagination metadata.
 
     Parameters
@@ -299,14 +296,13 @@ async def count_rows(
         Total number of rows in the table
     """
     ensure_base_inheritance(the_class)
-    
+
     from sqlalchemy import func
-    
+
     logger.debug("Counting rows", table=the_class.__name__)
     q = select(func.count()).select_from(the_class)
     result = await session.execute(q)
     count = result.scalar_one()
-    
+
     logger.debug("Row count", table=the_class.__name__, count=count)
     return count
-        

@@ -1,7 +1,6 @@
 """Unit tests for the Configuration module"""
 
 import os
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -116,7 +115,7 @@ class TestLoggingConfiguration:
     def test_logging_level_validation(self):
         """Test that log level must be valid"""
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-        
+
         for level in valid_levels:
             logging = LoggingConfiguration(level=level)
             assert logging.level == level
@@ -124,7 +123,7 @@ class TestLoggingConfiguration:
     def test_logging_level_case_insensitive(self):
         """Test that log level is normalized to uppercase"""
         levels = ["debug", "info", "warning", "error", "critical", "Debug", "InFo"]
-        
+
         for level in levels:
             logging = LoggingConfiguration(level=level)
             assert logging.level == level.upper()
@@ -209,7 +208,7 @@ class TestDatabaseConfiguration:
             "postgresql+psycopg2://user:pass@localhost/db",
             "mysql://user:pass@localhost/db",
         ]
-        
+
         for url in valid_urls:
             db = DatabaseConfiguration(url=url)
             assert db.url == url
@@ -222,7 +221,7 @@ class TestDatabaseConfiguration:
             "mongodb://localhost/db",
             "invalid://localhost/db",
         ]
-        
+
         for url in invalid_urls:
             with pytest.raises(ValidationError) as exc_info:
                 DatabaseConfiguration(url=url)
@@ -231,12 +230,12 @@ class TestDatabaseConfiguration:
     def test_database_password_is_secret(self):
         """Test that password is properly handled as SecretStr"""
         db = DatabaseConfiguration(password=SecretStr("my_secret_password"))
-        
+
         # Password should not be in string representation
         db_str = str(db)
         assert "my_secret_password" not in db_str
         assert "**********" in db_str or "SecretStr" in db_str
-        
+
         # But can be retrieved when needed
         assert db.password.get_secret_value() == "my_secret_password"
 
@@ -244,7 +243,7 @@ class TestDatabaseConfiguration:
         """Test echo setting as boolean"""
         db_false = DatabaseConfiguration(echo=False)
         assert db_false.echo is False
-        
+
         db_true = DatabaseConfiguration(echo=True)
         assert db_true.echo is True
 
@@ -261,26 +260,25 @@ class TestStorageConfiguration:
     def test_valid_storage_configuration_custom_values(self):
         """Test creating StorageConfiguration with custom values"""
         with pytest.raises(ValueError):
-            storage = StorageConfiguration(
+            StorageConfiguration(
                 archive="/data/archive",
                 import_area="/data/import",
             )
-
 
     def test_storage_existing_paths(self, tmp_path):
         """Test that existing paths work correctly"""
         archive_path = tmp_path / "existing_archive"
         import_path = tmp_path / "existing_import"
-        
+
         # Create paths
         archive_path.mkdir()
         import_path.mkdir()
-        
+
         storage = StorageConfiguration(
             archive=str(archive_path),
             import_area=str(import_path),
         )
-        
+
         assert storage.archive == str(archive_path)
         assert storage.import_area == str(import_path)
 
@@ -291,7 +289,7 @@ class TestConfiguration:
     def test_valid_configuration_defaults(self):
         """Test creating Configuration with all default values"""
         config = Configuration()
-        
+
         assert isinstance(config.asgi, AsgiConfiguration)
         assert isinstance(config.daemon, DaemonConfiguration)
         assert isinstance(config.db, DatabaseConfiguration)
@@ -307,7 +305,7 @@ class TestConfiguration:
         # Create paths
         archive_path.mkdir()
         import_path.mkdir()
-        
+
         env_vars = {
             "ASGI__PORT": "9000",
             "ASGI__HOST": "127.0.0.1",
@@ -317,10 +315,10 @@ class TestConfiguration:
             "STORAGE__ARCHIVE": str(archive_path),
             "STORAGE__IMPORT_AREA": str(import_path),
         }
-        
+
         with patch.dict(os.environ, env_vars, clear=False):
             config = Configuration()
-            
+
             assert config.asgi.port == 9000
             assert config.asgi.host == "127.0.0.1"
             assert config.db.url == "postgresql://localhost/testdb"
@@ -328,14 +326,14 @@ class TestConfiguration:
             assert config.daemon.processing_interval == 60
             assert config.storage.archive == str(archive_path)
             assert config.storage.import_area == str(import_path)
-            
+
     def test_configuration_case_insensitive_env_vars(self):
         """Test that environment variables are case insensitive"""
         env_vars = {
             "asgi__port": "7000",
             "ASGI__PORT": "8000",  # Should override lowercase
         }
-        
+
         with patch.dict(os.environ, env_vars, clear=False):
             config = Configuration()
             # Due to case_sensitive=False, both should work
@@ -347,7 +345,7 @@ class TestConfiguration:
         config = Configuration(
             asgi={"port": 3000},  # Only update port, keep other defaults
         )
-        
+
         assert config.asgi.port == 3000
         assert config.asgi.host == "0.0.0.0"  # Default preserved
         assert config.asgi.title == "rail-svc"  # Default preserved
@@ -359,15 +357,15 @@ class TestConfiguration:
             unknown_field="value",
             another_unknown=123,
         )
-        
-        assert not hasattr(config, 'unknown_field')
-        assert not hasattr(config, 'another_unknown')
+
+        assert not hasattr(config, "unknown_field")
+        assert not hasattr(config, "another_unknown")
 
     def test_configuration_realistic_production_setup(self, tmp_path):
         """Test realistic production configuration"""
         archive_path = tmp_path / "existing_archive"
         import_path = tmp_path / "existing_import"
-        
+
         # Create paths
         archive_path.mkdir()
         import_path.mkdir()
@@ -396,7 +394,7 @@ class TestConfiguration:
                 "import_area": str(import_path),
             },
         )
-        
+
         assert config.asgi.reload is False
         assert config.db.password.get_secret_value() == "prod_password"
         assert config.logging.level == "WARNING"
@@ -422,7 +420,7 @@ class TestConfiguration:
                 "processing_interval": 10,
             },
         )
-        
+
         assert config.asgi.reload is True
         assert config.db.echo is True
         assert config.logging.level == "DEBUG"

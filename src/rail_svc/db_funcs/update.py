@@ -9,8 +9,7 @@ from sqlalchemy.exc import StatementError
 from sqlalchemy.ext.asyncio import async_scoped_session
 import structlog
 
-from rail_svc.db.base import Base, ensure_base_inheritance, T
-
+from rail_svc.db.base import ensure_base_inheritance, T
 
 logger = structlog.get_logger(__name__)
 
@@ -25,7 +24,7 @@ async def update_row(
 
     The update is committed automatically. If the update fails, the
     transaction is rolled back.
-    
+
     Parameters
     ----------
     the_class
@@ -52,13 +51,13 @@ async def update_row(
         If row with given ID does not exist
     StatementError
         If update statement is invalid (e.g., invalid column or type)
-        
+
     Notes
     -----
     - The row's ID cannot be changed
     - The update is automatically committed
     - Row is refreshed after update to load any DB-generated values
-    
+
     Examples
     --------
     >>> user = await update_row(
@@ -71,22 +70,16 @@ async def update_row(
     >>> print(user.updated_at)  # Shows new timestamp
     """
     ensure_base_inheritance(the_class)
-    
+
     # Prevent ID changes
     if "id" in kwargs and kwargs["id"] != row_id:
-        raise ValueError(
-            f"Cannot change row ID: row_id={row_id}, kwargs['id']={kwargs['id']}"
-        )
-    
+        raise ValueError(f"Cannot change row ID: row_id={row_id}, kwargs['id']={kwargs['id']}")
+
     # Remove ID from update data (don't try to update primary key)
     update_data = {k: v for k, v in kwargs.items() if k != "id"}
-    
+
     if not update_data:
-        logger.warning(
-            "No fields to update",
-            table=the_class.__name__,
-            row_id=row_id
-        )
+        logger.warning("No fields to update", table=the_class.__name__, row_id=row_id)
         # Just return existing row
         row = await session.get(the_class, row_id)
         if row is None:
@@ -103,22 +96,18 @@ async def update_row(
     # Get existing row
     row = await session.get(the_class, row_id)
     if row is None:
-        logger.warning(
-            "Cannot update - row not found",
-            table=the_class.__name__,
-            row_id=row_id
-        )
+        logger.warning("Cannot update - row not found", table=the_class.__name__, row_id=row_id)
         raise KeyError(f"{the_class.__name__} {row_id} not found")
 
     try:
         # Apply updates
         for var, value in update_data.items():
             setattr(row, var, value)
-        
+
         # Flush to catch any statement errors
         await session.flush()
         await session.commit()
-            
+
     except StatementError as err:
         await session.rollback()
         logger.error(
@@ -141,9 +130,9 @@ async def update_rows(
     updates: Sequence[dict[str, Any]],
 ) -> list[T]:
     """Update multiple rows atomically.
-    
+
     Each dict in updates must contain an 'id' key specifying which row to update.
-    
+
     Parameters
     ----------
     the_class
@@ -168,7 +157,7 @@ async def update_rows(
         If any row ID is not found
     StatementError
         If any update is invalid
-        
+
     Examples
     --------
     >>> users = await update_rows(
@@ -182,55 +171,47 @@ async def update_rows(
     ... )
     """
     ensure_base_inheritance(the_class)
-    
+
     if not updates:
         raise ValueError("updates cannot be empty")
-    
-    logger.debug(
-        "Updating multiple rows",
-        table=the_class.__name__,
-        count=len(updates)
-    )
-    
+
+    logger.debug("Updating multiple rows", table=the_class.__name__, count=len(updates))
+
     updated_rows = []
-    
+
     try:
         for update_data in updates:
             if "id" not in update_data:
                 raise ValueError("Each update must contain 'id' key")
-            
+
             row_id = update_data["id"]
             fields = {k: v for k, v in update_data.items() if k != "id"}
-            
+
             row = await session.get(the_class, row_id)
             if row is None:
                 raise KeyError(f"{the_class.__name__} {row_id} not found")
-            
+
             for var, value in fields.items():
                 setattr(row, var, value)
-            
+
             updated_rows.append(row)
-        
+
         await session.flush()
         await session.commit()
-        
+
         # Refresh all
         for row in updated_rows:
             await session.refresh(row)
-        
+
         logger.info(
             "Rows updated successfully",
             table=the_class.__name__,
-            count=len(updated_rows)
+            count=len(updated_rows),
         )
-        
+
         return updated_rows
-        
+
     except Exception as err:
         await session.rollback()
-        logger.error(
-            "Error during bulk update",
-            table=the_class.__name__,
-            error=str(err)
-        )
+        logger.error("Error during bulk update", table=the_class.__name__, error=str(err))
         raise
