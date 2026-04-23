@@ -12,13 +12,10 @@ class DatasetBase(BaseModel):
     name: str = Field(..., description="Unique name for this dataset")
 
     #: Path to the relevant file (could be None)
-    path: str | None = Field(None, description="File path to the stored dataset")
-
-    #: Data for the dataset (could be None)
-    data: dict | None = Field(None, description="Dataset data for small datasets")
+    path: str = Field(..., description="File path to the stored dataset")
 
     #: Number of objects in the dataset
-    n_objects: int | None = Field(None, description="Number of objects in the dataset")
+    n_objects: int = Field(..., description="Number of objects in the dataset")
 
 
 class DatasetCreate(DatasetBase):
@@ -32,15 +29,13 @@ class DatasetCreate(DatasetBase):
 
 
 class Dataset(DatasetBase):
-    """Color data about set of objects that can be used to obtain
+    """Magnitude data about set of objects that can be used to obtain
     p(z) estimates.
 
     It is associated with a `CatalogTag` that defines which columns
     names to expect.
 
-    It can either be stored in a file (for larger datasets) or as a
-    python dict (for small datasets of a few objects, useful when
-    uploading things on the fly
+    It is stored in a file
     """
 
     model_config = ConfigDict(from_attributes=True)

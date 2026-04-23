@@ -1,6 +1,9 @@
 """Unit tests for the Band Pydantic models"""
 
 import pytest
+
+import numpy as np
+
 from pydantic import ValidationError
 
 from rail_svc.models.band import Band, BandBase, BandCreate

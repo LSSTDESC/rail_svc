@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from rail_pz_service.models.dataset import Dataset, DatasetBase, DatasetCreate
+from rail_svc.models.dataset import Dataset, DatasetBase, DatasetCreate
 
 
 class TestDatasetBase:
@@ -19,26 +19,6 @@ class TestDatasetBase:
         assert dataset.name == "test_dataset"
         assert dataset.path == "/path/to/data.parquet"
         assert dataset.n_objects == 1000
-        assert dataset.data is None
-
-    def test_dataset_base_with_data(self):
-        """Test creating DatasetBase with data dict"""
-        data_dict = {"mag_r": [20.1, 20.5], "mag_i": [19.8, 20.2]}
-        dataset = DatasetBase(
-            name="small_dataset",
-            data=data_dict,
-            n_objects=2,
-        )
-        assert dataset.data == data_dict
-        assert dataset.path is None
-
-    def test_dataset_base_minimal(self):
-        """Test creating DatasetBase with minimal fields"""
-        dataset = DatasetBase(name="minimal", n_objects=None)
-        assert dataset.name == "minimal"
-        assert dataset.path is None
-        assert dataset.data is None
-        assert dataset.n_objects is None
 
     def test_dataset_base_missing_name(self):
         """Test that name is required"""
@@ -46,6 +26,23 @@ class TestDatasetBase:
             DatasetBase(n_objects=100)
         assert "name" in str(exc_info.value)
 
+    def test_dataset_base_missing_path(self):
+        """Test that path is required"""
+        with pytest.raises(ValidationError) as exc_info:
+            DatasetBase(
+                name="test_dataset",
+                n_objects=100
+            )
+        assert "path" in str(exc_info.value)
+
+    def test_dataset_base_missing_n_objects(self):
+        """Test that name is required"""
+        with pytest.raises(ValidationError) as exc_info:
+            DatasetBase(
+                name="test_dataset",
+                path="/path/to/data.parquet",
+            )
+        assert "n_objects" in str(exc_info.value)
 
 class TestDatasetCreate:
     """Tests for DatasetCreate model"""
@@ -68,6 +65,7 @@ class TestDatasetCreate:
         dataset = DatasetCreate(
             name="test",
             n_objects=10,
+            path="/data/catalog.parquet",            
             catalog_tag_name="lsst",
         )
         assert dataset.validate_file is False
@@ -94,19 +92,6 @@ class TestDataset:
         assert dataset.id == 1
         assert dataset.name == "full_dataset"
         assert dataset.catalog_tag_id == 5
-
-    def test_dataset_with_data_dict(self):
-        """Test Dataset with inline data"""
-        data = {"mag_g": [21.0], "mag_r": [20.5]}
-        dataset = Dataset(
-            id=2,
-            name="inline_data",
-            data=data,
-            n_objects=1,
-            catalog_tag_id=3,
-        )
-        assert dataset.data == data
-        assert dataset.path is None
 
     def test_dataset_id_must_be_positive(self):
         """Test that id must be greater than 0"""
@@ -146,7 +131,6 @@ class TestDataset:
             id = 10
             name = "orm_dataset"
             path = "/orm/path.parquet"
-            data = None
             n_objects = 500
             catalog_tag_id = 2
 

@@ -1,7 +1,7 @@
 [project]
 # https://packaging.python.org/en/latest/specifications/declaring-project-metadata/
 name = "pz-rail-svc"
-description = "RAIL service to generate photometric redshifts
+description = "RAIL service to generate photometric redshifts"
 license = { file = "LICENSE" }
 readme = "README.md"
 # https://pypi.org/classifiers/
@@ -20,14 +20,18 @@ requires-python = ">=3.13"
 dynamic = ["version"]
 
 dependencies = [
+    "aiosqlite",
     "click",
     "dotenv",
     "httpx>=0.27.2",
     "pre-commit>=4.0.1",
     "setuptools",
+    "sqlalchemy",
+    "structlog",
     "pydantic",
     "pydantic-settings",
     "tabulate==0.9.*",
+    "numpy",
 ]
 
 [project.optional-dependencies]
@@ -35,9 +39,11 @@ server = [
 ]
 
 dev = [
+    "pytest-async",
+    "pytest-asyncio",
     "pytest-cov>=6.0.0",
     "pytest-timeout>=2.3.1",
-    "qp-prob[full]",
+    "mypy",
     "ruff>=0.8.0",
     "types-pyyaml>=6.0.12.20240917",
     "types-tabulate>=0.9.0.20240106",
@@ -77,8 +83,8 @@ write_to = "src/rail_svc/_version.py"
 [tool.coverage.run]
 parallel = true
 #branch = true
-source = ["rail_pz_service"]
-concurrency = ['greenlet', 'thread']
+source = ["rail_svc"]
+#concurrency = ['greenlet', 'thread']
 omit = [
     # omit everything in web_app, worker, main
     "web_app.py",
@@ -156,7 +162,7 @@ max-doc-length = 88
 convention = "numpy"
 
 [tool.pytest.ini_options]
-asyncio_mode = "strict"
+asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope="function"
 # The python_files setting is not for test detection (pytest will pick up any
 # test files named *_test.py without this setting) but to enable special
