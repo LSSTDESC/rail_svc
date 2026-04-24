@@ -112,7 +112,7 @@ class Estimator(Base):
             The catalog tag ID
         """
         return self.model.catalog_tag_id
-
+    
     @property
     def algo(self) -> "Algorithm":
         """Get the associated Algorithm via the model.
@@ -135,6 +135,28 @@ class Estimator(Base):
         """
         return self.model.catalog_tag
 
+    @property
+    def algo_name(self) -> str:
+        """Get the name from the associated algorithm.
+        
+        Returns
+        -------
+        str
+            The algorithm name
+        """
+        return self.algo.name
+
+    @property
+    def catalog_tag_name(self) -> str:
+        """Get the name from the associated catalog tag
+        
+        Returns
+        -------
+        str
+            The catalog tag name
+        """
+        return self.catalog_tag.name    
+    
     def __repr__(self) -> str:
         """Return a detailed string representation of the Estimator.
         

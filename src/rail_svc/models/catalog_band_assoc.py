@@ -15,6 +15,9 @@ class CatalogBandAssocBase(BaseModel):
         gt=0,
     )
 
+    #: What the band is called in the catalog tag
+    band_alias: str = Field(..., description="Name given to Band in the Catalog")
+    
 
 class CatalogBandAssocCreate(CatalogBandAssocBase):
     """CatalogBandAssoc Parameters that are used to create new rows but not in DB tables"""
