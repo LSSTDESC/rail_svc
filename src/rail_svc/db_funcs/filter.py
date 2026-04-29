@@ -9,7 +9,7 @@ from typing import Any
 from collections.abc import AsyncIterator, Sequence
 from enum import StrEnum
 
-from sqlalchemy import Select, or_, asc, desc, select
+from sqlalchemy import Select, or_, asc, desc, select, func
 from sqlalchemy.ext.asyncio import async_scoped_session
 import structlog
 
@@ -542,8 +542,6 @@ async def count_filtered_rows(
         filter_count=len(filters) if filters else 0,
         logical_op=logical_op,
     )
-
-    from sqlalchemy import func
 
     # Start with count query
     query = select(func.count()).select_from(the_class)

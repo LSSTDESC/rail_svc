@@ -32,6 +32,11 @@ dependencies = [
     "pydantic",
     "pydantic-settings",
     "tabulate==0.9.*",
+    "aiofiles",
+    "safir",
+    "tables_io",
+    "tenacity",
+    "fastapi",
     "numpy",
 ]
 

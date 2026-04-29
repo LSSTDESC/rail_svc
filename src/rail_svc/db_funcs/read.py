@@ -13,7 +13,7 @@ different access patterns and performance characteristics:
 
 from collections.abc import AsyncIterator, Sequence
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import async_scoped_session
 import structlog
 
@@ -296,8 +296,6 @@ async def count_rows(
         Total number of rows in the table
     """
     ensure_base_inheritance(the_class)
-
-    from sqlalchemy import func
 
     logger.debug("Counting rows", table=the_class.__name__)
     q = select(func.count()).select_from(the_class)

@@ -106,8 +106,7 @@ class CatalogTag(Base):
         str
             String showing id, name, and description
         """
-        desc = f", description='{self.description[:50]}...'" if self.description else ""
-        return f"CatalogTag(id={self.id}, name='{self.name}'{desc})"
+        return f"CatalogTag(id={self.id}, name='{self.name})"
 
     def __str__(self) -> str:
         """Return a simple string representation of the CatalogTag.

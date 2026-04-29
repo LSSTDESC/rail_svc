@@ -11,8 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 import click
 from click.decorators import FC
 
-from ...config import config as global_config
-from .operations.client import RailClient
+from ..config import config as global_config
+from ..operations.client import RailClient
 
 
 # Configuration defaults
@@ -24,13 +24,13 @@ DEFAULT_TIMEOUT = global_config.web_interface.default_timeout
 STREAM_TIMEOUT = global_config.web_interface.stream_timeout
 
 
-def validate_non_empty(ctx: click.Context, param: click.Parameter, value: str) -> str:
+def validate_non_empty(_ctx: click.Context, param: click.Parameter, value: str) -> str:
     """
     Click callback to validate non-empty string.
 
     Parameters
     ----------
-    ctx : click.Context
+    _ctx : click.Context
         Click context
     param : click.Parameter
         Click parameter

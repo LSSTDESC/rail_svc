@@ -13,12 +13,11 @@ from sqlalchemy.ext.asyncio import async_scoped_session
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.schema import ForeignKey
 
-from .. import models
+from .. import models, db_funcs
 from ..config import config as global_config
 from .algorithm import Algorithm
 from .base import Base
 from .catalog_tag import CatalogTag
-from .row import RowMixin
 
 if TYPE_CHECKING:
     from .estimator import Estimator
@@ -26,7 +25,7 @@ if TYPE_CHECKING:
 logger = structlog.get_logger(__name__)
 
 
-class Model(Base, RowMixin):
+class Model(Base):
     """Model representing a trained machine learning model.
 
     A Model is associated with an Algorithm and CatalogTag, and references
@@ -174,10 +173,10 @@ class Model(Base, RowMixin):
                     missing_key=str(e),
                 )
                 raise
-            algo_ = await Algorithm.get_row_by_name(session, algo_name)
+            algo_ = await db_funcs.get_row_by_name(Algorithm, session, algo_name)
             algo_id = algo_.id
         else:
-            algo_ = await Algorithm.get_row(session, algo_id)
+            algo_ = await db_funcs.get_row(Algorithm, session, algo_id)
 
         # Get or validate catalog_tag_id
         catalog_tag_id = kwargs.get("catalog_tag_id", None)
@@ -191,10 +190,10 @@ class Model(Base, RowMixin):
                     missing_key=str(e),
                 )
                 raise
-            catalog_tag_ = await CatalogTag.get_row_by_name(session, catalog_tag_name)
+            catalog_tag_ = await db_funcs.get_row_by_name(CatalogTag, session, catalog_tag_name)
             catalog_tag_id = catalog_tag_.id
         else:
-            catalog_tag_ = await CatalogTag.get_row(session, catalog_tag_id)
+            catalog_tag_ = await db_funcs.get_row(CatalogTag, session, catalog_tag_id)
 
         # Validate model file if requested
         if validate_file:

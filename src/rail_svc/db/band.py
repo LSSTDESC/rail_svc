@@ -37,10 +37,10 @@ class Band(Base):
     name: Mapped[str] = mapped_column(String(255), index=True, unique=True)
 
     # Wavelength grid
-    band_wavelengths: Mapped[list[float]] = Field(..., description="Wavelengths for band transmission grid")
+    band_wavelengths: Mapped[list[float]] = mapped_column()
 
     #: Transmission at given wavelengths
-    band_transmission: Mapped[list[float]] = Field(..., description="Transmission at given wavelengths")
+    band_transmission: Mapped[list[float]] = mapped_column()
 
 
     # Pydantic integration

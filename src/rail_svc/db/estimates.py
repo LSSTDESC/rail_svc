@@ -237,30 +237,16 @@ class Estimates(Base):
             archive_path = Path(global_config.storage.archive).resolve()
             fullpath = (archive_path / qp_file_path).resolve()
 
-            try:
-                # Python 3.9+
-                if not fullpath.is_relative_to(archive_path):
-                    logger.error(
-                        "Path traversal attempt detected",
-                        table=cls.__name__,
-                        attempted_path=str(qp_file_path),
-                        archive_path=str(archive_path),
-                    )
-                    raise ValueError(
-                        f"Path {qp_file_path} would escape archive directory"
-                    )
-            except AttributeError:
-                # Fallback for Python < 3.9
-                if not str(fullpath).startswith(str(archive_path)):
-                    logger.error(
-                        "Path traversal attempt detected",
-                        table=cls.__name__,
-                        attempted_path=str(qp_file_path),
-                        archive_path=str(archive_path),
-                    )
-                    raise ValueError(
-                        f"Path {qp_file_path} would escape archive directory"
-                    )
+            if not fullpath.is_relative_to(archive_path):
+                logger.error(
+                    "Path traversal attempt detected",
+                    table=cls.__name__,
+                    attempted_path=str(qp_file_path),
+                    archive_path=str(archive_path),
+                )
+                raise ValueError(
+                    f"Path {qp_file_path} would escape archive directory"
+                )
 
             # Note: dataset could be passed to validate_data_for_path if needed
             # for schema validation in the future
@@ -317,7 +303,7 @@ class Estimates(Base):
             raise FileNotFoundError(f"Input file {path} not found")
 
         try:
-            n_objects = tables_io.io.getInputDataLength(str(path))
+            n_objects = tables_io.getInputDataLength(str(path))
         except (OSError, ValueError) as exc:
             logger.error(
                 "Failed to read estimates file",
