@@ -1,6 +1,6 @@
 """Database model for Estimator table"""
 
-from typing import Any, Dict
+from typing import Any
 
 from pydantic import BaseModel
 from sqlalchemy import JSON, String
@@ -14,15 +14,15 @@ from .base import Base
 
 class Estimator(Base):
     """Estimator configuration for machine learning models.
-    
+
     An Estimator represents a specific configuration of a machine learning
     algorithm that can be used to train models. It captures the hyperparameters
     and settings needed to create a trainable model instance.
-    
+
     The Estimator is associated with a Model, and through that relationship
     has access to the Algorithm and CatalogTag. This normalized design
     ensures data consistency.
-    
+
     Attributes
     ----------
     id : int
@@ -35,7 +35,7 @@ class Estimator(Base):
         JSON-serialized configuration parameters (hyperparameters, etc.)
     model : Model
         The associated Model instance
-    
+
     Notes
     -----
     To access the Algorithm or CatalogTag, use the model relationship:
@@ -58,7 +58,7 @@ class Estimator(Base):
     )
 
     # Configuration stored as JSON
-    config: Mapped[Dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    config: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
     # Relationship - read-only access to associated model
     model: Mapped["Model"] = relationship(
@@ -71,7 +71,7 @@ class Estimator(Base):
     @classmethod
     def pydantic_model_class(cls) -> type[BaseModel]:
         """Return the Pydantic model class for serialization/validation.
-        
+
         Returns
         -------
         type[BaseModel]
@@ -82,7 +82,7 @@ class Estimator(Base):
     @classmethod
     def class_string(cls) -> str:
         """Return the class identifier string.
-        
+
         Returns
         -------
         str
@@ -94,7 +94,7 @@ class Estimator(Base):
     @property
     def algo_id(self) -> int:
         """Get the algorithm ID from the associated model.
-        
+
         Returns
         -------
         int
@@ -105,18 +105,18 @@ class Estimator(Base):
     @property
     def catalog_tag_id(self) -> int:
         """Get the catalog tag ID from the associated model.
-        
+
         Returns
         -------
         int
             The catalog tag ID
         """
         return self.model.catalog_tag_id
-    
+
     @property
     def algo(self) -> "Algorithm":
         """Get the associated Algorithm via the model.
-        
+
         Returns
         -------
         Algorithm
@@ -127,7 +127,7 @@ class Estimator(Base):
     @property
     def catalog_tag(self) -> "CatalogTag":
         """Get the associated CatalogTag via the model.
-        
+
         Returns
         -------
         CatalogTag
@@ -138,7 +138,7 @@ class Estimator(Base):
     @property
     def algo_name(self) -> str:
         """Get the name from the associated algorithm.
-        
+
         Returns
         -------
         str
@@ -149,17 +149,17 @@ class Estimator(Base):
     @property
     def catalog_tag_name(self) -> str:
         """Get the name from the associated catalog tag
-        
+
         Returns
         -------
         str
             The catalog tag name
         """
-        return self.catalog_tag.name    
-    
+        return self.catalog_tag.name
+
     def __repr__(self) -> str:
         """Return a detailed string representation of the Estimator.
-        
+
         Returns
         -------
         str
@@ -169,7 +169,7 @@ class Estimator(Base):
 
     def __str__(self) -> str:
         """Return a simple string representation of the Estimator.
-        
+
         Returns
         -------
         str
@@ -184,11 +184,11 @@ class Estimator(Base):
         **kwargs: Any,
     ) -> dict[str, Any]:
         """Prepare keyword arguments for creating an Estimator.
-        
+
         This method handles the logic of looking up a model by either
         ID or name. The algorithm and catalog tag are accessed through
         the model relationship.
-        
+
         Parameters
         ----------
         session : async_scoped_session
@@ -196,7 +196,7 @@ class Estimator(Base):
         **kwargs : Any
             Must contain 'name' and either 'model_id' or 'model_name'.
             May optionally contain 'config'.
-        
+
         Returns
         -------
         dict[str, Any]
@@ -204,12 +204,12 @@ class Estimator(Base):
             - name
             - config
             - model_id
-        
+
         Raises
         ------
         RAILMissingRowCreateInputError
             If required fields are missing or invalid
-        
+
         Examples
         --------
         >>> # Create by model_id
@@ -219,7 +219,7 @@ class Estimator(Base):
         ...     model_id=123,
         ...     config={"learning_rate": 0.01}
         ... )
-        
+
         >>> # Create by model_name
         >>> kwargs = await Estimator.get_create_kwargs(
         ...     session,
@@ -233,13 +233,13 @@ class Estimator(Base):
             raise KeyError(
                 "Missing required field 'name' to create Estimator"
             )
-        
+
         name = kwargs["name"]
         config = kwargs.get("config", {})
 
         # Get model either by ID or by name
         model_id = kwargs.get("model_id")
-        
+
         if model_id is None:
             # Must provide model_name if model_id not provided
             model_name = kwargs.get("model_name")
@@ -247,7 +247,7 @@ class Estimator(Base):
                 raise KeyError(
                     "Either 'model_id' or 'model_name' must be provided to create Estimator"
                 )
-            
+
             # Look up model by name
             from .model import Model
             model = await Model.get_row_by_name(session, model_name)

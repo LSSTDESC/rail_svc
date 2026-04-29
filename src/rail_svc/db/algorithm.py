@@ -16,11 +16,11 @@ if TYPE_CHECKING:
 
 class Algorithm(Base):
     """Algorithm database model.
-    
+
     Represents a machine learning algorithm that can be used to create
     estimators and models. Each algorithm has a unique name and references
     a Python class that implements the algorithm logic.
-    
+
     Attributes
     ----------
     id : int
@@ -43,7 +43,7 @@ class Algorithm(Base):
 
     # Algorithm identification
     name: Mapped[str] = mapped_column(String(255), index=True, unique=True)
-    
+
     # Python class implementing the algorithm
     class_name: Mapped[str] = mapped_column(String(512))
 
@@ -64,7 +64,7 @@ class Algorithm(Base):
     @classmethod
     def pydantic_model_class(cls) -> type[BaseModel]:
         """Return the Pydantic model class for serialization/validation.
-        
+
         Returns
         -------
         type[BaseModel]
@@ -75,7 +75,7 @@ class Algorithm(Base):
     @classmethod
     def class_string(cls) -> str:
         """Return the class identifier string.
-        
+
         Returns
         -------
         str
@@ -85,7 +85,7 @@ class Algorithm(Base):
 
     def __repr__(self) -> str:
         """Return a detailed string representation of the Algorithm.
-        
+
         Returns
         -------
         str
@@ -95,7 +95,7 @@ class Algorithm(Base):
 
     def __str__(self) -> str:
         """Return a simple string representation of the Algorithm.
-        
+
         Returns
         -------
         str

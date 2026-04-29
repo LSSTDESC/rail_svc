@@ -1,0 +1,87 @@
+"""Database model for CatalogTag table"""
+
+
+from pydantic import BaseModel
+from sqlalchemy import String
+from sqlalchemy.orm import Mapped, mapped_column
+
+from .. import models
+from .base import Base
+
+
+class Band(Base):
+    """Catalog tag
+
+
+    Attributes
+    ----------
+    id : int
+        Primary key, auto-incrementing unique identifier
+    name : str
+        Unique name for this base tag (e.g., 'lsst_u')
+
+    Examples
+    --------
+    >>> tag = Band(
+    ...     name="production_models",
+    ...     metadata={"environment": "prod", "team": "ml-ops"}
+    ... )
+    """
+
+    __tablename__ = "band"
+
+    # Primary key
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    # Unique name for this catalog tag
+    name: Mapped[str] = mapped_column(String(255), index=True, unique=True)
+
+    # Wavelength grid
+    band_wavelengths: Mapped[list[float]] = Field(..., description="Wavelengths for band transmission grid")
+
+    #: Transmission at given wavelengths
+    band_transmission: Mapped[list[float]] = Field(..., description="Transmission at given wavelengths")
+
+
+    # Pydantic integration
+    @classmethod
+    def pydantic_model_class(cls) -> type[BaseModel]:
+        """Return the Pydantic model class for serialization/validation.
+
+        Returns
+        -------
+        type[BaseModel]
+            The Pydantic model class for Band
+        """
+        return models.Band
+
+    @classmethod
+    def class_string(cls) -> str:
+        """Return the class identifier string.
+
+        Returns
+        -------
+        str
+            The string 'band' for use in help functions and descriptions
+        """
+        return cls.__tablename__
+
+    def __repr__(self) -> str:
+        """Return a detailed string representation of the Band.
+
+        Returns
+        -------
+        str
+            String showing id, name, and description
+        """
+        return f"Band(id={self.id}, name='{self.name}')"
+
+    def __str__(self) -> str:
+        """Return a simple string representation of the Band.
+
+        Returns
+        -------
+        str
+            Just the bad name
+        """
+        return self.name

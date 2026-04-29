@@ -8,16 +8,9 @@ from pydantic import BaseModel, ConfigDict, Field
 class CatalogBandAssocBase(BaseModel):
     """CatalogBandAssoc parameters that are in DB tables and also used to create new rows"""
 
-    #: Five sigma limiting magnitude for this Band in this Catalog
-    limiting_mag: float = Field(
-        ...,
-        description="Five sigma limiting magnitude for this Band in the Catalog",
-        gt=0,
-    )
-
     #: What the band is called in the catalog tag
     band_alias: str = Field(..., description="Name given to Band in the Catalog")
-    
+
 
 class CatalogBandAssocCreate(CatalogBandAssocBase):
     """CatalogBandAssoc Parameters that are used to create new rows but not in DB tables"""
@@ -43,7 +36,7 @@ class CatalogBandAssoc(CatalogBandAssocBase):
         "id",
         "catalog_tag_id",
         "band_id",
-        "limiting_mag",
+        "band_alias",
     ]
 
     #: primary key

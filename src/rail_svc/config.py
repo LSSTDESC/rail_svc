@@ -12,6 +12,40 @@ __all__ = ["Configuration", "config"]
 load_dotenv()
 
 
+class WebInterfaceConfiguration(BaseModel):
+    """Configuration for web client"""
+
+    default_page_size: int = Field(
+        description="Default page size for pagination",
+        default=100,
+    )
+
+    max_page_size : int = Field(
+        description="Max page size for pagination",
+        default=1000,
+    )
+
+    default_batch_size: int = Field(
+        description="Default size for batch operations",
+        default=1000,
+    )
+
+    max_batch_size : int = Field(
+        description="Max size for batch operations",
+        default=10000,
+    )
+
+    default_timeout: float = Field(
+        description="Default query timeout (seconds)",
+        default=30.,
+    )
+
+    stream_timeout: float = Field(
+        description="Default streaming timeout (seconds)",
+        default=60.,
+    )
+
+
 class AsgiConfiguration(BaseModel):
     """Configuration for the application's ASGI web server."""
 
@@ -180,6 +214,7 @@ class Configuration(BaseSettings):
     )
 
     # Nested Models
+    web_interface: WebInterfaceConfiguration = WebInterfaceConfiguration()
     asgi: AsgiConfiguration = AsgiConfiguration()
     daemon: DaemonConfiguration = DaemonConfiguration()
     db: DatabaseConfiguration = DatabaseConfiguration()
