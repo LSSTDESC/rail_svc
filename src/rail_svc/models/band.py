@@ -50,9 +50,9 @@ class Band(BandBase):
 
     #: column names to use when printing the table
     col_names_for_table: ClassVar[list[str]] = [
-        "id",
+        "id_",
         "name",
     ]
 
     #: primary key
-    id: int = Field(..., gt=0)
+    id_: int = Field(..., gt=0)

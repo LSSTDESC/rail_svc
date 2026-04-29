@@ -33,17 +33,17 @@ class CatalogBandAssoc(CatalogBandAssocBase):
 
     #: column names to use when printing the table
     col_names_for_table: ClassVar[list[str]] = [
-        "id",
+        "id_",
         "catalog_tag_id",
         "band_id",
         "band_alias",
     ]
 
     #: primary key
-    id: int = Field(..., gt=0)
+    id_: int = Field(..., gt=0)
 
     #: foreign key into catalog_tag table
-    catalog_tag_id: int = Field(..., gt=0, description="Foreign key referencing CatalogTag.id")
+    catalog_tag_id: int = Field(..., gt=0, description="Foreign key referencing CatalogTag.id_")
 
     #: foreign key into band table
-    band_id: int = Field(..., gt=0, description="Foreign key referencing Band.id")
+    band_id: int = Field(..., gt=0, description="Foreign key referencing Band.id_")

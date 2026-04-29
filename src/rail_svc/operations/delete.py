@@ -11,11 +11,10 @@ All operations support both local and remote execution.
 
 from __future__ import annotations
 
-import click
-
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
+import click
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, status
 from httpx import HTTPError, TimeoutException
 from pydantic import BaseModel, Field, TypeAdapter
@@ -24,19 +23,16 @@ from safir.dependencies.db_session import db_session_dependency
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncEngine, async_scoped_session
 from structlog import get_logger
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
+                      wait_exponential)
+
+from .. import db_funcs
+from ..cli import common_options
+from ..cli.utils import handle_cli_error
+from .base import BaseOperation, build_url, output_json
 
 if TYPE_CHECKING:
     from .client import ClientBase
-
-from ... import db_funcs
-from ..cli import common_options
-from ..cli.utils import handle_cli_error
-from .base import (
-    BaseOperation,
-    output_json,
-    build_url,
-)
 
 logger = get_logger(__name__)
 
@@ -46,7 +42,7 @@ class DeleteResponse(BaseModel):
     """Response model for single row deletion."""
 
     success: bool = Field(..., description="Whether deletion succeeded")
-    id: int = Field(..., description="ID of deleted record")
+    id_: int = Field(..., description="ID of deleted record")
     resource: str = Field(..., description="Resource type")
     data: dict[str, Any] | None = Field(None, description="Deleted row data if captured")
 
@@ -54,9 +50,9 @@ class DeleteResponse(BaseModel):
         "json_schema_extra": {
             "example": {
                 "success": True,
-                "id": 123,
+                "id_": 123,
                 "resource": "users",
-                "data": {"id": 123, "username": "alice", "email": "alice@example.com"},
+                "data": {"id_": 123, "username": "alice", "email": "alice@example.com"},
             }
         }
     }
@@ -122,19 +118,19 @@ class DeleteRowOperation[T: BaseModel](BaseOperation[T]):
         async def command(
             db_engine: Callable[[], AsyncEngine],
             output: common_options.OutputEnum | None,
-            id: int,
+            id_: int,
             *,
             capture_data: bool,
             confirm: bool,
         ) -> None:
             """Delete a single row by ID."""
-            if id <= 0:
+            if id_ <= 0:
                 click.echo("Error: ID must be positive", err=True)
                 raise click.Abort()
 
             # Confirmation prompt unless --confirm flag
             if not confirm:
-                if not click.confirm(f"Are you sure you want to delete {ctx.router_string} {id}?"):
+                if not click.confirm(f"Are you sure you want to delete {ctx.router_string} {id_}?"):
                     click.echo("Deletion cancelled", err=True)
                     raise click.Abort()
 
@@ -143,29 +139,29 @@ class DeleteRowOperation[T: BaseModel](BaseOperation[T]):
                     result = await db_funcs.delete.delete_row(
                         ctx.db_class,
                         session,
-                        id,
+                        id_,
                         capture_data=capture_data,
                     )
 
                     response = {
                         "success": True,
-                        "id": id,
+                        "id_": id_,
                         "resource": ctx.router_string,
                         "data": result,
                     }
 
                     output_json(response, output)
-                    click.echo(f"Successfully deleted {ctx.router_string} {id}", err=True)
+                    click.echo(f"Successfully deleted {ctx.router_string} {id_}", err=True)
 
             except KeyError as exc:
                 click.echo(f"Error: {exc}", err=True)
                 raise click.Abort()
             except IntegrityError as exc:
                 logger.error(
-                    "Integrity constraint violation", db_class=ctx.db_class.__name__, id=id, error=str(exc)
+                    "Integrity constraint violation", db_class=ctx.db_class.__name__, id_=id_, error=str(exc)
                 )
                 click.echo(
-                    f"Error: Cannot delete {ctx.router_string} {id} - " "it is referenced by other records",
+                    f"Error: Cannot delete {ctx.router_string} {id_} - " "it is referenced by other records",
                     err=True,
                 )
                 raise click.Abort()
@@ -173,7 +169,7 @@ class DeleteRowOperation[T: BaseModel](BaseOperation[T]):
                 raise
             except Exception as exc:
                 logger.error(
-                    "Error deleting row", db_class=ctx.db_class.__name__, id=id, error=str(exc), exc_info=True
+                    "Error deleting row", db_class=ctx.db_class.__name__, id_=id_, error=str(exc), exc_info=True
                 )
                 click.echo(f"Error: {exc}", err=True)
                 raise click.Abort()
@@ -184,14 +180,14 @@ class DeleteRowOperation[T: BaseModel](BaseOperation[T]):
         ctx = self.ctx
 
         @router.delete(
-            f"/{ctx.name}/{{id}}",
+            f"/{ctx.name}/{{id_}}",
             response_model=DeleteResponse,
             status_code=status.HTTP_200_OK,
             summary=f"Delete {ctx.router_string} by ID",
             description=f"Delete a single {ctx.router_string} record. Supports pre/post-delete hooks.",
         )
         async def endpoint(
-            id: int = Path(..., description="Record ID to delete", gt=0),
+            id_: int = Path(..., description="Record ID to delete", gt=0),
             *,
             capture_data: bool = Body(
                 default=False, description="Capture row data before deletion", embed=True
@@ -204,13 +200,13 @@ class DeleteRowOperation[T: BaseModel](BaseOperation[T]):
                     result = await db_funcs.delete.delete_row(
                         ctx.db_class,
                         session,
-                        id,
+                        id_,
                         capture_data=capture_data,
                     )
 
                     return DeleteResponse(
                         success=True,
-                        id=id,
+                        id_=id_,
                         resource=ctx.router_string,
                         data=result,
                     )
@@ -219,15 +215,15 @@ class DeleteRowOperation[T: BaseModel](BaseOperation[T]):
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
             except IntegrityError as exc:
                 logger.error(
-                    "Integrity constraint violation", db_class=ctx.db_class.__name__, id=id, error=str(exc)
+                    "Integrity constraint violation", db_class=ctx.db_class.__name__, id_=id_, error=str(exc)
                 )
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
-                    detail=f"Cannot delete {ctx.router_string} {id} - " "it is referenced by other records",
+                    detail=f"Cannot delete {ctx.router_string} {id_} - " "it is referenced by other records",
                 ) from exc
             except Exception as exc:
                 logger.error(
-                    "Database error", db_class=ctx.db_class.__name__, id=id, error=str(exc), exc_info=True
+                    "Database error", db_class=ctx.db_class.__name__, id_=id_, error=str(exc), exc_info=True
                 )
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Database error: {str(exc)}"
@@ -246,7 +242,7 @@ class DeleteRowOperation[T: BaseModel](BaseOperation[T]):
         )
         def client_method(
             client_object: ClientBase,
-            id: int,
+            id_: int,
             *,
             capture_data: bool = False,
             timeout: float = common_options.DEFAULT_TIMEOUT,
@@ -258,7 +254,7 @@ class DeleteRowOperation[T: BaseModel](BaseOperation[T]):
             ----------
             client_object
                 HTTP client object with a .client attribute (httpx.Client)
-            id
+            id_
                 Record ID to delete
             capture_data
                 Whether to capture row data before deletion
@@ -279,10 +275,10 @@ class DeleteRowOperation[T: BaseModel](BaseOperation[T]):
             ValidationError
                 If response validation fails
             """
-            query_url = build_url(ctx.router_string, ctx.name, str(id))
+            query_url = build_url(ctx.router_string, ctx.name, str(id_))
 
             try:
-                logger.debug("Deleting row by ID", url=query_url, id=id)
+                logger.debug("Deleting row by ID", url=query_url, id_=id_)
 
                 response = client_object.client.delete(
                     query_url,
@@ -292,25 +288,25 @@ class DeleteRowOperation[T: BaseModel](BaseOperation[T]):
                 response.raise_for_status()
 
                 result = response_adapter.validate_python(response.json())
-                logger.debug("Successfully deleted row", id=id)
+                logger.debug("Successfully deleted row", id_=id_)
 
                 return result
 
             except HTTPError as exc:
                 if hasattr(exc, "response"):
                     if exc.response.status_code == 404:
-                        error_msg = f"{ctx.router_string} with ID {id} not found"
-                        logger.warning("Record not found", id=id, url=query_url)
+                        error_msg = f"{ctx.router_string} with ID {id_} not found"
+                        logger.warning("Record not found", id_=id_, url=query_url)
                         raise ValueError(error_msg) from exc
-                    elif exc.response.status_code == 409:
-                        error_msg = f"Cannot delete {ctx.router_string} {id} - integrity constraint"
-                        logger.warning("Integrity violation", id=id, url=query_url)
+                    if exc.response.status_code == 409:
+                        error_msg = f"Cannot delete {ctx.router_string} {id_} - integrity constraint"
+                        logger.warning("Integrity violation", id_=id_, url=query_url)
                         raise ValueError(error_msg) from exc
 
-                logger.error("HTTP error deleting row", url=query_url, id=id, error=str(exc))
+                logger.error("HTTP error deleting row", url=query_url, id_=id_, error=str(exc))
                 raise
             except CoreValidationError as exc:
-                logger.error("Validation error parsing response", url=query_url, id=id, error=str(exc))
+                logger.error("Validation error parsing response", url=query_url, id_=id_, error=str(exc))
                 raise
 
         return client_method
@@ -329,28 +325,28 @@ class DeleteRowOperation[T: BaseModel](BaseOperation[T]):
         def command(
             client_object: ClientBase,
             output: common_options.OutputEnum | None,
-            id: int,
+            id_: int,
             *,
             capture_data: bool,
             confirm: bool,
             timeout: float,
         ) -> None:
             """Delete a single row by ID from remote API."""
-            if id <= 0:
+            if id_ <= 0:
                 click.echo("Error: ID must be positive", err=True)
                 raise click.Abort()
 
             # Confirmation prompt unless --confirm flag
             if not confirm:
-                if not click.confirm(f"Are you sure you want to delete {ctx.router_string} {id}?"):
+                if not click.confirm(f"Are you sure you want to delete {ctx.router_string} {id_}?"):
                     click.echo("Deletion cancelled", err=True)
                     raise click.Abort()
 
             try:
-                result = client_method(client_object, id, capture_data=capture_data, timeout=timeout)
+                result = client_method(client_object, id_, capture_data=capture_data, timeout=timeout)
 
                 output_json(result.model_dump(), output)
-                click.echo(f"Successfully deleted {ctx.router_string} {id}", err=True)
+                click.echo(f"Successfully deleted {ctx.router_string} {id_}", err=True)
 
             except Exception as exc:
                 handle_cli_error(exc, "delete", ctx.router_string)
@@ -401,7 +397,7 @@ class DeleteRowsOperation[T: BaseModel](BaseOperation[T]):
                 click.echo("Error: Must provide at least one ID", err=True)
                 raise click.Abort()
 
-            if any(id <= 0 for id in id_list):
+            if any(id_ <= 0 for id_ in id_list):
                 click.echo("Error: All IDs must be positive", err=True)
                 raise click.Abort()
 
@@ -605,11 +601,11 @@ class DeleteRowsOperation[T: BaseModel](BaseOperation[T]):
                         error_msg = f"One or more {ctx.router_string} not found"
                         logger.warning("Records not found", url=query_url)
                         raise ValueError(error_msg) from exc
-                    elif exc.response.status_code == 409:
+                    if exc.response.status_code == 409:
                         error_msg = "Cannot delete - integrity constraint violation"
                         logger.warning("Integrity violation", url=query_url)
                         raise ValueError(error_msg) from exc
-                    elif exc.response.status_code == 400:
+                    if exc.response.status_code == 400:
                         error_msg = "Invalid request"
                         logger.warning("Bad request", url=query_url)
                         raise ValueError(error_msg) from exc
@@ -651,7 +647,7 @@ class DeleteRowsOperation[T: BaseModel](BaseOperation[T]):
                 click.echo("Error: Must provide at least one ID", err=True)
                 raise click.Abort()
 
-            if any(id <= 0 for id in id_list):
+            if any(id_ <= 0 for id_ in id_list):
                 click.echo("Error: All IDs must be positive", err=True)
                 raise click.Abort()
 
@@ -723,7 +719,7 @@ class BulkDeleteRowsOperation[T: BaseModel](BaseOperation[T]):
                 click.echo("Error: Must provide at least one ID", err=True)
                 raise click.Abort()
 
-            if any(id <= 0 for id in id_list):
+            if any(id_ <= 0 for id_ in id_list):
                 click.echo("Error: All IDs must be positive", err=True)
                 raise click.Abort()
 
@@ -926,7 +922,7 @@ class BulkDeleteRowsOperation[T: BaseModel](BaseOperation[T]):
                         error_msg = "Cannot delete - integrity constraint violation"
                         logger.warning("Integrity violation", url=query_url)
                         raise ValueError(error_msg) from exc
-                    elif exc.response.status_code == 400:
+                    if exc.response.status_code == 400:
                         error_msg = "Invalid request"
                         logger.warning("Bad request", url=query_url)
                         raise ValueError(error_msg) from exc
@@ -966,7 +962,7 @@ class BulkDeleteRowsOperation[T: BaseModel](BaseOperation[T]):
                 click.echo("Error: Must provide at least one ID", err=True)
                 raise click.Abort()
 
-            if any(id <= 0 for id in id_list):
+            if any(id_ <= 0 for id_ in id_list):
                 click.echo("Error: All IDs must be positive", err=True)
                 raise click.Abort()
 

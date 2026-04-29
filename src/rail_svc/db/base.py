@@ -4,7 +4,6 @@ This module provides the declarative base class for all ORM models,
 with consistent schema configuration and naming conventions.
 """
 
-from abc import abstractmethod
 from typing import Any, ClassVar, TypeVar
 
 from pydantic import BaseModel
@@ -41,7 +40,8 @@ class Base(DeclarativeBase):
     """
 
     metadata: ClassVar[MetaData] = MetaData(
-        schema=config.db.table_schema or None, naming_convention=NAMING_CONVENTION
+        schema=config.db.table_schema if config.db.table_schema else None,
+        naming_convention=NAMING_CONVENTION
     )
 
     @classmethod
@@ -56,7 +56,23 @@ class Base(DeclarativeBase):
         return cls.__name__
 
     @classmethod
-    @abstractmethod
+    def pydantic_create_class(cls) -> type[BaseModel]:
+        """Pydantic model used to create rows in this table.
+
+        Subclasses must implement this to specify their associated
+        Pydantic model for creation.
+
+        Returns
+        -------
+        type[BaseModel]
+            The Pydantic model class
+        """
+        raise NotImplementedError(
+            f"{cls.__name__} must implement pydantic_create_class() "
+            f"to return a Pydantic model for row creation"
+        )
+
+    @classmethod
     def pydantic_model_class(cls) -> type[BaseModel]:
         """Pydantic model class for this table.
 
@@ -68,43 +84,10 @@ class Base(DeclarativeBase):
         type[BaseModel]
             The Pydantic model class
         """
-        ...
-
-    @classmethod
-    async def get_create_kwargs(
-        cls: type[T],
-        session: async_scoped_session,
-        **kwargs: Any,
-    ) -> dict[str, Any]:
-        """Get additional keywords needed to create a row.
-
-        This can be overridden by subclasses to add computed fields,
-        foreign key lookups, or other preprocessing before row creation.
-
-        The default implementation returns the input unchanged.
-
-        Parameters
-        ----------
-        session
-            DB session manager
-        **kwargs
-            Original column names and values for the new row
-
-        Returns
-        -------
-        dict[str, Any]
-            Keywords needed to create a new row (may include additional fields)
-
-        Examples
-        --------
-        >>> class User(Base):
-        ...     @classmethod
-        ...     async def get_create_kwargs(cls, session, **kwargs):
-        ...         # Add computed field
-        ...         kwargs['full_name'] = f"{kwargs['first']} {kwargs['last']}"
-        ...         return kwargs
-        """
-        return kwargs
+        raise NotImplementedError(
+            f"{cls.__name__} must implement pydantic_model_class() "
+            f"to return a Pydantic model for row serialization/validation"
+        )
 
     @classmethod
     def get_pagination_limit(cls) -> int:
@@ -122,8 +105,8 @@ class Base(DeclarativeBase):
     @classmethod
     async def pre_delete_hook(
         cls: type[T],
-        _session: async_scoped_session,
-        _row: T,
+        session: async_scoped_session,  # pylint: disable=unused-argument
+        row: T,  # pylint: disable=unused-argument
     ) -> None:
         """Hook called during delete_row, BEFORE deletion
 
@@ -136,20 +119,20 @@ class Base(DeclarativeBase):
 
         Parameters
         ----------
-        _session
+        session
             DB session manager
 
-        _row
+        row
             The row object that will be deleted (with all fields accessible)
         """
-        return
+        return None
 
     @classmethod
     async def after_delete_hook(
         cls: type[T],
-        _session: async_scoped_session,
-        _row_id: int,
-        _deleted_row_data: dict[str, Any] | None = None,
+        session: async_scoped_session,  # pylint: disable=unused-argument
+        row_id: int,  # pylint: disable=unused-argument
+        deleted_row_data: dict[str, Any] | None = None,  # pylint: disable=unused-argument
     ) -> None:
         """Hook called during delete_row, AFTER successful deletion
 
@@ -171,13 +154,13 @@ class Base(DeclarativeBase):
 
         Parameters
         ----------
-        _session
+        session
             DB session manager
 
-        _row_id
+        row_id
             The ID of the row that was deleted
 
-        _deleted_row_data
+        deleted_row_data
             Optional dictionary containing the row data before deletion.
             This is useful if you need to access field values after the
             row is deleted.
@@ -205,12 +188,130 @@ class Base(DeclarativeBase):
         - This hook runs AFTER deletion, so the row is no longer in the database
         - Any exceptions raised will roll back the entire transaction
         - For operations that should succeed even if the hook fails, use try/except
+        - **Hook implementations should be idempotent** where possible
         - This is called within the same transaction as the delete operation
         """
-        return
+        return None
+
+    @classmethod
+    async def pre_create_hook(
+        cls: type[T],
+        session: async_scoped_session,  # pylint: disable=unused-argument
+        data: dict[str, Any],  # pylint: disable=unused-argument
+    ) -> dict[str, Any]:
+        """Hook called during create_row, BEFORE row creation.
+
+        Subclasses can override this to:
+        - Validate or transform input data
+        - Add computed/derived fields
+        - Perform authorization checks
+        - Look up foreign key values
+
+        This is called within the transaction but before the row is
+        instantiated, so any errors raised here will prevent creation.
+
+        Parameters
+        ----------
+        session
+            DB session manager for performing additional queries
+        data
+            Dictionary of field names and values for the new row.
+            Can be modified before returning.
+
+        Returns
+        -------
+        dict[str, Any]
+            Modified or unchanged data dictionary used to create the row.
+            The returned dict is what actually gets passed to the model constructor.
+
+        Examples
+        --------
+        >>> class User(Base):
+        ...     @classmethod
+        ...     async def pre_create_hook(cls, session, data):
+        ...         # Add computed field
+        ...         if 'email' in data:
+        ...             data['email_lower'] = data['email'].lower()
+        ...
+        ...         # Add timestamp
+        ...         data['registered_at'] = datetime.utcnow()
+        ...
+        ...         # Validate business rules
+        ...         if data.get('age', 0) < 18:
+        ...             raise ValueError("Users must be 18 or older")
+        ...
+        ...         return data
+
+        Notes
+        -----
+        - This hook runs BEFORE row creation
+        - Must return the data dictionary (possibly modified)
+        - Any exceptions raised will prevent row creation
+        - This is called within the same transaction as the create operation
+        """
+        return data
+
+    @classmethod
+    async def after_create_hook(
+        cls: type[T],
+        session: async_scoped_session,  # pylint: disable=unused-argument
+        row: T,  # pylint: disable=unused-argument
+    ) -> None:
+        """Hook called during create_row, AFTER successful creation.
+
+        Subclasses can override this to perform operations after the row
+        is created and flushed to the database, such as:
+        - Creating related records
+        - Updating caches
+        - Sending notifications
+        - Logging/auditing
+        - Triggering background tasks
+
+        This hook is called AFTER the row has been flushed to the database
+        (so it has an ID and all database-generated values) but before the
+        transaction commits. If this hook raises an exception, the entire
+        transaction (including the create) will be rolled back.
+
+        Parameters
+        ----------
+        session
+            DB session manager for performing additional database operations
+        row
+            The newly created row object with all fields populated,
+            including database-generated values like auto-increment IDs
+
+        Examples
+        --------
+        >>> class User(Base):
+        ...     @classmethod
+        ...     async def after_create_hook(cls, session, row):
+        ...         # Create default user preferences
+        ...         prefs = UserPreferences(user_id=row.id)
+        ...         async with session() as s:
+        ...             s.add(prefs)
+        ...             await s.flush()
+        ...
+        ...         # Warm cache
+        ...         await cache.set(f"user:{row.id}", row.to_dict())
+        ...
+        ...         # Send welcome email (non-blocking)
+        ...         await queue.enqueue('send_welcome_email', user_id=row.id)
+        ...
+        ...         # Audit log
+        ...         await audit_log.record_creation("User", row.id, row.email)
+
+        Notes
+        -----
+        - This hook runs AFTER creation and flush, so row.id is available
+        - Any exceptions raised will roll back the entire transaction
+        - For operations that shouldn't block creation, use try/except
+        - **Hook implementations should be idempotent** where possible
+        - This is called within the same transaction as the create operation
+        """
+        return None
 
 
-def ensure_base_inheritance(cls: type) -> None:
+def ensure_base_inheritance(cls: type[Any]) -> None:
     """Raise TypeError if a class does not inherit from Base.
 
     Parameters

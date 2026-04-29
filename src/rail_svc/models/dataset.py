@@ -42,7 +42,7 @@ class Dataset(DatasetBase):
 
     #: column names to use when printing the table
     col_names_for_table: ClassVar[list[str]] = [
-        "id",
+        "id_",
         "name",
         "n_objects",
         "catalog_tag_id",
@@ -50,7 +50,7 @@ class Dataset(DatasetBase):
     ]
 
     #: primary key
-    id: int = Field(..., gt=0)
+    id_: int = Field(..., gt=0)
 
     #: foreign key into catalog_tag table
-    catalog_tag_id: int = Field(..., gt=0, description="Foreign key referencing CatalogTag.id")
+    catalog_tag_id: int = Field(..., gt=0, description="Foreign key referencing CatalogTag.id_")

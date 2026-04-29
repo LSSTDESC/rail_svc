@@ -45,12 +45,11 @@ Set these in your config module::
 from __future__ import annotations
 
 import json
-import click
-
 from collections.abc import AsyncGenerator, Callable, Sequence
 from typing import TYPE_CHECKING
 from urllib.parse import quote
 
+import click
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from fastapi.responses import StreamingResponse
 from httpx import HTTPError, TimeoutException
@@ -59,16 +58,18 @@ from pydantic_core import ValidationError as CoreValidationError
 from safir.dependencies.db_session import db_session_dependency
 from sqlalchemy.ext.asyncio import AsyncEngine, async_scoped_session
 from structlog import get_logger
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
+                      wait_exponential)
+
+from .. import db_funcs
+from ..cli import common_options
+from ..cli.utils import handle_cli_error
+from ..config import config as global_config
+from .base import (BaseOperation, OperationContext, build_url,
+                   output_pydantic_list, output_pydantic_single)
 
 if TYPE_CHECKING:
     from .client import ClientBase
-
-from ... import db_funcs
-from ...config import config as global_config
-from ..cli import common_options
-from ..cli.utils import handle_cli_error
-from .base import BaseOperation, OperationContext, build_url, output_pydantic_list, output_pydantic_single
 
 logger = get_logger(__name__)
 
@@ -385,13 +386,13 @@ class GetRowByIdOperation[T: BaseModel](BaseOperation[T]):
     >>> op.create_router_endpoint(router)
     """
 
-    def __init__(self, context: OperationContext[T], id_field: str = "id") -> None:
+    def __init__(self, context: OperationContext[T], id_field: str = "id_") -> None:
         """
         Initialize operation with ID field specification.
 
         Args:
             context: Operation context
-            id_field: Name of the ID field in the database (default: "id")
+            id_field: Name of the ID field in the database (default: "id_")
                      Note: Currently not used by db_funcs but reserved for future use
         """
         super().__init__(context)
@@ -403,28 +404,28 @@ class GetRowByIdOperation[T: BaseModel](BaseOperation[T]):
         @group.command(name=f"get-{ctx.name}", help=f"Get single {ctx.router_string} by ID")
         @common_options.db_engine()
         @common_options.output()
-        @click.argument("id", type=int)
+        @common_options.id_arg()
         async def command(
             db_engine: Callable[[], AsyncEngine],
             output: common_options.OutputEnum | None,
-            id: int,
+            id_: int,
         ) -> None:
             """Get a single row by ID."""
-            if id <= 0:
+            if id_ <= 0:
                 click.echo("Error: ID must be positive", err=True)
                 raise click.Abort()
 
             try:
                 async with db_engine().begin() as session:
-                    result = await db_funcs.read.get_row_by_id(
+                    result = await db_funcs.read.get_row(
                         ctx.db_class,
                         session,
-                        id,
+                        id_,
                     )
 
                     if result is None:
                         click.echo(
-                            f"Error: {ctx.router_string} with ID {id} not found",
+                            f"Error: {ctx.router_string} with ID {id_} not found",
                             err=True
                         )
                         raise click.Abort()
@@ -437,7 +438,7 @@ class GetRowByIdOperation[T: BaseModel](BaseOperation[T]):
                 logger.error(
                     "Error fetching row",
                     db_class=ctx.db_class.__name__,
-                    id=id,
+                    id_=id_,
                     error=str(exc),
                     exc_info=True
                 )
@@ -451,28 +452,28 @@ class GetRowByIdOperation[T: BaseModel](BaseOperation[T]):
         ResponseModel = ctx.response_class
 
         @router.get(
-            f"/{ctx.name}/{{id}}",
+            f"/{ctx.name}/{{id_}}",
             response_model=ResponseModel,
             summary=f"Get {ctx.router_string} by ID",
             description=f"Retrieve a single {ctx.router_string} record by its ID.",
         )
         async def endpoint(
-            id: int = Path(..., description="Record ID", gt=0),
+            id_: int = Path(..., description="Record ID", gt=0),
             session: async_scoped_session = Depends(db_session_dependency),
         ) -> BaseModel:
             """Get a single row by ID."""
             try:
                 async with session.begin():
-                    result = await db_funcs.read.get_row_by_id(
+                    result = await db_funcs.read.get_row(
                         ctx.db_class,
                         session,
-                        id,
+                        id_,
                     )
 
                     if result is None:
                         raise HTTPException(
                             status_code=404,
-                            detail=f"{ctx.router_string} with ID {id} not found"
+                            detail=f"{ctx.router_string} with ID {id_} not found"
                         )
 
                     return result
@@ -483,7 +484,7 @@ class GetRowByIdOperation[T: BaseModel](BaseOperation[T]):
                 logger.error(
                     "Database error",
                     db_class=ctx.db_class.__name__,
-                    id=id,
+                    id_=id_,
                     error=str(exc),
                     exc_info=True
                 )
@@ -505,7 +506,7 @@ class GetRowByIdOperation[T: BaseModel](BaseOperation[T]):
         )
         def client_method(
             client_object: ClientBase,
-            id: int,
+            id_: int,
             timeout: float = DEFAULT_TIMEOUT,
         ) -> BaseModel:
             """
@@ -515,7 +516,7 @@ class GetRowByIdOperation[T: BaseModel](BaseOperation[T]):
             ----------
             client_object
                 HTTP client object with a .client attribute (httpx.Client)
-            id
+            id_
                 Record ID to fetch
             timeout
                 Request timeout in seconds
@@ -534,29 +535,29 @@ class GetRowByIdOperation[T: BaseModel](BaseOperation[T]):
             ValidationError
                 If response validation fails
             """
-            query_url = build_url(ctx.router_string, ctx.name, str(id))
+            query_url = build_url(ctx.router_string, ctx.name, str(id_))
 
             try:
-                logger.debug("Fetching row by ID", url=query_url, id=id)
+                logger.debug("Fetching row by ID", url=query_url, id_=id_)
 
                 response = client_object.client.get(query_url, timeout=timeout)
                 response.raise_for_status()
 
                 result = response_adapter.validate_python(response.json())
-                logger.debug("Successfully fetched row", id=id)
+                logger.debug("Successfully fetched row", id_=id_)
 
                 return result
 
             except HTTPError as exc:
                 if hasattr(exc, 'response') and exc.response.status_code == 404:
-                    error_msg = f"{ctx.router_string} with ID {id} not found"
-                    logger.warning("Record not found", id=id, url=query_url)
+                    error_msg = f"{ctx.router_string} with ID {id_} not found"
+                    logger.warning("Record not found", id_=id_, url=query_url)
                     raise ValueError(error_msg) from exc
 
                 logger.error(
                     "HTTP error fetching row",
                     url=query_url,
-                    id=id,
+                    id_=id_,
                     error=str(exc)
                 )
                 raise
@@ -564,7 +565,7 @@ class GetRowByIdOperation[T: BaseModel](BaseOperation[T]):
                 logger.error(
                     "Validation error parsing response",
                     url=query_url,
-                    id=id,
+                    id_=id_,
                     error=str(exc)
                 )
                 raise
@@ -578,21 +579,21 @@ class GetRowByIdOperation[T: BaseModel](BaseOperation[T]):
         @group.command(name=f"get-{ctx.name}", help=f"Get {ctx.router_string} by ID")
         @common_options.pz_client()
         @common_options.output()
-        @click.argument("id", type=int)
+        @common_options.id_arg()
         @common_options.timeout()
         def command(
             client_object: ClientBase,
             output: common_options.OutputEnum | None,
-            id: int,
+            id_: int,
             timeout: float,
         ) -> None:
             """Get a single row by ID from remote API."""
-            if id <= 0:
+            if id_ <= 0:
                 click.echo("Error: ID must be positive", err=True)
                 raise click.Abort()
 
             try:
-                result = client_method(client_object, id, timeout=timeout)
+                result = client_method(client_object, id_, timeout=timeout)
                 output_pydantic_single(result, output, ctx.col_names_optional)
 
             except Exception as exc:
@@ -864,13 +865,13 @@ class GetRowOrNoneOperation[T: BaseModel](BaseOperation[T]):
     >>> result = await op.get_row(session, 123)  # Returns None if not found
     """
 
-    def __init__(self, context: OperationContext[T], id_field: str = "id") -> None:
+    def __init__(self, context: OperationContext[T], id_field: str = "id_") -> None:
         """
         Initialize operation with ID field specification.
 
         Args:
             context: Operation context
-            id_field: Name of the ID field in the database (default: "id")
+            id_field: Name of the ID field in the database (default: "id_")
                      Reserved for future use when db_funcs supports it
         """
         super().__init__(context)
@@ -885,14 +886,14 @@ class GetRowOrNoneOperation[T: BaseModel](BaseOperation[T]):
         )
         @common_options.db_engine()
         @common_options.output()
-        @click.argument("id", type=int)
+        @common_options.id_arg()
         async def command(
             db_engine: Callable[[], AsyncEngine],
             output: common_options.OutputEnum | None,
-            id: int,
+            id_: int,
         ) -> None:
             """Get a single row by ID, or nothing if not found."""
-            if id <= 0:
+            if id_ <= 0:
                 click.echo("Error: ID must be positive", err=True)
                 raise click.Abort()
 
@@ -901,12 +902,12 @@ class GetRowOrNoneOperation[T: BaseModel](BaseOperation[T]):
                     result = await db_funcs.read.get_row_or_none(
                         ctx.db_class,
                         session,
-                        id,
+                        id_,
                     )
 
                     if result is None:
                         click.echo(
-                            f"{ctx.router_string} with ID {id} not found",
+                            f"{ctx.router_string} with ID {id_} not found",
                             err=True
                         )
                         # Don't abort - this is expected behavior
@@ -918,7 +919,7 @@ class GetRowOrNoneOperation[T: BaseModel](BaseOperation[T]):
                 logger.error(
                     "Error fetching row",
                     db_class=ctx.db_class.__name__,
-                    id=id,
+                    id_=id_,
                     error=str(exc),
                     exc_info=True
                 )
@@ -932,14 +933,14 @@ class GetRowOrNoneOperation[T: BaseModel](BaseOperation[T]):
         ResponseModel = ctx.response_class
 
         @router.get(
-            f"/{ctx.name}/or-none/{{id}}",
+            f"/{ctx.name}/or-none/{{id_}}",
             response_model=ResponseModel | None,
             summary=f"Get {ctx.router_string} by ID or null",
             description=f"Retrieve a single {ctx.router_string} record by its ID "
                         "returning null if not found.",
         )
         async def endpoint(
-            id: int = Path(..., description="Record ID", gt=0),
+            id_: int = Path(..., description="Record ID", gt=0),
             session: async_scoped_session = Depends(db_session_dependency),
         ) -> BaseModel | None:
             """Get a single row by ID, or None if not found."""
@@ -948,7 +949,7 @@ class GetRowOrNoneOperation[T: BaseModel](BaseOperation[T]):
                     result = await db_funcs.read.get_row_or_none(
                         ctx.db_class,
                         session,
-                        id,
+                        id_,
                     )
 
                     return result
@@ -957,7 +958,7 @@ class GetRowOrNoneOperation[T: BaseModel](BaseOperation[T]):
                 logger.error(
                     "Database error",
                     db_class=ctx.db_class.__name__,
-                    id=id,
+                    id_=id_,
                     error=str(exc),
                     exc_info=True
                 )
@@ -979,7 +980,7 @@ class GetRowOrNoneOperation[T: BaseModel](BaseOperation[T]):
         )
         def client_method(
             client_object: ClientBase,
-            id: int,
+            id_: int,
             timeout: float = DEFAULT_TIMEOUT,
         ) -> BaseModel | None:
             """
@@ -989,7 +990,7 @@ class GetRowOrNoneOperation[T: BaseModel](BaseOperation[T]):
             ----------
             client_object
                 HTTP client object with a .client attribute (httpx.Client)
-            id
+            id_
                 Record ID to fetch
             timeout
                 Request timeout in seconds
@@ -1006,10 +1007,10 @@ class GetRowOrNoneOperation[T: BaseModel](BaseOperation[T]):
             ValidationError
                 If response validation fails
             """
-            query_url = build_url(ctx.router_string, ctx.name, "or-none", str(id))
+            query_url = build_url(ctx.router_string, ctx.name, "or-none", str(id_))
 
             try:
-                logger.debug("Fetching row by ID (or None)", url=query_url, id=id)
+                logger.debug("Fetching row by ID (or None)", url=query_url, id_=id_)
 
                 response = client_object.client.get(query_url, timeout=timeout)
                 response.raise_for_status()
@@ -1017,11 +1018,11 @@ class GetRowOrNoneOperation[T: BaseModel](BaseOperation[T]):
                 # Handle null response
                 json_data = response.json()
                 if json_data is None:
-                    logger.debug("Record not found", id=id)
+                    logger.debug("Record not found", id_=id_)
                     return None
 
                 result = response_adapter.validate_python(json_data)
-                logger.debug("Successfully fetched row", id=id)
+                logger.debug("Successfully fetched row", id_=id_)
 
                 return result
 
@@ -1029,7 +1030,7 @@ class GetRowOrNoneOperation[T: BaseModel](BaseOperation[T]):
                 logger.error(
                     "HTTP error fetching row",
                     url=query_url,
-                    id=id,
+                    id_=id_,
                     error=str(exc)
                 )
                 raise
@@ -1037,7 +1038,7 @@ class GetRowOrNoneOperation[T: BaseModel](BaseOperation[T]):
                 logger.error(
                     "Validation error parsing response",
                     url=query_url,
-                    id=id,
+                    id_=id_,
                     error=str(exc)
                 )
                 raise
@@ -1059,20 +1060,20 @@ class GetRowOrNoneOperation[T: BaseModel](BaseOperation[T]):
         def command(
             client_object: ClientBase,
             output: common_options.OutputEnum | None,
-            id: int,
+            id_: int,
             timeout: float,
         ) -> None:
             """Get a single row by ID from remote API, or nothing if not found."""
-            if id <= 0:
+            if id_ <= 0:
                 click.echo("Error: ID must be positive", err=True)
                 raise click.Abort()
 
             try:
-                result = client_method(client_object, id, timeout=timeout)
+                result = client_method(client_object, id_, timeout=timeout)
 
                 if result is None:
                     click.echo(
-                        f"{ctx.router_string} with ID {id} not found",
+                        f"{ctx.router_string} with ID {id_} not found",
                         err=True
                     )
                     # Don't abort - this is expected behavior
@@ -1542,11 +1543,10 @@ class StreamRowsOperation[T: BaseModel](BaseOperation[T]):
 
             if yield_records:
                 return _stream_generator()
-            else:
-                # Load all into memory
-                results = list(_stream_generator())
-                logger.info("Stream loaded into memory", total_records=len(results))
-                return results
+            # Load all into memory
+            results = list(_stream_generator())
+            logger.info("Stream loaded into memory", total_records=len(results))
+            return results
 
         return client_method
 
@@ -1587,7 +1587,7 @@ class StreamRowsOperation[T: BaseModel](BaseOperation[T]):
                         length=None,
                         label=f'Streaming {ctx.router_string}',
                         show_eta=False,
-                    ) as bar:
+                    ) as prog_bar:
                         for record in client_method(
                             client_object,
                             batch_size=batch_size,
@@ -1595,7 +1595,7 @@ class StreamRowsOperation[T: BaseModel](BaseOperation[T]):
                             yield_records=True,
                         ):
                             results.append(record)
-                            bar.update(1)
+                            prog_bar.update(1)
 
                     # Output after streaming complete
                     output_pydantic_list(results, output, ctx.col_names_optional)

@@ -3,7 +3,8 @@
 This module provides functions for updating existing database rows.
 """
 
-from typing import Any, Sequence
+from typing import Any
+from collections.abc import Sequence
 
 from sqlalchemy.exc import StatementError
 from sqlalchemy.ext.asyncio import async_scoped_session

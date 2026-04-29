@@ -33,17 +33,17 @@ class Estimates(EstimatesBase):
 
     #: column names to use when printing the table
     col_names_for_table: ClassVar[list[str]] = [
-        "id",
+        "id_",
         "estimator_id",
         "dataset_id",
         "qp_file_path",
     ]
 
     #: primary key
-    id: int = Field(..., gt=0)
+    id_: int = Field(..., gt=0)
 
     #: foreign key into estimator table
-    estimator_id: int = Field(..., gt=0, description="Foreign key referencing Estimator.id")
+    estimator_id: int = Field(..., gt=0, description="Foreign key referencing Estimator.id_")
 
     #: foreign key into dataset table
-    dataset_id: int = Field(..., gt=0, description="Foreign key referencing Dataset.id")
+    dataset_id: int = Field(..., gt=0, description="Foreign key referencing Dataset.id_")

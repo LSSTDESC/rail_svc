@@ -14,6 +14,7 @@ different access patterns and performance characteristics:
 from collections.abc import AsyncIterator, Sequence
 
 from sqlalchemy import select, func
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import async_scoped_session
 import structlog
 
@@ -304,3 +305,141 @@ async def count_rows(
 
     logger.debug("Row count", table=the_class.__name__, count=count)
     return count
+
+
+async def lookup_by_id_or_name(
+    the_class: type[T],
+    session: async_scoped_session,
+    id_: int | None,
+    name: str | None,
+    *,
+    need_object: bool = False,
+) -> tuple[int, T | None]:
+    """Look up a database record by ID or name.
+
+    This is a generic helper function for resolving foreign keys. It handles
+    the common pattern of accepting either an ID (fast) or a name (lookup required).
+
+    Parameters
+    ----------
+    the_class
+        The SQLAlchemy model class to look up
+    session
+        Database session
+    id_
+        Primary key ID if known (provide this OR name)
+    name
+        Record name to look up (provide this OR id_)
+    need_object
+        Whether to fetch and return the full object.
+        - If True: Always fetches the object and returns (id, object)
+        - If False and id_ provided: Returns (id, None) without database query
+        - If False and name provided: Must fetch to get ID, returns (id, object)
+
+    Returns
+    -------
+    tuple[int, T | None]
+        A tuple of (id, object) where:
+        - id: The primary key (always present)
+        - object: The database object (present if need_object=True or if looked up by name)
+
+    Raises
+    ------
+    ValueError
+        If neither id_ nor name provided, or if lookup fails
+
+    Examples
+    --------
+    Lookup by ID without fetching object:
+
+    >>> algo_id, algo_obj = await lookup_by_id_or_name(
+    ...     Algorithm,
+    ...     session,
+    ...     id_=123,
+    ...     name=None,
+    ...     need_object=False
+    ... )
+    >>> assert algo_id == 123
+    >>> assert algo_obj is None  # Not fetched
+
+    Lookup by ID with object:
+
+    >>> algo_id, algo_obj = await lookup_by_id_or_name(
+    ...     Algorithm,
+    ...     session,
+    ...     id_=123,
+    ...     name=None,
+    ...     need_object=True
+    ... )
+    >>> assert algo_id == 123
+    >>> assert algo_obj.name == "RandomForest"  # Object fetched
+
+    Lookup by name (always returns object):
+
+    >>> algo_id, algo_obj = await lookup_by_id_or_name(
+    ...     Algorithm,
+    ...     session,
+    ...     id_=None,
+    ...     name="RandomForest",
+    ...     need_object=False  # Ignored - must fetch to get ID
+    ... )
+    >>> assert algo_id == 123
+    >>> assert algo_obj is not None  # Always fetched when lookup by name
+
+    Notes
+    -----
+    When looking up by name, the object is always fetched (regardless of
+    need_object) because we need to get the ID. When looking up by ID and
+    need_object=False, no database query is made.
+    """
+    if id_ is None:
+        if name is None:
+            logger.error(
+                "Missing identifier for lookup",
+                table=the_class.__name__,
+            )
+            raise ValueError(f"Either 'id_' or 'name' must be provided for {the_class.__name__}")
+
+        # Look up by name - must fetch object to get ID
+        try:
+            the_object = await get_row_by_name(the_class, session, name)
+            logger.debug(
+                "Record found by name",
+                table=the_class.__name__,
+                name=name,
+                id=the_object.id_,
+            )
+            return the_object.id_, the_object
+        except NoResultFound:
+            logger.error(
+                "Record not found by name",
+                table=the_class.__name__,
+                name=name,
+            )
+            raise ValueError(f"{the_class.__name__} with name '{name}' not found") from None
+    else:
+        # Have ID - fetch object only if needed
+        if need_object:
+            try:
+                the_object = await get_row(the_class, session, id_)
+                logger.debug(
+                    "Record found by ID",
+                    table=the_class.__name__,
+                    id=id_,
+                )
+                return id_, the_object
+            except NoResultFound:
+                logger.error(
+                    "Record not found by ID",
+                    table=the_class.__name__,
+                    id=id_,
+                )
+                raise ValueError(f"{the_class.__name__} with ID {id_} not found") from None
+        else:
+            # Have ID and don't need object - return immediately
+            logger.debug(
+                "Using provided ID without fetching",
+                table=the_class.__name__,
+                id=id_,
+            )
+            return id_, None

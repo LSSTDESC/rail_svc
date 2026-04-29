@@ -38,6 +38,7 @@ dependencies = [
     "tenacity",
     "fastapi",
     "numpy",
+    "qp-prob",
 ]
 
 [project.optional-dependencies]
@@ -223,4 +224,4 @@ add-ignore = [
 
 [tool.pylint.'MESSAGES CONTROL']
 max-line-length = 120
-disable = "W0718, C0116, C0114, C0103, R0902, R0903, R0912, R0913, R0917, R0914, R0915, R0801, R1735"
+disable = "W0718, C0116, C0114, C0103, C0302, R0902, R0903, R0912, R0913, R0917, R0914, R0915, R0801, R1735"

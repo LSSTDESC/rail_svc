@@ -48,4 +48,3 @@ class ClientBase:
     def client(self) -> httpx.Client:
         """Return the httpx.Client"""
         return self._client
-

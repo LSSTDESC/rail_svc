@@ -13,29 +13,29 @@ All operations support both local and remote execution.
 from __future__ import annotations
 
 import json as json_lib
-import click
-
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
-import aiofiles
 
+import aiofiles
+import click
 from fastapi import APIRouter, Depends, HTTPException, status
 from httpx import HTTPError, TimeoutException
-from pydantic import BaseModel, Field, ValidationError, TypeAdapter
+from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 from pydantic_core import ValidationError as CoreValidationError
 from safir.dependencies.db_session import db_session_dependency
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncEngine, async_scoped_session
 from structlog import get_logger
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
+                      wait_exponential)
 
-if TYPE_CHECKING:
-    from .client import ClientBase
-
-from ... import db_funcs
+from .. import db_funcs
 from ..cli import common_options
 from ..cli.utils import handle_cli_error
 from .base import BaseOperation, build_url, output_json
+
+if TYPE_CHECKING:
+    from .client import ClientBase
 
 logger = get_logger(__name__)
 
@@ -321,7 +321,7 @@ class CreateRowOperation[T: BaseModel](BaseOperation[T]):
                         error_msg = "Validation failed"
                         logger.warning("Validation error", url=query_url)
                         raise ValueError(error_msg) from exc
-                    elif exc.response.status_code == 409:
+                    if exc.response.status_code == 409:
                         error_msg = "Integrity constraint violation (duplicate key, etc.)"
                         logger.warning("Integrity violation", url=query_url)
                         raise ValueError(error_msg) from exc
@@ -649,11 +649,11 @@ class CreateRowsOperation[T: BaseModel](BaseOperation[T]):
                         error_msg = "Validation failed"
                         logger.warning("Validation error", url=query_url)
                         raise ValueError(error_msg) from exc
-                    elif exc.response.status_code == 409:
+                    if exc.response.status_code == 409:
                         error_msg = "Integrity constraint violation"
                         logger.warning("Integrity violation", url=query_url)
                         raise ValueError(error_msg) from exc
-                    elif exc.response.status_code == 400:
+                    if exc.response.status_code == 400:
                         error_msg = "Invalid request"
                         logger.warning("Bad request", url=query_url)
                         raise ValueError(error_msg) from exc
@@ -691,7 +691,7 @@ class CreateRowsOperation[T: BaseModel](BaseOperation[T]):
             """Create multiple rows atomically from remote API."""
             # Load data
             try:
-                with open(json_file) as f:
+                with open(json_file, 'r', encoding='utf-8') as f:
                     rows_data = json_lib.load(f)
             except json_lib.JSONDecodeError as exc:
                 click.echo(f"Error: Invalid JSON file: {exc}", err=True)
@@ -796,7 +796,7 @@ class CreateRowsBatchedOperation[T: BaseModel](BaseOperation[T]):
                     with click.progressbar(
                         length=len(rows_data),
                         label=f"Creating {ctx.router_string}",
-                    ) as bar:
+                    ) as prog_bar:
                         results = await db_funcs.create.create_rows_batched(
                             ctx.db_class,
                             session,
@@ -804,7 +804,7 @@ class CreateRowsBatchedOperation[T: BaseModel](BaseOperation[T]):
                             validate=not no_validate,
                             batch_size=batch_size,
                         )
-                        bar.update(len(results))
+                        prog_bar.update(len(results))
 
                     # Convert to dicts
                     results_data = [
@@ -869,7 +869,7 @@ class CreateRowsBatchedOperation[T: BaseModel](BaseOperation[T]):
             batch_size: int = Field(
                 common_options.DEFAULT_BATCH_SIZE,
                 ge=1,
-                le=common_options.common_options.MAX_BATCH_SIZE,
+                le=common_options.MAX_BATCH_SIZE,
                 description="Records per batch",
             )
 
@@ -1060,7 +1060,7 @@ class CreateRowsBatchedOperation[T: BaseModel](BaseOperation[T]):
 
             # Load data
             try:
-                with open(json_file) as f:
+                with open(json_file, 'r', encoding='utf-8') as f:
                     rows_data = json_lib.load(f)
             except json_lib.JSONDecodeError as exc:
                 click.echo(f"Error: Invalid JSON file: {exc}", err=True)
@@ -1320,11 +1320,11 @@ class BulkInsertRowsOperation[T: BaseModel](BaseOperation[T]):
                         error_msg = "Validation failed"
                         logger.warning("Validation error", url=query_url)
                         raise ValueError(error_msg) from exc
-                    elif exc.response.status_code == 409:
+                    if exc.response.status_code == 409:
                         error_msg = "Integrity constraint violation"
                         logger.warning("Integrity violation", url=query_url)
                         raise ValueError(error_msg) from exc
-                    elif exc.response.status_code == 400:
+                    if exc.response.status_code == 400:
                         error_msg = "Invalid request"
                         logger.warning("Bad request", url=query_url)
                         raise ValueError(error_msg) from exc
@@ -1359,7 +1359,7 @@ class BulkInsertRowsOperation[T: BaseModel](BaseOperation[T]):
             """Bulk insert rows from remote API (maximum performance)."""
             # Load data
             try:
-                with open(json_file) as f:
+                with open(json_file, 'r', encoding='utf-8') as f:
                     rows_data = json_lib.load(f)
             except json_lib.JSONDecodeError as exc:
                 click.echo(f"Error: Invalid JSON file: {exc}", err=True)

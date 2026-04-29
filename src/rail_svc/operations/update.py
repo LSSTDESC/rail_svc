@@ -11,31 +11,30 @@ validation, error handling, and transaction management.
 
 from __future__ import annotations
 
-import click
-
+import json
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
+import aiofiles
+import click
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, status
 from httpx import HTTPError, TimeoutException
-import json
-import aiofiles
-
 from pydantic import BaseModel, Field, TypeAdapter, field_validator
 from pydantic_core import ValidationError as CoreValidationError
 from safir.dependencies.db_session import db_session_dependency
 from sqlalchemy.exc import StatementError
 from sqlalchemy.ext.asyncio import AsyncEngine, async_scoped_session
 from structlog import get_logger
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
+                      wait_exponential)
+
+from .. import db_funcs
+from ..cli import common_options
+from ..cli.utils import handle_cli_error
+from .base import BaseOperation, build_url, output_json
 
 if TYPE_CHECKING:
     from .client import ClientBase
-
-from ... import db_funcs
-from ..cli import common_options
-from ..cli.utils import handle_cli_error
-from .base import BaseOperation, output_json, build_url
 
 logger = get_logger(__name__)
 
@@ -45,7 +44,7 @@ class UpdateResponse(BaseModel):
     """Response model for single row update."""
 
     success: bool = Field(..., description="Whether update succeeded")
-    id: int = Field(..., description="ID of updated record")
+    id_: int = Field(..., description="ID of updated record")
     resource: str = Field(..., description="Resource type")
     updated_fields: list[str] = Field(..., description="List of fields that were updated")
     data: dict[str, Any] = Field(..., description="Complete updated record data")
@@ -53,11 +52,11 @@ class UpdateResponse(BaseModel):
     model_config = {"json_schema_extra": {
         "example": {
             "success": True,
-            "id": 123,
+            "id_": 123,
             "resource": "users",
             "updated_fields": ["username", "email"],
             "data": {
-                "id": 123,
+                "id_": 123,
                 "username": "new_username",
                 "email": "new@example.com",
                 "updated_at": "2025-01-01T12:00:00Z"
@@ -82,9 +81,9 @@ class UpdateMultipleResponse(BaseModel):
             "ids": [1, 2, 3],
             "resource": "users",
             "data": [
-                {"id": 1, "status": "active"},
-                {"id": 2, "status": "active"},
-                {"id": 3, "status": "inactive"}
+                {"id_": 1, "status": "active"},
+                {"id_": 2, "status": "active"},
+                {"id_": 3, "status": "inactive"}
             ]
         }
     }}
@@ -123,12 +122,12 @@ class UpdateRowOperation[T: BaseModel](BaseOperation[T]):
         async def command(
             db_engine: Callable[[], AsyncEngine],
             output: common_options.OutputEnum | None,
-            id: int,
+            id_: int,
             field: tuple[tuple[str, str], ...],
             json_data: str | None,
         ) -> None:
             """Update a single row by ID."""
-            if id <= 0:
+            if id_ <= 0:
                 click.echo("Error: ID must be positive", err=True)
                 raise click.Abort()
 
@@ -160,7 +159,7 @@ class UpdateRowOperation[T: BaseModel](BaseOperation[T]):
                     result = await db_funcs.update.update_row(
                         ctx.db_class,
                         session,
-                        id,
+                        id_,
                         **update_data,
                     )
 
@@ -172,7 +171,7 @@ class UpdateRowOperation[T: BaseModel](BaseOperation[T]):
 
                     response = {
                         "success": True,
-                        "id": id,
+                        "id_": id_,
                         "resource": ctx.router_string,
                         "updated_fields": list(update_data.keys()),
                         "data": result_dict,
@@ -180,7 +179,7 @@ class UpdateRowOperation[T: BaseModel](BaseOperation[T]):
 
                     output_json(response, output)
                     click.echo(
-                        f"Successfully updated {ctx.router_string} {id}",
+                        f"Successfully updated {ctx.router_string} {id_}",
                         err=True
                     )
 
@@ -194,7 +193,7 @@ class UpdateRowOperation[T: BaseModel](BaseOperation[T]):
                 logger.error(
                     "Invalid update statement",
                     db_class=ctx.db_class.__name__,
-                    id=id,
+                    id_=id_,
                     error=str(exc)
                 )
                 click.echo(
@@ -208,7 +207,7 @@ class UpdateRowOperation[T: BaseModel](BaseOperation[T]):
                 logger.error(
                     "Error updating row",
                     db_class=ctx.db_class.__name__,
-                    id=id,
+                    id_=id_,
                     error=str(exc),
                     exc_info=True
                 )
@@ -232,19 +231,19 @@ class UpdateRowOperation[T: BaseModel](BaseOperation[T]):
             @classmethod
             def validate_no_id_change(cls, v: dict[str, Any]) -> dict[str, Any]:
                 """Ensure ID is not being changed."""
-                if 'id' in v:
-                    raise ValueError("Cannot update 'id' field")
+                if 'id_' in v:
+                    raise ValueError("Cannot update 'id_' field")
                 return v
 
         @router.patch(
-            f"/{ctx.name}/{{id}}",
+            f"/{ctx.name}/{{id_}}",
             response_model=UpdateResponse,
             status_code=status.HTTP_200_OK,
             summary=f"Update {ctx.router_string} by ID",
             description=f"Update a single {ctx.router_string} record. Returns refreshed data.",
         )
         async def endpoint(
-            id: int = Path(..., description="Record ID to update", gt=0),
+            id_: int = Path(..., description="Record ID to update", gt=0),
             request: UpdateRequest = Body(...),
             session: async_scoped_session = Depends(db_session_dependency),
         ) -> UpdateResponse:
@@ -254,7 +253,7 @@ class UpdateRowOperation[T: BaseModel](BaseOperation[T]):
                     result = await db_funcs.update.update_row(
                         ctx.db_class,
                         session,
-                        id,
+                        id_,
                         **request.updates,
                     )
 
@@ -266,7 +265,7 @@ class UpdateRowOperation[T: BaseModel](BaseOperation[T]):
 
                     return UpdateResponse(
                         success=True,
-                        id=id,
+                        id_=id_,
                         resource=ctx.router_string,
                         updated_fields=list(request.updates.keys()),
                         data=result_dict,
@@ -286,7 +285,7 @@ class UpdateRowOperation[T: BaseModel](BaseOperation[T]):
                 logger.error(
                     "Invalid update statement",
                     db_class=ctx.db_class.__name__,
-                    id=id,
+                    id_=id_,
                     error=str(exc)
                 )
                 raise HTTPException(
@@ -297,7 +296,7 @@ class UpdateRowOperation[T: BaseModel](BaseOperation[T]):
                 logger.error(
                     "Database error",
                     db_class=ctx.db_class.__name__,
-                    id=id,
+                    id_=id_,
                     error=str(exc),
                     exc_info=True
                 )
@@ -319,7 +318,7 @@ class UpdateRowOperation[T: BaseModel](BaseOperation[T]):
         )
         def client_method(
             client_object: ClientBase,
-            id: int,
+            id_: int,
             updates: dict[str, Any],
             timeout: float = common_options.DEFAULT_TIMEOUT,
         ) -> UpdateResponse:
@@ -330,7 +329,7 @@ class UpdateRowOperation[T: BaseModel](BaseOperation[T]):
             ----------
             client_object
                 HTTP client object with a .client attribute (httpx.Client)
-            id
+            id_
                 Record ID to update
             updates
                 Dictionary of fields to update with their new values
@@ -354,13 +353,13 @@ class UpdateRowOperation[T: BaseModel](BaseOperation[T]):
             if not updates:
                 raise ValueError("updates cannot be empty")
 
-            if 'id' in updates:
-                raise ValueError("Cannot update 'id' field")
+            if 'id_' in updates:
+                raise ValueError("Cannot update 'id_' field")
 
-            query_url = build_url(ctx.router_string, ctx.name, str(id))
+            query_url = build_url(ctx.router_string, ctx.name, str(id_))
 
             try:
-                logger.debug("Updating row by ID", url=query_url, id=id, fields=list(updates.keys()))
+                logger.debug("Updating row by ID", url=query_url, id_=id_, fields=list(updates.keys()))
 
                 response = client_object.client.patch(
                     query_url,
@@ -370,29 +369,29 @@ class UpdateRowOperation[T: BaseModel](BaseOperation[T]):
                 response.raise_for_status()
 
                 result = response_adapter.validate_python(response.json())
-                logger.debug("Successfully updated row", id=id)
+                logger.debug("Successfully updated row", id_=id_)
 
                 return result
 
             except HTTPError as exc:
                 if hasattr(exc, 'response'):
                     if exc.response.status_code == 404:
-                        error_msg = f"{ctx.router_string} with ID {id} not found"
-                        logger.warning("Record not found", id=id, url=query_url)
+                        error_msg = f"{ctx.router_string} with ID {id_} not found"
+                        logger.warning("Record not found", id_=id_, url=query_url)
                         raise ValueError(error_msg) from exc
-                    elif exc.response.status_code == 400:
+                    if exc.response.status_code == 400:
                         error_msg = "Invalid update request"
-                        logger.warning("Bad request", id=id, url=query_url)
+                        logger.warning("Bad request", id_=id_, url=query_url)
                         raise ValueError(error_msg) from exc
-                    elif exc.response.status_code == 422:
+                    if exc.response.status_code == 422:
                         error_msg = "Invalid field or value in update"
-                        logger.warning("Unprocessable entity", id=id, url=query_url)
+                        logger.warning("Unprocessable entity", id_=id_, url=query_url)
                         raise ValueError(error_msg) from exc
 
                 logger.error(
                     "HTTP error updating row",
                     url=query_url,
-                    id=id,
+                    id_=id_,
                     error=str(exc)
                 )
                 raise
@@ -400,7 +399,7 @@ class UpdateRowOperation[T: BaseModel](BaseOperation[T]):
                 logger.error(
                     "Validation error parsing response",
                     url=query_url,
-                    id=id,
+                    id_=id_,
                     error=str(exc)
                 )
                 raise
@@ -424,13 +423,13 @@ class UpdateRowOperation[T: BaseModel](BaseOperation[T]):
         def command(
             client_object: ClientBase,
             output: common_options.OutputEnum | None,
-            id: int,
+            id_: int,
             field: tuple[tuple[str, str], ...],
             json_data: str | None,
             timeout: float,
         ) -> None:
             """Update a single row by ID from remote API."""
-            if id <= 0:
+            if id_ <= 0:
                 click.echo("Error: ID must be positive", err=True)
                 raise click.Abort()
 
@@ -460,14 +459,14 @@ class UpdateRowOperation[T: BaseModel](BaseOperation[T]):
             try:
                 result = client_method(
                     client_object,
-                    id,
+                    id_,
                     updates=update_data,
                     timeout=timeout
                 )
 
                 output_json(result.model_dump(), output)
                 click.echo(
-                    f"Successfully updated {ctx.router_string} {id}",
+                    f"Successfully updated {ctx.router_string} {id_}",
                     err=True
                 )
 
@@ -483,7 +482,7 @@ class UpdateRowsOperation[T: BaseModel](BaseOperation[T]):
 
     Features:
     - Atomic transaction (all or nothing)
-    - Each update dict must contain 'id' key
+    - Each update dict must contain 'id_' key
     - Validates all rows exist before updating
     - Returns all refreshed row data
     - Field-level validation for each row
@@ -493,9 +492,9 @@ class UpdateRowsOperation[T: BaseModel](BaseOperation[T]):
     >>> ctx = OperationContext.from_db_class("users", User)
     >>> op = UpdateRowsOperation(ctx)
     >>> updates = [
-    ...     {"id": 1, "status": "active"},
-    ...     {"id": 2, "status": "active"},
-    ...     {"id": 3, "status": "inactive"},
+    ...     {"id_": 1, "status": "active"},
+    ...     {"id_": 2, "status": "active"},
+    ...     {"id_": 3, "status": "inactive"},
     ... ]
     >>> results = await op.update_multiple(session, updates)
     """
@@ -535,13 +534,13 @@ class UpdateRowsOperation[T: BaseModel](BaseOperation[T]):
                 click.echo("Error: Update array is empty", err=True)
                 raise click.Abort()
 
-            # Validate all have 'id'
+            # Validate all have 'id_'
             for i, update in enumerate(updates):
                 if not isinstance(update, dict):
                     click.echo(f"Error: Update at index {i} is not an object", err=True)
                     raise click.Abort()
-                if 'id' not in update:
-                    click.echo(f"Error: Update at index {i} missing 'id' field", err=True)
+                if 'id_' not in update:
+                    click.echo(f"Error: Update at index {i} missing 'id_' field", err=True)
                     raise click.Abort()
 
             try:
@@ -564,7 +563,7 @@ class UpdateRowsOperation[T: BaseModel](BaseOperation[T]):
                     response = {
                         "success": True,
                         "count": len(results),
-                        "ids": [update['id'] for update in updates],
+                        "ids": [update['id_'] for update in updates],
                         "resource": ctx.router_string,
                         "data": results_data,
                     }
@@ -613,17 +612,17 @@ class UpdateRowsOperation[T: BaseModel](BaseOperation[T]):
             """Request model for multiple row update."""
             updates: list[dict[str, Any]] = Field(
                 ...,
-                description="List of update objects, each must contain 'id'",
+                description="List of update objects, each must contain 'id_'",
                 min_length=1
             )
 
             @field_validator('updates')
             @classmethod
             def validate_all_have_id(cls, v: list[dict[str, Any]]) -> list[dict[str, Any]]:
-                """Ensure all updates have 'id' field."""
+                """Ensure all updates have 'id_' field."""
                 for i, update in enumerate(v):
-                    if 'id' not in update:
-                        raise ValueError(f"Update at index {i} missing 'id' field")
+                    if 'id_' not in update:
+                        raise ValueError(f"Update at index {i} missing 'id_' field")
                 return v
 
         @router.patch(
@@ -658,7 +657,7 @@ class UpdateRowsOperation[T: BaseModel](BaseOperation[T]):
                     return UpdateMultipleResponse(
                         success=True,
                         count=len(results),
-                        ids=[update['id'] for update in request.updates],
+                        ids=[update['id_'] for update in request.updates],
                         resource=ctx.router_string,
                         data=results_data,
                     )
@@ -719,7 +718,7 @@ class UpdateRowsOperation[T: BaseModel](BaseOperation[T]):
             client_object
                 HTTP client object with a .client attribute (httpx.Client)
             updates
-                List of update dicts, each must contain 'id' key
+                List of update dicts, each must contain 'id_' key
             timeout
                 Request timeout in seconds
 
@@ -731,7 +730,7 @@ class UpdateRowsOperation[T: BaseModel](BaseOperation[T]):
             Raises
             ------
             ValueError
-                If updates is empty, any update missing 'id', or any record not found
+                If updates is empty, any update missing 'id_', or any record not found
             HTTPError
                 For other HTTP errors (422 for invalid fields/values)
             ValidationError
@@ -740,10 +739,10 @@ class UpdateRowsOperation[T: BaseModel](BaseOperation[T]):
             if not updates:
                 raise ValueError("updates cannot be empty")
 
-            # Validate all have 'id'
+            # Validate all have 'id_'
             for i, update in enumerate(updates):
-                if 'id' not in update:
-                    raise ValueError(f"Update at index {i} missing 'id' field")
+                if 'id_' not in update:
+                    raise ValueError(f"Update at index {i} missing 'id_' field")
 
             query_url = build_url(ctx.router_string, ctx.name, "multiple")
 
@@ -768,11 +767,11 @@ class UpdateRowsOperation[T: BaseModel](BaseOperation[T]):
                         error_msg = "One or more records not found"
                         logger.warning("Records not found", url=query_url)
                         raise ValueError(error_msg) from exc
-                    elif exc.response.status_code == 400:
+                    if exc.response.status_code == 400:
                         error_msg = "Invalid update request"
                         logger.warning("Bad request", url=query_url)
                         raise ValueError(error_msg) from exc
-                    elif exc.response.status_code == 422:
+                    if exc.response.status_code == 422:
                         error_msg = "Invalid field or value in one of the updates"
                         logger.warning("Unprocessable entity", url=query_url)
                         raise ValueError(error_msg) from exc
@@ -814,7 +813,7 @@ class UpdateRowsOperation[T: BaseModel](BaseOperation[T]):
             """Update multiple rows atomically from remote API."""
             # Load updates from file
             try:
-                with open(json_file) as f:
+                with open(json_file, 'r', encoding='utf-8') as f:
                     updates = json.load(f)
             except json.JSONDecodeError as exc:
                 click.echo(f"Error: Invalid JSON file: {exc}", err=True)
@@ -831,13 +830,13 @@ class UpdateRowsOperation[T: BaseModel](BaseOperation[T]):
                 click.echo("Error: Update array is empty", err=True)
                 raise click.Abort()
 
-            # Validate all have 'id'
+            # Validate all have 'id_'
             for i, update in enumerate(updates):
                 if not isinstance(update, dict):
                     click.echo(f"Error: Update at index {i} is not an object", err=True)
                     raise click.Abort()
-                if 'id' not in update:
-                    click.echo(f"Error: Update at index {i} missing 'id' field", err=True)
+                if 'id_' not in update:
+                    click.echo(f"Error: Update at index {i} missing 'id_' field", err=True)
                     raise click.Abort()
 
             try:

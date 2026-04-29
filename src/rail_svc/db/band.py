@@ -15,7 +15,7 @@ class Band(Base):
 
     Attributes
     ----------
-    id : int
+    id_ : int
         Primary key, auto-incrementing unique identifier
     name : str
         Unique name for this base tag (e.g., 'lsst_u')
@@ -31,7 +31,7 @@ class Band(Base):
     __tablename__ = "band"
 
     # Primary key
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id_: Mapped[int] = mapped_column(primary_key=True)
 
     # Unique name for this catalog tag
     name: Mapped[str] = mapped_column(String(255), index=True, unique=True)
@@ -44,6 +44,20 @@ class Band(Base):
 
 
     # Pydantic integration
+    @classmethod
+    def pydantic_create_class(cls) -> type[BaseModel]:
+        """Pydantic model used to create rows in this table.
+
+        Subclasses must implement this to specify their associated
+        Pydantic model for creation.
+
+        Returns
+        -------
+        type[BaseModel]
+            The Pydantic model class
+        """
+        return models.BandCreate
+
     @classmethod
     def pydantic_model_class(cls) -> type[BaseModel]:
         """Return the Pydantic model class for serialization/validation.
@@ -72,9 +86,9 @@ class Band(Base):
         Returns
         -------
         str
-            String showing id, name, and description
+            String showing id_, name, and description
         """
-        return f"Band(id={self.id}, name='{self.name}')"
+        return f"Band(id_={self.id_}, name='{self.name}')"
 
     def __str__(self) -> str:
         """Return a simple string representation of the Band.

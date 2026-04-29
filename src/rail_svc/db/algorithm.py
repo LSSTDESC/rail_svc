@@ -23,7 +23,7 @@ class Algorithm(Base):
 
     Attributes
     ----------
-    id : int
+    id_ : int
         Primary key, auto-incrementing unique identifier
     name : str
         Unique name for this algorithm (e.g., 'random_forest', 'xgboost')
@@ -39,7 +39,7 @@ class Algorithm(Base):
     __tablename__ = "algorithm"
 
     # Primary key
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id_: Mapped[int] = mapped_column(primary_key=True)
 
     # Algorithm identification
     name: Mapped[str] = mapped_column(String(255), index=True, unique=True)
@@ -61,6 +61,20 @@ class Algorithm(Base):
     )
 
     # Pydantic integration
+    @classmethod
+    def pydantic_create_class(cls) -> type[BaseModel]:
+        """Pydantic model used to create rows in this table.
+
+        Subclasses must implement this to specify their associated
+        Pydantic model for creation.
+
+        Returns
+        -------
+        type[BaseModel]
+            The Pydantic model class
+        """
+        return models.AlgorithmCreate
+
     @classmethod
     def pydantic_model_class(cls) -> type[BaseModel]:
         """Return the Pydantic model class for serialization/validation.
@@ -89,9 +103,9 @@ class Algorithm(Base):
         Returns
         -------
         str
-            String showing id, name, and class_name
+            String showing id_, name, and class_name
         """
-        return f"Algorithm(id={self.id}, name='{self.name}', class_name='{self.class_name}')"
+        return f"Algorithm(id_={self.id_}, name='{self.name}', class_name='{self.class_name}')"
 
     def __str__(self) -> str:
         """Return a simple string representation of the Algorithm.

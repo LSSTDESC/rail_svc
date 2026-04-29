@@ -4,7 +4,6 @@ from typing import Any
 
 from pydantic import BaseModel
 from sqlalchemy import JSON, String
-from sqlalchemy.ext.asyncio import async_scoped_session
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.schema import ForeignKey
 
@@ -25,7 +24,7 @@ class Estimator(Base):
 
     Attributes
     ----------
-    id : int
+    id_ : int
         Primary key, auto-incrementing unique identifier
     name : str
         Unique name for this estimator configuration
@@ -46,14 +45,14 @@ class Estimator(Base):
     __tablename__ = "estimator"
 
     # Primary key
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id_: Mapped[int] = mapped_column(primary_key=True)
 
     # Unique name for this estimator
     name: Mapped[str] = mapped_column(String(255), index=True, unique=True)
 
     # Foreign key to model (which has algo_id and catalog_tag_id)
     model_id: Mapped[int] = mapped_column(
-        ForeignKey("model.id", ondelete="CASCADE"),
+        ForeignKey("model.id_", ondelete="CASCADE"),
         index=True,
     )
 
@@ -68,6 +67,20 @@ class Estimator(Base):
     )
 
     # Pydantic integration
+    @classmethod
+    def pydantic_create_class(cls) -> type[BaseModel]:
+        """Pydantic model used to create rows in this table.
+
+        Subclasses must implement this to specify their associated
+        Pydantic model for creation.
+
+        Returns
+        -------
+        type[BaseModel]
+            The Pydantic model class
+        """
+        return models.EstimatorCreate
+
     @classmethod
     def pydantic_model_class(cls) -> type[BaseModel]:
         """Return the Pydantic model class for serialization/validation.
@@ -163,9 +176,9 @@ class Estimator(Base):
         Returns
         -------
         str
-            String showing id, name, and model_id
+            String showing id_, name, and model_id
         """
-        return f"Estimator(id={self.id}, name='{self.name}', model_id={self.model_id})"
+        return f"Estimator(id_={self.id_}, name='{self.name}', model_id={self.model_id})"
 
     def __str__(self) -> str:
         """Return a simple string representation of the Estimator.
@@ -176,86 +189,3 @@ class Estimator(Base):
             Just the estimator name
         """
         return self.name
-
-    @classmethod
-    async def get_create_kwargs(
-        cls,
-        session: async_scoped_session,
-        **kwargs: Any,
-    ) -> dict[str, Any]:
-        """Prepare keyword arguments for creating an Estimator.
-
-        This method handles the logic of looking up a model by either
-        ID or name. The algorithm and catalog tag are accessed through
-        the model relationship.
-
-        Parameters
-        ----------
-        session : async_scoped_session
-            Database session for queries
-        **kwargs : Any
-            Must contain 'name' and either 'model_id' or 'model_name'.
-            May optionally contain 'config'.
-
-        Returns
-        -------
-        dict[str, Any]
-            Complete keyword arguments ready for row creation, including:
-            - name
-            - config
-            - model_id
-
-        Raises
-        ------
-        RAILMissingRowCreateInputError
-            If required fields are missing or invalid
-
-        Examples
-        --------
-        >>> # Create by model_id
-        >>> kwargs = await Estimator.get_create_kwargs(
-        ...     session,
-        ...     name="my_estimator",
-        ...     model_id=123,
-        ...     config={"learning_rate": 0.01}
-        ... )
-
-        >>> # Create by model_name
-        >>> kwargs = await Estimator.get_create_kwargs(
-        ...     session,
-        ...     name="my_estimator",
-        ...     model_name="baseline_model",
-        ...     config={"max_depth": 10}
-        ... )
-        """
-        # Validate required field
-        if "name" not in kwargs:
-            raise KeyError(
-                "Missing required field 'name' to create Estimator"
-            )
-
-        name = kwargs["name"]
-        config = kwargs.get("config", {})
-
-        # Get model either by ID or by name
-        model_id = kwargs.get("model_id")
-
-        if model_id is None:
-            # Must provide model_name if model_id not provided
-            model_name = kwargs.get("model_name")
-            if model_name is None:
-                raise KeyError(
-                    "Either 'model_id' or 'model_name' must be provided to create Estimator"
-                )
-
-            # Look up model by name
-            from .model import Model
-            model = await Model.get_row_by_name(session, model_name)
-            model_id = model.id
-
-        # Build kwargs (no need to fetch model if we already have model_id)
-        return {
-            "name": name,
-            "config": config,
-            "model_id": model_id,
-        }

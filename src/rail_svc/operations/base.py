@@ -13,20 +13,19 @@ work across all interaction modes (local CLI, REST API, remote CLI).
 
 from __future__ import annotations
 
+import json
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Protocol
-import urljoin
-import tabulate
-
-import json
-import yaml
+from urllib.parse import urljoin
 
 import click
+import yaml
 from fastapi import APIRouter
 from pydantic import BaseModel
 from structlog import get_logger
+from tabulate import tabulate
 
 logger = get_logger(__name__)
 
@@ -239,7 +238,6 @@ class BaseOperation[T: BaseModel](ABC):
         ...     results = self.ctx.db_class.query().limit(limit).all()
         ...     display_table(results, self.ctx.col_names)
         """
-        pass
 
     @abstractmethod
     def create_router_endpoint(self, router: APIRouter) -> FastAPIEndpoint:
@@ -268,7 +266,6 @@ class BaseOperation[T: BaseModel](ABC):
         ...     results = await self.ctx.db_class.query().limit(limit).all()
         ...     return results
         """
-        pass
 
     @abstractmethod
     def create_client_method(self) -> ClientMethod:
@@ -293,7 +290,6 @@ class BaseOperation[T: BaseModel](ABC):
         ...     response.raise_for_status()
         ...     return [self.ctx.response_class(**item) for item in response.json()]
         """
-        pass
 
     @abstractmethod
     def create_remote_command(self, group: click.Group) -> ClickCommand:
@@ -322,7 +318,6 @@ class BaseOperation[T: BaseModel](ABC):
         ...     results = client_method(limit=limit)
         ...     display_table(results, self.ctx.col_names)
         """
-        pass
 
 
 def display_table(data: list[dict], col_names: list[str]) -> None:

@@ -14,28 +14,29 @@ All operations support both local and remote execution.
 from __future__ import annotations
 
 import json as json_lib
-import click
-
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
+import click
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from httpx import HTTPError, TimeoutException
-from pydantic import BaseModel, Field, field_validator, TypeAdapter
+from pydantic import BaseModel, Field, TypeAdapter, field_validator
 from pydantic_core import ValidationError as CoreValidationError
 from safir.dependencies.db_session import db_session_dependency
 from sqlalchemy.ext.asyncio import AsyncEngine, async_scoped_session
 from structlog import get_logger
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
+                      wait_exponential)
+
+from .. import db_funcs
+from ..cli import common_options
+from ..cli.utils import handle_cli_error
+from ..db_funcs.filter import Filter, FilterOp, OrderBy
+from .base import (BaseOperation, build_url, output_json, output_pydantic_list,
+                   output_pydantic_single)
 
 if TYPE_CHECKING:
     from .client import ClientBase
-
-from ... import db_funcs
-from ...db.filter import Filter, FilterOp, OrderBy
-from ..cli import common_options
-from ..cli.utils import handle_cli_error
-from .base import BaseOperation, build_url, output_pydantic_single, output_pydantic_list, output_json
 
 logger = get_logger(__name__)
 
@@ -56,7 +57,8 @@ class FilterModel(BaseModel):
             FilterOp(v)
         except ValueError:
             valid_ops = ", ".join([op.value for op in FilterOp])
-            raise ValueError(f"Invalid operator '{v}'. Valid operators: {valid_ops}")
+            logger.error(f"Invalid operator '{v}'. Valid operators: {valid_ops}")
+            raise
         return v
 
     def to_filter(self) -> Filter:
@@ -179,7 +181,8 @@ def parse_filter_from_string(filter_str: str) -> Filter:
         op = FilterOp(op_str)
     except ValueError:
         valid_ops = ", ".join([o.value for o in FilterOp])
-        raise ValueError(f"Invalid operator '{op_str}'. Valid: {valid_ops}")
+        logger.error(f"Invalid operator '{op_str}'. Valid: {valid_ops}")
+        raise
 
     # Parse value
     if op in (FilterOp.IS_NULL, FilterOp.IS_NOT_NULL):
@@ -233,7 +236,7 @@ class FilterRowsOperation[T: BaseModel](BaseOperation[T]):
         @common_options.order_by()
         @common_options.skip()
         @common_options.limit()
-        @common_options.with_cunt()
+        @common_options.with_count()
         async def command(
             db_engine: Callable[[], AsyncEngine],
             output: common_options.OutputEnum | None,
@@ -1402,11 +1405,11 @@ class FilterOneOperation[T: BaseModel](BaseOperation[T]):
                         error_msg = f"No {ctx.router_string} found matching filters"
                         logger.warning("No rows found", url=query_url)
                         raise ValueError(error_msg) from exc
-                    elif exc.response.status_code == 409:
+                    if exc.response.status_code == 409:
                         error_msg = f"Multiple {ctx.router_string} found matching filters"
                         logger.warning("Multiple rows found", url=query_url)
                         raise ValueError(error_msg) from exc
-                    elif exc.response.status_code == 400:
+                    if exc.response.status_code == 400:
                         error_msg = "Invalid filter request"
                         logger.warning("Bad request", url=query_url)
                         raise ValueError(error_msg) from exc

@@ -31,7 +31,7 @@ class Estimator(EstimatorBase):
 
     #: column names to use when printing the table
     col_names_for_table: ClassVar[list[str]] = [
-        "id",
+        "id_",
         "name",
         "algo_id",
         "catalog_tag_id",
@@ -39,13 +39,13 @@ class Estimator(EstimatorBase):
     ]
 
     #: primary key
-    id: int = Field(..., gt=0)
+    id_: int = Field(..., gt=0)
 
     #: foreign key into algorithm table
-    algo_id: int = Field(..., gt=0, description="Foreign key referencing Algorithm.id")
+    algo_id: int = Field(..., gt=0, description="Foreign key referencing Algorithm.id_")
 
     #: foreign key into catalog_tag table
-    catalog_tag_id: int = Field(..., gt=0, description="Foreign key referencing CatalogTag.id")
+    catalog_tag_id: int = Field(..., gt=0, description="Foreign key referencing CatalogTag.id_")
 
     #: foreign key into model table
-    model_id: int = Field(..., gt=0, description="Foreign key referencing Model.id")
+    model_id: int = Field(..., gt=0, description="Foreign key referencing Model.id_")

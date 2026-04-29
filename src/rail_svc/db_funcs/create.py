@@ -20,11 +20,13 @@ import structlog
 
 from rail_svc.db.base import ensure_base_inheritance, T
 
+from .row_create import RowCreateBase
+
 logger = structlog.get_logger(__name__)
 
 
 async def create_row(
-    the_class: type[T],
+    creator: RowCreateBase[T],
     session: async_scoped_session,
     *,
     validate: bool = True,
@@ -34,8 +36,8 @@ async def create_row(
 
     Parameters
     ----------
-    the_class
-        The SQLAlchemy model class to instantiate
+    creator
+        Helper class to create rows
     session
         DB session manager
     validate
@@ -73,48 +75,31 @@ async def create_row(
     ...         email="alice@example.com"
     ...     )
     """
-    ensure_base_inheritance(the_class)
-
-    logger.debug("Creating row", table=the_class.__name__, fields=list(kwargs.keys()))
-
-    if validate:
-        try:
-            # Validate against Pydantic model for early error detection
-            pydantic_class = the_class.pydantic_model_class()
-            pydantic_class.model_validate(kwargs)
-        except ValidationError as e:
-            logger.warning(
-                "Validation failed in create_row",
-                table=the_class.__name__,
-                errors=e.errors(),
-            )
-            raise  # Re-raise with full error detail
-
-    # Get any additional kwargs needed (preprocessing/transformation)
-    create_kwargs = await the_class.get_create_kwargs(session, **kwargs)
-    row = the_class(**create_kwargs)
+    row = await creator.create_row(session, validate=validate, **kwargs)
 
     try:
         session.add(row)
-        await session.flush()  # Flush to assign DB-generated values
+        await session.flush()  # Get DB-generated values
+        await creator.ctx.db_class.after_create_hook(session, row)
         await session.commit()
     except IntegrityError as err:
         await session.rollback()
         logger.error(
             "Integrity error during create",
-            table=the_class.__name__,
+            table=creator.ctx.db_class.__name__,
             error=str(err),
         )
         raise
 
     # Refresh to ensure all DB-generated values are loaded
     await session.refresh(row)
-    logger.info("Row created successfully", table=the_class.__name__)
+
+    logger.info("Row created successfully", table=creator.ctx.db_class.__name__)
     return row
 
 
 async def create_rows(
-    the_class: type[T],
+    creator: RowCreateBase[T],
     session: async_scoped_session,
     rows_data: Sequence[dict[str, Any]],
     *,
@@ -128,8 +113,8 @@ async def create_rows(
 
     Parameters
     ----------
-    the_class
-        The SQLAlchemy model class to instantiate
+    creator
+        Helper class to create rows
     session
         DB session manager
     rows_data
@@ -180,43 +165,7 @@ async def create_rows(
     ...     )
     ...     print(f"Created {len(users)} users")
     """
-    ensure_base_inheritance(the_class)
-
-    if not rows_data:
-        raise ValueError("rows_data cannot be empty")
-
-    logger.debug("Creating multiple rows", table=the_class.__name__, count=len(rows_data))
-
-    # Validate all rows before any database interaction
-    if validate:
-        pydantic_class = the_class.pydantic_model_class()
-        for idx, row_kwargs in enumerate(rows_data):
-            try:
-                pydantic_class.model_validate(row_kwargs)
-            except ValidationError as e:
-                logger.warning(
-                    "Validation failed in create_rows",
-                    table=the_class.__name__,
-                    row_index=idx,
-                    errors=e.errors(),
-                )
-                raise
-
-    # Process all rows to get create kwargs
-    rows = []
-    for idx, row_kwargs in enumerate(rows_data):
-        try:
-            create_kwargs = await the_class.get_create_kwargs(session, **row_kwargs)
-            row = the_class(**create_kwargs)
-            rows.append(row)
-        except Exception as e:
-            logger.error(
-                "Failed to prepare row",
-                table=the_class.__name__,
-                row_index=idx,
-                error=str(e),
-            )
-            raise
+    rows = await creator.create_rows(session, rows_data, validate=validate)
 
     try:
         # Add all rows to session
@@ -227,7 +176,7 @@ async def create_rows(
         await session.rollback()
         logger.error(
             "Integrity error during bulk create",
-            table=the_class.__name__,
+            table=creator.ctx.db_class.__name__,
             row_count=len(rows),
             error=str(err),
         )
@@ -238,7 +187,7 @@ async def create_rows(
         for row in rows:
             await session.refresh(row)
 
-    logger.info("Rows created successfully", table=the_class.__name__, count=len(rows))
+    logger.info("Rows created successfully", table=creator.ctx.db_class.__name__, count=len(rows))
     return rows
 
 
