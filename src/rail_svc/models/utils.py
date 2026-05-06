@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from typing import Any, cast
 import json
 import yaml
 from pydantic import BaseModel
 from tabulate import tabulate
 
 
-def display_table(data, col_names):
+def display_table(data: list[dict[str, Any]], col_names: list[str]) -> str:
     """
     Display data as a formatted table.
 
@@ -34,7 +35,7 @@ def display_table(data, col_names):
     return tabulate(rows, headers=col_names, tablefmt="simple")
 
 
-def format_output(data, output_format):
+def format_output(data: list[dict[str, Any]] | dict[str, Any], output_format: str) -> str:
     """
     Format data as JSON or YAML.
 
@@ -72,7 +73,7 @@ def format_output(data, output_format):
         raise ValueError(f"Unknown output format: {output_format}")
 
 
-def output_json(response, output):
+def output_json(response: dict[str, Any] | list | str, output: str) -> str:
     """
     Output JSON data in the specified format.
 
@@ -109,7 +110,7 @@ def output_json(response, output):
     return format_output(data, output)
 
 
-def output_pydantic_list(result, output, col_names=None):
+def output_pydantic_list(result: list[BaseModel], output: str, col_names: list[str] | None=None) -> str:
     """
     Output a list of Pydantic models in the specified format.
 
@@ -163,7 +164,7 @@ def output_pydantic_list(result, output, col_names=None):
     return format_output(data, output)
 
 
-def output_pydantic_single(result, output, col_names=None):
+def output_pydantic_single(result: BaseModel, output: str, col_names: list[str] | None=None) -> str:
     """
     Output a single Pydantic model in the specified format.
 
@@ -216,7 +217,7 @@ def output_pydantic_single(result, output, col_names=None):
     return format_output(data, output)
 
 
-def output_pydantic(result, output_format, col_names=None):
+def output_pydantic(result: BaseModel | list[BaseModel], output_format: str, col_names: list[str] | None=None) -> str:
     """
     Output Pydantic model(s) in the specified format.
 
@@ -273,7 +274,7 @@ def output_pydantic(result, output_format, col_names=None):
     """
     # Normalize to list
     is_single = isinstance(result, BaseModel)
-    results = [result] if is_single else result
+    results = cast(list[BaseModel], [result] if is_single else result)
 
     # Convert to dicts
     data = [item.model_dump() for item in results]

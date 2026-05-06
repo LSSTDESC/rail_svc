@@ -6,7 +6,7 @@ from abc import abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, TypeVar, cast
+from typing import Any, Callable, TypeVar, cast, overload
 
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -211,7 +211,10 @@ class TableOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
 
     @overload
     def __getattr__(self, name: str) -> Callable[..., Any]: ...
-    
+
+    @overload
+    def __getattr__(self, name: str) -> int: ...
+        
     def __getattr__(self, name: str) -> Any:
         # This will be called for dynamically added methods
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")

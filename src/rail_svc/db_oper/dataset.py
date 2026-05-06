@@ -119,7 +119,7 @@ class DatasetOperations(FileValidatedOperations[db.Dataset, models.Dataset, mode
         )
 
         # 2. Process path and determine n_objects
-        n_objects = await self._process_path(path, catalog_tag_obj, validate_file, extra_kwargs)
+        n_objects = await self._process_path(path, catalog_tag_obj, validate_file=validate_file, extra_kwargs=extra_kwargs)
 
         # 3. Build final kwargs
         result = {

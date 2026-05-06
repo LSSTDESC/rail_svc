@@ -2,7 +2,7 @@
 
 from typing import ClassVar
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 
 
 class BandBase(BaseModel):
@@ -27,7 +27,7 @@ class BandBase(BaseModel):
 
     @field_validator("band_transmission")
     @classmethod
-    def validate_same_length(cls, v: list[float], info) -> list[float]:
+    def validate_same_length(cls, v: list[float], info: ValidationInfo) -> list[float]:
         """Ensure transmission and wavelength arrays have same length"""
         if "band_wavelengths" in info.data:
             if len(v) != len(info.data["band_wavelengths"]):
