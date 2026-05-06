@@ -7,16 +7,17 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol, Generic, Any, TypeVar
+from typing import Protocol, Generic, Any, TypeVar, cast
 
 import click
 import yaml
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import async_scoped_session
+from sqlalchemy.ext.asyncio import AsyncSession
 from structlog import get_logger
 from tabulate import tabulate
 
+from .. import db_funcs
 from ..db.base import ensure_base_inheritance, Base
 
 logger = get_logger(__name__)
@@ -72,7 +73,7 @@ class TableContext(Generic[T, ResponseT, CreateT]):
     class_string: str
 
     @classmethod
-    def from_db_class(cls, db_class: type[T]) -> TableContext[T, BaseModel, BaseModel]:
+    def from_db_class(cls, db_class: type[T]) -> TableContext[T, ResponseT, CreateT]:
         """
         Create context from database class using conventions.
 
@@ -119,21 +120,9 @@ class TableContext(Generic[T, ResponseT, CreateT]):
             )
 
         # Get the classes
-        response_class = db_class.pydantic_model_class()
-        create_class = db_class.pydantic_create_class()
+        response_class = cast(type[ResponseT], db_class.pydantic_model_class())
+        create_class = cast(type[CreateT], db_class.pydantic_create_class())
         
-        # Validate return types
-        if not (isinstance(response_class, type) and issubclass(response_class, BaseModel)):
-            raise TypeError(
-                f"{db_class.__name__}.pydantic_model_class() must return a "
-                f"BaseModel subclass, got {type(response_class)}"
-            )
-        if not (isinstance(create_class, type) and issubclass(create_class, BaseModel)):
-            raise TypeError(
-                f"{db_class.__name__}.pydantic_create_class() must return a "
-                f"BaseModel subclass, got {type(create_class)}"
-            )
-
         return cls(
             db_class=db_class,
             response_class=response_class,
@@ -261,7 +250,7 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
 
     async def get_create_kwargs(
         self,
-        session: async_scoped_session,
+        session: AsyncSession,
         **kwargs: Any,
     ) -> dict[str, Any]:
         """Prepare kwargs for creating an instance."""
@@ -269,7 +258,7 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
 
     async def create_row(
         self,
-        session: async_scoped_session,
+        session: AsyncSession,
         *,
         validate: bool = True,
         **kwargs: Any,
@@ -343,7 +332,7 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
                 raise
 
         # update kwargs
-        kwargs = self.get_create_kwargs(session, **kwargs)
+        kwargs = await self.get_create_kwargs(session, **kwargs)
         
         # Pre-create hook
         kwargs = await self.ctx.db_class.pre_create_hook(session, kwargs)
@@ -365,7 +354,7 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
 
     async def create_rows(
         self,
-        session: async_scoped_session,
+        session: AsyncSession,
         rows_data: Sequence[dict[str, Any]],
         *,
         validate: bool = True,
@@ -449,7 +438,7 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
             
                 # update kwargs
                 modified_kwargs = await self.get_create_kwargs(
-                    session, row_kwargs.copy()  # Copy to avoid modifying original
+                    session, **row_kwargs.copy()  # Copy to avoid modifying original
                 )
 
                 # Validate if requested
@@ -628,7 +617,7 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
         to_pydantic_list : Convert multiple rows at once
         to_pydantic_dict : Convert a row to a dictionary
         """
-        return self.ctx.db_class.to_pydantic(row)
+        return cast(ResponseT, self.ctx.db_class.to_pydantic(row))
 
     def to_pydantic_list(self, rows: list[T]) -> list[ResponseT]:
         """Convert a list of database rows to Pydantic model representations.
@@ -700,7 +689,7 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
         to_pydantic : Convert a single row
         to_pydantic_dict_list : Convert multiple rows to dictionaries
         """
-        return self.ctx.db_class.to_pydantic_list(rows)
+        return cast(list[ResponseT], self.ctx.db_class.to_pydantic_list(rows))
 
     def to_pydantic_dict(self, row: T) -> dict[str, Any]:
         """Convert a database row to a dictionary via Pydantic validation.

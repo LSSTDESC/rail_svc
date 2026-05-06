@@ -281,7 +281,7 @@ async def create_rows_batched(
         )
 
         try:
-            batch_rows = await create_rows(the_class, session, batch_data, validate=validate)
+            batch_rows: list = await create_rows(the_class, session, batch_data, validate=validate)
             all_rows.extend(batch_rows)
 
         except Exception as e:

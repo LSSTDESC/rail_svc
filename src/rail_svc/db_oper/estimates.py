@@ -16,7 +16,7 @@ File validation includes:
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy.ext.asyncio import async_scoped_session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import qp
 
@@ -36,7 +36,7 @@ class EstimatesOperations(FileValidatedOperations[db.Estimates, models.Estimates
 
     async def get_create_kwargs(
         self,
-        session: async_scoped_session,
+        session: AsyncSession,
         *,
         path: str | None = None,
         dataset_id: int | None = None,

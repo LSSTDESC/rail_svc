@@ -39,7 +39,7 @@ Mix IDs and names:
 import logging
 from typing import Any
 
-from sqlalchemy.ext.asyncio import async_scoped_session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import db, db_funcs, models
 from .base import TableContext, TableOperations
@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 __all__ = ["CatalogBandAssocOperations", "catalog_band_assoc"]
 
 
-class CatalogBandAssocOperations(TableOperations[db.CatalogBandAssoc, models.CatalogBandAssoc, models.CatalogBandAssocCreate):
+class CatalogBandAssocOperations(TableOperations[db.CatalogBandAssoc, models.CatalogBandAssoc, models.CatalogBandAssocCreate]):
     """Create operations for CatalogBandAssoc table.
 
     Handles automatic lookup of catalog_tag and band by either ID or name.
@@ -57,9 +57,8 @@ class CatalogBandAssocOperations(TableOperations[db.CatalogBandAssoc, models.Cat
 
     async def get_create_kwargs(
         self,
-        session: async_scoped_session,
-        *,
-        band_alias: str,
+        session: AsyncSession,
+        band_alias: str | None = None,
         catalog_tag_id: int | None = None,
         catalog_tag_name: str | None = None,
         band_id: int | None = None,
@@ -131,9 +130,7 @@ class CatalogBandAssocOperations(TableOperations[db.CatalogBandAssoc, models.Cat
         # Validate band_alias
         if not band_alias or not isinstance(band_alias, str):
             logger.warning(
-                "Invalid band_alias for CatalogBandAssoc",
-                table=self.ctx.db_class.__name__,
-                band_alias=band_alias,
+                f"Invalid band_alias for CatalogBandAssoc: {band_alias}",
             )
             raise ValueError("band_alias must be a non-empty string")
 

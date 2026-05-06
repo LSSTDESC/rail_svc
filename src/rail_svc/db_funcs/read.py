@@ -15,7 +15,7 @@ from collections.abc import AsyncIterator, Sequence
 
 from sqlalchemy import select, func
 from sqlalchemy.exc import NoResultFound
-from sqlalchemy.ext.asyncio import async_scoped_session
+from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
 from rail_svc.db.base import ensure_base_inheritance, T
@@ -25,7 +25,7 @@ logger = structlog.get_logger(__name__)
 
 async def get_row(
     the_class: type[T],
-    session: async_scoped_session,
+    session: AsyncSession,
     row_id: int,
 ) -> T:
     """Get a single row by primary key.
@@ -70,7 +70,7 @@ async def get_row(
 
 async def get_row_by_name(
     the_class: type[T],
-    session: async_scoped_session,
+    session: AsyncSession,
     name: str,
 ) -> T:
     """Get a single row by name field.
@@ -127,7 +127,7 @@ async def get_row_by_name(
 
 async def get_rows(
     the_class: type[T],
-    session: async_scoped_session,
+    session: AsyncSession,
     skip: int = 0,
     limit: int | None = None,
 ) -> Sequence[T]:
@@ -185,7 +185,7 @@ async def get_rows(
 
 async def get_rows_streaming(
     the_class: type[T],
-    session: async_scoped_session,
+    session: AsyncSession,
     skip: int = 0,
     limit: int | None = None,
 ) -> AsyncIterator[T]:
@@ -243,7 +243,7 @@ async def get_rows_streaming(
 
 async def get_row_or_none(
     the_class: type[T],
-    session: async_scoped_session,
+    session: AsyncSession,
     row_id: int,
 ) -> T | None:
     """Get a single row by ID, returning None if not found.
@@ -278,7 +278,7 @@ async def get_row_or_none(
 
 async def count_rows(
     the_class: type[T],
-    session: async_scoped_session,
+    session: AsyncSession,
 ) -> int:
     """Count total number of rows in a table.
 

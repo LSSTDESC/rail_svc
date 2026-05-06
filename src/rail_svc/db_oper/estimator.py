@@ -7,7 +7,7 @@ lookup of the associated Model by ID or name.
 
 from typing import Any
 
-from sqlalchemy.ext.asyncio import async_scoped_session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import db, db_funcs, models
 from .base import TableContext, TableOperations
@@ -24,7 +24,7 @@ class EstimatorOperations(TableOperations[db.Estimator, models.Estimator, models
 
     async def get_create_kwargs(
         self,
-        session: async_scoped_session,
+        session: AsyncSession,
         *,
         model_id: int | None = None,
         model_name: str | None = None,

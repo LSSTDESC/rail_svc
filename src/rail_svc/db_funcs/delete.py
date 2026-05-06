@@ -8,7 +8,7 @@ from typing import Any
 
 from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import async_scoped_session
+from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
 from rail_svc.db.base import ensure_base_inheritance, T
@@ -18,7 +18,7 @@ logger = structlog.get_logger(__name__)
 
 async def delete_row(
     the_class: type[T],
-    session: async_scoped_session,
+    session: AsyncSession,
     row_id: int,
     *,
     capture_data: bool = True,
@@ -91,14 +91,14 @@ async def delete_row(
         # Call the pre-delete hook BEFORE deletion so it has access to row
         await the_class.pre_delete_hook(session, row)
 
-        # Delete the row (synchronous method, no await)
-        session.delete(row)
+        # Delete the row
+        await session.delete(row)
 
         # Flush to catch integrity errors
         await session.flush()
 
         # Call the after-delete hook AFTER deletion but before commit
-        await the_class.after_delete_hook(session, row_id, row_data)
+        await the_class.after_delete_hook(session, row)
 
         # Commit the transaction
         await session.commit()
@@ -130,7 +130,7 @@ async def delete_row(
 
 async def delete_rows(
     the_class: type[T],
-    session: async_scoped_session,
+    session: AsyncSession,
     row_ids: list[int],
     *,
     capture_data: bool = False,
@@ -207,15 +207,14 @@ async def delete_rows(
 
         # Phase 3: Delete all rows
         for row in rows_to_delete:
-            session.delete(row)
+            await session.delete(row)
 
         # Flush to catch integrity errors
         await session.flush()
 
         # Phase 4: Call after-delete hooks
-        for idx, row_id in enumerate(row_ids):
-            row_data = all_data[idx] if capture_data else None
-            await the_class.after_delete_hook(session, row_id, row_data)
+        for row in rows_to_delete:
+            await the_class.after_delete_hook(session, row)
 
         # Commit the transaction
         await session.commit()
@@ -250,7 +249,7 @@ async def delete_rows(
 
 async def bulk_delete_rows(
     the_class: type[T],
-    session: async_scoped_session,
+    session: AsyncSession,
     row_ids: list[int],
 ) -> int:
     """Delete multiple rows using bulk SQL operation.
@@ -303,7 +302,7 @@ async def bulk_delete_rows(
 
     try:
         # Use SQL DELETE statement for maximum performance
-        stmt = delete(the_class).where(the_class.id.in_(row_ids))
+        stmt = delete(the_class).where(the_class.id_.in_(row_ids))
         result = await session.execute(stmt)
         await session.commit()
 

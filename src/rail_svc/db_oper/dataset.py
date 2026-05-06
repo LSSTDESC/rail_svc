@@ -17,7 +17,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy.ext.asyncio import async_scoped_session
+from sqlalchemy.ext.asyncio import AsyncSession
 import tables_io
 
 from .. import db, db_funcs, models
@@ -37,7 +37,7 @@ class DatasetOperations(FileValidatedOperations[db.Dataset, models.Dataset, mode
 
     async def get_create_kwargs(
         self,
-        session: async_scoped_session,
+        session: AsyncSession,
         *,
         path: str | None = None,
         catalog_tag_id: int | None = None,

@@ -25,8 +25,6 @@ class CatalogTag(Base):
         Primary key, auto-incrementing unique identifier
     name : str
         Unique name for this catalog tag (e.g., 'roman', 'rubin')
-    metadata : Dict[str, Any] | None
-        Optional JSON metadata for additional tag information
     estimators : list[Estimator]
         Read-only list of estimators tagged with this catalog tag
     models : list[Model]
@@ -49,12 +47,6 @@ class CatalogTag(Base):
 
     # Unique name for this catalog tag
     name: Mapped[str] = mapped_column(String(255), index=True, unique=True)
-
-    # Optional metadata for additional information
-    metadata: Mapped[dict[str, Any] | None] = mapped_column(
-        JSON,
-        nullable=True,
-    )
 
     # Relationships - read-only access to tagged objects
     estimators: Mapped[list["Estimator"]] = relationship(

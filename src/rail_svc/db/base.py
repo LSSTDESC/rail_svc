@@ -33,7 +33,7 @@ Example Hook Implementation:
     ...             logger.warning(f"Cache update failed: {e}")
 """
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Any, ClassVar, TypeVar
 
 from pydantic import BaseModel
@@ -56,7 +56,7 @@ NAMING_CONVENTION = {
 }
 
 
-class Base(DeclarativeBase, ABC):
+class Base(DeclarativeBase):
     """Declarative base for all database models.
 
     Provides:
@@ -71,6 +71,9 @@ class Base(DeclarativeBase, ABC):
     in the row lifecycle.
     """
 
+    id_: int
+    name: str
+    
     # Default pagination limit - subclasses can override via get_pagination_limit()
     default_pagination_limit: ClassVar[int] = 100
 

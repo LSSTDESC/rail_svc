@@ -6,11 +6,12 @@ model file validation.
 
 """
 
+import asyncio
 import logging
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy.ext.asyncio import async_scoped_session
+from sqlalchemy.ext.asyncio import AsyncSession
 from rail.core.model import RailModel
 
 from .. import db, db_funcs, models
@@ -24,7 +25,7 @@ __all__ = ["ModelOperations", "model"]
 # Mapping from Informer class names to Estimator class names
 # This is only needed for cases that don't follow the
 # XxxInformer -> XxxEstimator pattern
-INFORMER_TO_ESTIMATOR_MAP = {}
+INFORMER_TO_ESTIMATOR_MAP: dict[str, str] = {}
 
 
 class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate]):
@@ -36,10 +37,9 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
 
     async def get_create_kwargs(
         self,
-        session: async_scoped_session,
-        *,
-        name: str,
-        path: str,
+        session: AsyncSession,
+        name: str | None = None,
+        path: str | None = None,
         algo_id: int | None = None,
         algo_name: str | None = None,
         catalog_tag_id: int | None = None,
@@ -119,11 +119,17 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
             db.Algorithm, session, algo_id, algo_name, need_object=validate_file
         )
 
+        assert algo_obj
+        
         # Resolve catalog_tag foreign key
         catalog_tag_id, catalog_tag_obj = await db_funcs.read.lookup_by_id_or_name(
             db.CatalogTag, session, catalog_tag_id, catalog_tag_name, need_object=validate_file
         )
 
+        assert catalog_tag_obj
+
+        assert path
+        
         # Validate file if requested
         if validate_file:
             fullpath = self._validate_path_security(path)
@@ -184,9 +190,7 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
         # Check file exists (fast check, can be sync)
         if not path.exists():
             logger.error(
-                "Model file not found",
-                table=self.ctx.db_class.__name__,
-                path=str(path),
+                f"Model file not found: {path}",
             )
             raise FileNotFoundError(f"Model file {path} not found")
 
@@ -197,10 +201,7 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
             the_model = await loop.run_in_executor(None, RailModel.read, str(path))
         except Exception as exc:
             logger.error(
-                "Failed to read model file",
-                table=self.ctx.db_class.__name__,
-                path=str(path),
-                error=str(exc),
+                f"Failed to read model file {path}",
             )
             raise ValueError(f"Could not read model from {path}: {exc}") from exc
 
@@ -208,11 +209,7 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
         if the_model.catalog_tag:
             if the_model.catalog_tag != catalog_tag.name:
                 logger.error(
-                    "CatalogTag mismatch",
-                    table=self.ctx.db_class.__name__,
-                    path=str(path),
-                    model_catalog_tag=the_model.catalog_tag,
-                    expected_catalog_tag=catalog_tag.name,
+                    "CatalogTag mismatch {path} {the_model.catalog_tag} {catalog_tag.name}",
                 )
                 raise ValueError(
                     f"CatalogTag mismatch: model has '{the_model.catalog_tag}' "
@@ -225,11 +222,7 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
 
             if algo.class_name != expected_estimator_class:
                 logger.error(
-                    "Algorithm class mismatch",
-                    table=self.ctx.db_class.__name__,
-                    path=str(path),
-                    expected_class=expected_estimator_class,
-                    actual_class=algo.class_name,
+                    f"Algorithm class mismatch {expected_estimator_class} {algo.class_name}",
                 )
                 raise ValueError(
                     f"Algorithm mismatch: model expects '{expected_estimator_class}' "
@@ -237,12 +230,7 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
                 )
 
         logger.info(
-            "Model validation successful",
-            table=self.ctx.db_class.__name__,
-            path=str(path),
-            algo_name=algo.name,
-            algo_class=algo.class_name,
-            catalog_tag_name=catalog_tag.name,
+            "Model validation successful {path}",
         )
 
     def _convert_informer_to_estimator(self, informer_class_name: str) -> str:
@@ -283,17 +271,11 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
         # Fall back to pattern-based conversion
         if informer_class_name.endswith("Informer"):
             estimator_class_name = informer_class_name[:-8] + "Estimator"
-            logger.debug(
-                "Converting Informer to Estimator class name",
-                informer_class=informer_class_name,
-                estimator_class=estimator_class_name,
-            )
             return estimator_class_name
 
         # No conversion possible
         logger.warning(
-            "Unknown Informer class name pattern",
-            informer_class=informer_class_name,
+            "Unknown Informer class name pattern {informer_class_name}",
         )
         raise ValueError(
             f"Cannot convert Informer class name '{informer_class_name}' to Estimator. "

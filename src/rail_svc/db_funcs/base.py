@@ -12,7 +12,7 @@ import click
 import yaml
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import async_scoped_session
+from sqlalchemy.ext.asyncio import AsyncSession
 from structlog import get_logger
 from tabulate import tabulate
 
@@ -260,7 +260,7 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
 
     async def get_create_kwargs(
         self,
-        session: async_scoped_session,
+        session: AsyncSession,
         **kwargs: Any,
     ) -> dict[str, Any]:
         """Prepare kwargs for creating an instance."""
@@ -268,7 +268,7 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
 
     async def create_row(
         self,
-        session: async_scoped_session,
+        session: AsyncSession,
         *,
         validate: bool = True,
         **kwargs: Any,
@@ -364,7 +364,7 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
 
     async def create_rows(
         self,
-        session: async_scoped_session,
+        session: AsyncSession,
         rows_data: Sequence[dict[str, Any]],
         *,
         validate: bool = True,
