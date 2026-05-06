@@ -22,7 +22,7 @@ ResponseT = TypeVar("ResponseT", bound=BaseModel)
 CreateT = TypeVar("CreateT", bound=BaseModel)
 
 
-async def delete_row(
+async def delete_row[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     table_ops: TableOperations[T, ResponseT, CreateT],
     row_id: int,
     *,
@@ -76,7 +76,7 @@ async def delete_row(
             return await table_ops.delete_row(session, row_id, capture_data=capture_data)
 
 
-async def delete_rows(
+async def delete_rows[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     table_ops: TableOperations[T, ResponseT, CreateT],
     row_ids: list[int],
     *,
@@ -130,7 +130,7 @@ async def delete_rows(
             return await table_ops.delete_rows(session, row_ids, capture_data=capture_data)
 
 
-async def bulk_delete_rows(
+async def bulk_delete_rows[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     table_ops: TableOperations[T, ResponseT, CreateT],
     row_ids: list[int],
 ) -> int:

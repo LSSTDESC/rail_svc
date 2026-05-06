@@ -21,7 +21,7 @@ T = TypeVar("T", bound=Base)
 ResponseT = TypeVar("ResponseT", bound=BaseModel)
 
 
-async def get_row(
+async def get_row[T: Base, ResponseT: BaseModel](
     table_ops: TableOperations[T, ResponseT, Any],
     row_id: int,
 ) -> ResponseT:
@@ -57,7 +57,7 @@ async def get_row(
         return table_ops.to_pydantic(row)
 
 
-async def get_row_by_name(
+async def get_row_by_name[T: Base, ResponseT: BaseModel](
     table_ops: TableOperations[T, ResponseT, Any],
     name: str,
 ) -> ResponseT:
@@ -92,7 +92,7 @@ async def get_row_by_name(
         return table_ops.to_pydantic(row)
 
 
-async def get_rows(
+async def get_rows[T: Base, ResponseT: BaseModel](
     table_ops: TableOperations[T, ResponseT, Any],
     skip: int = 0,
     limit: int | None = None,
@@ -133,7 +133,7 @@ async def get_rows(
         return table_ops.to_pydantic_list(rows)
 
 
-async def get_rows_streaming(
+async def get_rows_streaming[T: Base, ResponseT: BaseModel](
     table_ops: TableOperations[T, ResponseT, Any],
     skip: int = 0,
     limit: int | None = None,
@@ -179,7 +179,7 @@ async def get_rows_streaming(
             yield table_ops.to_pydantic(row)
 
 
-async def get_row_or_none(
+async def get_row_or_none[T: Base, ResponseT: BaseModel](
     table_ops: TableOperations[T, ResponseT, Any],
     row_id: int,
 ) -> ResponseT | None:
@@ -209,7 +209,7 @@ async def get_row_or_none(
         return table_ops.to_pydantic(row) if row is not None else None
 
 
-async def count_rows(
+async def count_rows[T: Base, ResponseT: BaseModel](
     table_ops: TableOperations[T, ResponseT, Any],
 ) -> int:
     """Count total rows in a table with automatic session management.
@@ -235,7 +235,7 @@ async def count_rows(
         return await table_ops.count_rows(session)
 
 
-async def lookup_by_id_or_name(
+async def lookup_by_id_or_name[T: Base, ResponseT: BaseModel](
     table_ops: TableOperations[T, ResponseT, Any],
     row_id: int | None = None,
     name: str | None = None,

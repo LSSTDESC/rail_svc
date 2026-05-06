@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Callable, TypeVar, Generic
+from typing import Any, TypeVar
+from collections.abc import Callable
 
 import click
 import aiofiles
@@ -23,7 +24,7 @@ ResponseT = TypeVar("ResponseT", bound=BaseModel)
 CreateT = TypeVar("CreateT", bound=BaseModel)
 
 
-class CliOperations(Generic[T, ResponseT, CreateT]):
+class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
     """Base class for CLI operations on database tables.
 
     Provides common functionality for Click commands that interact
@@ -81,7 +82,7 @@ class CliOperations(Generic[T, ResponseT, CreateT]):
             If file cannot be read, JSON is invalid, or not an array
         """
         try:
-            async with aiofiles.open(json_file, "r") as f:
+            async with aiofiles.open(json_file) as f:
                 content = await f.read()
                 rows_data = json.loads(content)
         except json.JSONDecodeError as exc:
@@ -428,6 +429,7 @@ class CliOperations(Generic[T, ResponseT, CreateT]):
             db_engine: Callable[[], AsyncEngine],
             output: common_options.OutputEnum | None,
             from_json: str | None,
+            *,
             no_validate: bool,
             fields: tuple[str, ...],
         ) -> None:
@@ -445,7 +447,7 @@ class CliOperations(Generic[T, ResponseT, CreateT]):
             # Parse input
             if from_json:
                 try:
-                    with open(from_json, "r") as f:
+                    with open(from_json) as f:
                         row_data = json.load(f)
                 except json.JSONDecodeError as exc:
                     click.echo(f"Error: Invalid JSON: {exc}", err=True)
@@ -500,6 +502,7 @@ class CliOperations(Generic[T, ResponseT, CreateT]):
         def command(
             db_engine: Callable[[], AsyncEngine],
             output: common_options.OutputEnum | None,
+            *,
             no_validate: bool,
             json_file: str,
         ) -> None:
@@ -514,7 +517,7 @@ class CliOperations(Generic[T, ResponseT, CreateT]):
 
             # Load JSON file
             try:
-                with open(json_file, "r") as f:
+                with open(json_file) as f:
                     rows_data = json.load(f)
             except json.JSONDecodeError as exc:
                 click.echo(f"Error: Invalid JSON: {exc}", err=True)
@@ -558,6 +561,7 @@ class CliOperations(Generic[T, ResponseT, CreateT]):
             db_engine: Callable[[], AsyncEngine],
             output: common_options.OutputEnum | None,
             batch_size: int,
+            *,
             no_validate: bool,
             json_file: str,
         ) -> None:
@@ -578,7 +582,7 @@ class CliOperations(Generic[T, ResponseT, CreateT]):
 
             # Load JSON file
             try:
-                with open(json_file, "r") as f:
+                with open(json_file) as f:
                     rows_data = json.load(f)
             except json.JSONDecodeError as exc:
                 click.echo(f"Error: Invalid JSON: {exc}", err=True)
@@ -623,6 +627,7 @@ class CliOperations(Generic[T, ResponseT, CreateT]):
         @click.argument("json_file", type=click.Path(exists=True))
         def command(
             db_engine: Callable[[], AsyncEngine],
+            *,
             no_validate: bool,
             json_file: str,
         ) -> None:
@@ -638,7 +643,7 @@ class CliOperations(Generic[T, ResponseT, CreateT]):
 
             # Load JSON file
             try:
-                with open(json_file, "r") as f:
+                with open(json_file) as f:
                     rows_data = json.load(f)
             except json.JSONDecodeError as exc:
                 click.echo(f"Error: Invalid JSON: {exc}", err=True)
@@ -712,7 +717,7 @@ class CliOperations(Generic[T, ResponseT, CreateT]):
             # Parse input
             if from_json:
                 try:
-                    with open(from_json, "r") as f:
+                    with open(from_json) as f:
                         update_data = json.load(f)
                 except json.JSONDecodeError as exc:
                     click.echo(f"Error: Invalid JSON: {exc}", err=True)
@@ -792,7 +797,7 @@ class CliOperations(Generic[T, ResponseT, CreateT]):
 
             # Load JSON file
             try:
-                with open(json_file, "r") as f:
+                with open(json_file) as f:
                     updates = json.load(f)
             except json.JSONDecodeError as exc:
                 click.echo(f"Error: Invalid JSON: {exc}", err=True)
@@ -854,6 +859,7 @@ class CliOperations(Generic[T, ResponseT, CreateT]):
         def command(
             db_engine: Callable[[], AsyncEngine],
             output: common_options.OutputEnum | None,
+            *,
             no_capture: bool,
             confirm: bool,
             row_id: int,
@@ -909,6 +915,7 @@ class CliOperations(Generic[T, ResponseT, CreateT]):
         def command(
             db_engine: Callable[[], AsyncEngine],
             output: common_options.OutputEnum | None,
+            *,
             capture_data: bool,
             confirm: bool,
             from_file: str | None,
@@ -934,7 +941,7 @@ class CliOperations(Generic[T, ResponseT, CreateT]):
             # Parse input
             if from_file:
                 try:
-                    with open(from_file, "r") as f:
+                    with open(from_file) as f:
                         content = f.read().strip()
 
                     # Try JSON first
@@ -996,6 +1003,7 @@ class CliOperations(Generic[T, ResponseT, CreateT]):
         @click.argument("row_ids", nargs=-1, type=int)
         def command(
             db_engine: Callable[[], AsyncEngine],
+            *,
             confirm: bool,
             from_file: str | None,
             row_ids: tuple[int, ...],
@@ -1021,7 +1029,7 @@ class CliOperations(Generic[T, ResponseT, CreateT]):
             # Parse input
             if from_file:
                 try:
-                    with open(from_file, "r") as f:
+                    with open(from_file) as f:
                         content = f.read().strip()
 
                     # Try JSON first
@@ -1106,6 +1114,7 @@ class CliOperations(Generic[T, ResponseT, CreateT]):
             limit: int | None,
             page_size: int,
             field: tuple[str, ...],
+            *,
             use_or: bool,
             order_by: tuple[str, ...],
         ) -> None:
@@ -1232,6 +1241,7 @@ class CliOperations(Generic[T, ResponseT, CreateT]):
         def command(
             db_engine: Callable[[], AsyncEngine],
             field: tuple[str, ...],
+            *,
             use_or: bool,
         ) -> None:
             """Count rows matching filter conditions.

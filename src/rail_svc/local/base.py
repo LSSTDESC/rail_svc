@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import functools
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 from pydantic import BaseModel
 
@@ -20,7 +20,7 @@ ResponseT = TypeVar("ResponseT", bound=BaseModel)
 CreateT = TypeVar("CreateT", bound=BaseModel)
 
 
-class LocalOperations(Generic[T, ResponseT, CreateT]):
+class LocalOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
     """Base class for table-specific local operations.
 
     Dynamically binds API functions as methods on this instance,
@@ -83,6 +83,13 @@ class LocalOperations(Generic[T, ResponseT, CreateT]):
         self._table_ops = table_operations
         self._bind_delegated_methods()
 
+    @overload
+    def __getattr__(self, name: str) -> Callable[..., Any]: ...
+    
+    def __getattr__(self, name: str) -> Any:
+        # This will be called for dynamically added methods
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+        
     def _bind_delegated_methods(self) -> None:
         """Bind all delegated methods to this instance.
 
@@ -109,7 +116,7 @@ class LocalOperations(Generic[T, ResponseT, CreateT]):
                 setattr(self, func_name, bound_func)
 
 
-class SyncLocalOperations(Generic[T, ResponseT, CreateT]):
+class SyncLocalOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
     """Synchronous wrapper for local operations.
 
     Wraps async LocalOperations methods to provide synchronous versions
@@ -140,6 +147,13 @@ class SyncLocalOperations(Generic[T, ResponseT, CreateT]):
         self._async_ops = async_ops
         self._bind_sync_methods()
 
+    @overload
+    def __getattr__(self, name: str) -> Callable[..., Any]: ...
+    
+    def __getattr__(self, name: str) -> Any:
+        # This will be called for dynamically added methods
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+        
     def _bind_sync_methods(self) -> None:
         """Bind synchronous wrapper methods to this instance."""
         for module_name, func_list in LocalOperations._DELEGATED_METHODS.items():
@@ -156,7 +170,7 @@ class SyncLocalOperations(Generic[T, ResponseT, CreateT]):
                 setattr(self, func_name, make_sync(async_func))
 
 
-def create_local_operations(
+def create_local_operations[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     table_operations: TableOperations[T, ResponseT, CreateT],
 ) -> LocalOperations[T, ResponseT, CreateT]:
     """Create an async LocalOperations instance.

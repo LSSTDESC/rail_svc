@@ -23,7 +23,7 @@ ResponseT = TypeVar("ResponseT", bound=BaseModel)
 CreateT = TypeVar("CreateT", bound=BaseModel)
 
 
-async def update_row(
+async def update_row[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     table_ops: TableOperations[T, ResponseT, CreateT],
     row_id: int,
     **kwargs: Any,
@@ -73,7 +73,7 @@ async def update_row(
             return table_ops.to_pydantic(row)
 
 
-async def update_rows(
+async def update_rows[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     table_ops: TableOperations[T, ResponseT, CreateT],
     updates: Sequence[dict[str, Any]],
 ) -> list[ResponseT]:

@@ -23,7 +23,7 @@ ResponseT = TypeVar("ResponseT", bound=BaseModel)
 CreateT = TypeVar("CreateT", bound=BaseModel)
 
 
-async def create_row(
+async def create_row[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     table_ops: TableOperations[T, ResponseT, CreateT],
     *,
     validate: bool = True,
@@ -74,7 +74,7 @@ async def create_row(
             return table_ops.to_pydantic(row)
 
 
-async def create_rows(
+async def create_rows[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     table_ops: TableOperations[T, ResponseT, CreateT],
     rows_data: Sequence[dict[str, Any]],
     *,
@@ -130,7 +130,7 @@ async def create_rows(
             return table_ops.to_pydantic_list(rows)
 
 
-async def create_rows_batched(
+async def create_rows_batched[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     table_ops: TableOperations[T, ResponseT, CreateT],
     rows_data: Sequence[dict[str, Any]],
     *,
@@ -187,7 +187,7 @@ async def create_rows_batched(
         return table_ops.to_pydantic_list(rows)
 
 
-async def bulk_insert_rows(
+async def bulk_insert_rows[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     table_ops: TableOperations[T, ResponseT, CreateT],
     rows_data: Sequence[dict[str, Any]],
     *,
