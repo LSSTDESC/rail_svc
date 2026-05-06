@@ -8,7 +8,7 @@ For operations requiring explicit transaction control or complex multi-table que
 use the TableOperations methods directly with explicit session management.
 """
 
-from collections.abc import AsyncIterator, Sequence
+from collections.abc import AsyncIterator
 from typing import TypeVar, Any
 
 from pydantic import BaseModel
@@ -16,14 +16,14 @@ from pydantic import BaseModel
 from ..db.base import Base
 from ..db_oper.base import TableOperations
 from ..db.session import get_session
-from ..db_funcs.filter import Filter, FilterOp, OrderBy
+from ..db_funcs.filter import Filter, OrderBy
 
 T = TypeVar("T", bound=Base)
 ResponseT = TypeVar("ResponseT", bound=BaseModel)
 CreateT = TypeVar("CreateT", bound=BaseModel)
 
 
-async def filter_rows(
+async def filter_rows[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     table_ops: TableOperations[T, ResponseT, CreateT],
     filters: list[Filter] | None = None,
     logical_op: str = "and",
@@ -92,7 +92,7 @@ async def filter_rows(
         return table_ops.to_pydantic_list(rows)
 
 
-async def filter_rows_streaming(
+async def filter_rows_streaming[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     table_ops: TableOperations[T, ResponseT, CreateT],
     filters: list[Filter] | None = None,
     logical_op: str = "and",
@@ -160,7 +160,7 @@ async def filter_rows_streaming(
             yield table_ops.to_pydantic(row)
 
 
-async def count_filtered_rows(
+async def count_filtered_rows[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     table_ops: TableOperations[T, ResponseT, CreateT],
     filters: list[Filter] | None = None,
     logical_op: str = "and",
@@ -203,7 +203,7 @@ async def count_filtered_rows(
         )
 
 
-async def filter_one(
+async def filter_one[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     table_ops: TableOperations[T, ResponseT, CreateT],
     filters: list[Filter],
     logical_op: str = "and",
@@ -251,7 +251,7 @@ async def filter_one(
         return table_ops.to_pydantic(row)
 
 
-async def filter_one_or_none(
+async def filter_one_or_none[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     table_ops: TableOperations[T, ResponseT, CreateT],
     filters: list[Filter],
     logical_op: str = "and",
@@ -297,7 +297,7 @@ async def filter_one_or_none(
         return table_ops.to_pydantic(row) if row is not None else None
 
 
-async def find_by(
+async def find_by[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     table_ops: TableOperations[T, ResponseT, CreateT],
     order_by: OrderBy | list[OrderBy] | None = None,
     skip: int = 0,
@@ -354,7 +354,7 @@ async def find_by(
         return table_ops.to_pydantic_list(rows)
 
 
-async def find_one_by(
+async def find_one_by[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     table_ops: TableOperations[T, ResponseT, CreateT],
     **kwargs: Any,
 ) -> ResponseT:

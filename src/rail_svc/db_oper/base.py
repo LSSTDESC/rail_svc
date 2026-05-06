@@ -2,20 +2,15 @@ from __future__ import annotations
 
 import asyncio
 import functools
-import json
-from abc import ABC, abstractmethod
-from collections.abc import Callable, Sequence
+from abc import abstractmethod
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol, Generic, Any, TypeVar, cast
+from typing import Any, TypeVar, cast
 
-import click
-import yaml
 from pydantic import BaseModel, ValidationError
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from structlog import get_logger
-from tabulate import tabulate
 
 from .. import db_funcs
 from ..db.base import ensure_base_inheritance, Base
@@ -29,7 +24,7 @@ CreateT = TypeVar("CreateT", bound=BaseModel)
 
 
 @dataclass
-class TableContext(Generic[T, ResponseT, CreateT]):
+class TableContext[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
     """
     Common context for database tables
 
@@ -125,7 +120,7 @@ class TableContext(Generic[T, ResponseT, CreateT]):
         )
 
 
-class TableOperations(Generic[T, ResponseT, CreateT]):
+class TableOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
     """Base class for Table operations with full type safety.
 
     Provides common CRUD operations for database tables with validation,
@@ -214,6 +209,13 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
         self.ctx = context
         self._bind_delegated_methods()
 
+    @overload
+    def __getattr__(self, name: str) -> Callable[..., Any]: ...
+    
+    def __getattr__(self, name: str) -> Any:
+        # This will be called for dynamically added methods
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+        
     def _bind_delegated_methods(self) -> None:
         """
         Bind all delegated methods to this instance.
@@ -861,6 +863,7 @@ class FileValidatedOperations(TableOperations[T, ResponseT, CreateT]):
         self,
         path: str | None,
         reference_obj: Base | None,
+        *,
         validate_file: bool,
         extra_kwargs: dict[str, Any],
     ) -> int:
@@ -1019,7 +1022,7 @@ class FileValidatedOperations(TableOperations[T, ResponseT, CreateT]):
         return n_objects
 
 
-def create_operations(
+def create_operations[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     db_class: type[T],
     response_class: type[ResponseT],
     create_class: type[CreateT],

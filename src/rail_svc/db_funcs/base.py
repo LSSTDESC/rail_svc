@@ -1,22 +1,17 @@
 from __future__ import annotations
 
 import functools
-import json
-from abc import ABC, abstractmethod
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol, Generic, Any, TypeVar
+from typing import Any, TypeVar
 
-import click
-import yaml
 from pydantic import BaseModel, ValidationError
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from structlog import get_logger
-from tabulate import tabulate
 
 from ..db.base import ensure_base_inheritance, Base
+from . import read, create, update, delete, filter as filter_ops
 
 logger = get_logger(__name__)
 
@@ -27,7 +22,7 @@ CreateT = TypeVar("CreateT", bound=BaseModel)
 
 
 @dataclass
-class TableContext(Generic[T, ResponseT, CreateT]):
+class TableContext[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
     """
     Common context for database tables
 
@@ -135,7 +130,7 @@ class TableContext(Generic[T, ResponseT, CreateT]):
         )
 
 
-class TableOperations(Generic[T, ResponseT, CreateT]):
+class TableOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
     """Base class for Table operations with full type safety.
 
     Provides common CRUD operations for database tables with validation,
@@ -237,9 +232,17 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
         The delegated methods are defined in _DELEGATED_METHODS and organized
         by operation type (create, read, update, delete).
         """
+        module_map = {
+            "read": read,
+            "create": create,
+            "update": update,
+            "delete": delete,
+            "filter": filter_ops,
+        }
+
         for module_name, func_list in self._DELEGATED_METHODS.items():
+            module = module_map[module_name]
             for func_name in func_list:
-                module = getattr(db_funcs, module_name)
                 func = getattr(module, func_name)
                 bound_func = functools.partial(func, self.ctx.db_class)
                 functools.update_wrapper(bound_func, func)
@@ -817,7 +820,7 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
         return self.ctx.db_class.to_pydantic_dict_list(rows)
 
 
-def create_operations(
+def create_operations[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     db_class: type[T],
     response_class: type[ResponseT],
     create_class: type[CreateT],

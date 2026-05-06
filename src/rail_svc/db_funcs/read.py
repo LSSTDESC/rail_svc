@@ -309,7 +309,7 @@ async def count_rows(
 
 async def lookup_by_id_or_name(
     the_class: type[T],
-    session: async_scoped_session,
+    session: AsyncSession,
     id_: int | None,
     name: str | None,
     *,

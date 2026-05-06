@@ -12,7 +12,6 @@ File validation includes:
 - Object count extraction
 """
 
-import asyncio
 import logging
 from pathlib import Path
 from typing import Any
