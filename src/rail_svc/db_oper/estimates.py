@@ -23,7 +23,6 @@ import qp
 from .. import db, db_funcs, models
 from .base import TableContext, FileValidatedOperations
 
-
 __all__ = ["EstimatesOperations", "estimates"]
 
 
@@ -99,7 +98,7 @@ class EstimatesOperations(FileValidatedOperations[db.Estimates, models.Estimates
         Examples
         --------
         With file validation:
-        
+
         >>> kwargs = await ops.get_create_kwargs(
         ...     session,
         ...     path="estimates/pzflow_results.hdf5",
@@ -120,11 +119,10 @@ class EstimatesOperations(FileValidatedOperations[db.Estimates, models.Estimates
         ...     validate_file=False
         ... )
         """
-        
+
         # 1. Resolve dataset_id and estimator_id foreign keys
         dataset_id, dataset_obj = await db_funcs.read.lookup_by_id_or_name(
-            db.Dataset, session, dataset_id, dataset_name,
-            need_object=validate_file and path is not None
+            db.Dataset, session, dataset_id, dataset_name, need_object=validate_file and path is not None
         )
 
         estimator_id, _ = await db_funcs.read.lookup_by_id_or_name(
@@ -153,20 +151,20 @@ class EstimatesOperations(FileValidatedOperations[db.Estimates, models.Estimates
 
     def get_file_length(self, path: Path) -> int:
         """Extract number of objects from qp ensemble file.
-    
+
         Parameters
         ----------
         path : Path
             Absolute path to the estimates file
-        
+
         Returns
         -------
         int
             Number of objects in the ensemble
-        
-        """
-        return qp.data_length(str(path))    
 
-    
+        """
+        return qp.data_length(str(path))
+
+
 # Module-level singleton
 estimates: EstimatesOperations = EstimatesOperations(TableContext.from_db_class(db.Estimates))

@@ -42,11 +42,7 @@ def handle_cli_error(exc: Exception, operation: str, resource: str) -> None:
         click.echo(f"Error: {exc}", err=True)
     else:
         logger.error(
-            "Unexpected error",
-            operation=operation,
-            resource=resource,
-            error=str(exc),
-            exc_info=True
+            "Unexpected error", operation=operation, resource=resource, error=str(exc), exc_info=True
         )
         click.echo(f"Error: {exc}", err=True)
     raise click.Abort()

@@ -1,4 +1,3 @@
-
 from .algorithm import algorithm
 from .band import band
 from .catalog_band_assoc import catalog_band_assoc
@@ -9,12 +8,12 @@ from .estimator import estimator
 from .model import model
 
 __all__ = [
-    'algorithm',
-    'band',
-    'catalog_band_assoc',
-    'catalog_tag',
-    'dataset',
-    'estimates',
-    'estimator',
-    'model',
+    "algorithm",
+    "band",
+    "catalog_band_assoc",
+    "catalog_tag",
+    "dataset",
+    "estimates",
+    "estimator",
+    "model",
 ]

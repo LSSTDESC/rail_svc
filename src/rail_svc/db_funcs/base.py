@@ -21,9 +21,9 @@ from ..db.base import ensure_base_inheritance, Base
 logger = get_logger(__name__)
 
 # Type variables
-T = TypeVar('T', bound=Base)
-ResponseT = TypeVar('ResponseT', bound=BaseModel)
-CreateT = TypeVar('CreateT', bound=BaseModel)
+T = TypeVar("T", bound=Base)
+ResponseT = TypeVar("ResponseT", bound=BaseModel)
+CreateT = TypeVar("CreateT", bound=BaseModel)
 
 
 @dataclass
@@ -105,22 +105,16 @@ class TableContext(Generic[T, ResponseT, CreateT]):
         """
         # Validate required methods exist
         if not hasattr(db_class, "pydantic_model_class"):
-            raise AttributeError(
-                f"{db_class.__name__} must implement pydantic_model_class() method"
-            )
+            raise AttributeError(f"{db_class.__name__} must implement pydantic_model_class() method")
         if not hasattr(db_class, "pydantic_create_class"):
-            raise AttributeError(
-                f"{db_class.__name__} must implement pydantic_create_class() method"
-            )
+            raise AttributeError(f"{db_class.__name__} must implement pydantic_create_class() method")
         if not hasattr(db_class, "class_string"):
-            raise AttributeError(
-                f"{db_class.__name__} must implement class_string() method"
-            )
+            raise AttributeError(f"{db_class.__name__} must implement class_string() method")
 
         # Get the classes
         response_class = db_class.pydantic_model_class()
         create_class = db_class.pydantic_create_class()
-        
+
         # Validate return types
         if not (isinstance(response_class, type) and issubclass(response_class, BaseModel)):
             raise TypeError(
@@ -197,31 +191,24 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
 
     _DELEGATED_METHODS = {
         # CREATE operations
-        'create': [
-            'create_rows_batched',
-            'bulk_insert_rows'
-        ],
+        "create": ["create_rows_batched", "bulk_insert_rows"],
         # READ operations
-        'read': [
-            'get_row',
-            'get_row_by_name',
-            'get_rows',
-            'get_rows_streaming',
-            'get_row_or_none',
-            'count_rows',
-            'lookup_by_id_or_name',
+        "read": [
+            "get_row",
+            "get_row_by_name",
+            "get_rows",
+            "get_rows_streaming",
+            "get_row_or_none",
+            "count_rows",
+            "lookup_by_id_or_name",
         ],
         # UPDATE operations
-        'update': [
-            'update_row',
-            'update_rows',
+        "update": [
+            "update_row",
+            "update_rows",
         ],
         # DELETE operations
-        'delete': [
-            'delete_row',
-            'delete_rows',
-            'bulk_delete_rows'
-        ],
+        "delete": ["delete_row", "delete_rows", "bulk_delete_rows"],
     }
 
     def __init__(self, context: TableContext[T, ResponseT, CreateT]) -> None:
@@ -240,11 +227,11 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
     def _bind_delegated_methods(self) -> None:
         """
         Bind all delegated methods to this instance.
-        
+
         This method dynamically attaches CRUD operations from the db_funcs
         modules to this instance, pre-binding them with the database class
         from the context.
-        
+
         Notes
         -----
         The delegated methods are defined in _DELEGATED_METHODS and organized
@@ -322,12 +309,7 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
         """
         ensure_base_inheritance(self.ctx.db_class)
 
-        logger.debug(
-            "Creating row",
-            table=self.ctx.db_class.__name__,
-            fields=list(kwargs.keys())
-        )
-
+        logger.debug("Creating row", table=self.ctx.db_class.__name__, fields=list(kwargs.keys()))
 
         # Validate input if requested
         if validate:
@@ -343,10 +325,10 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
 
         # update kwargs
         kwargs = self.get_create_kwargs(session, **kwargs)
-        
+
         # Pre-create hook
         kwargs = await self.ctx.db_class.pre_create_hook(session, kwargs)
-        
+
         # Create the row
         row = self.ctx.db_class(**kwargs)
 
@@ -354,11 +336,7 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
         session.add(row)
         await session.flush()
 
-        logger.debug(
-            "Row created",
-            table=self.ctx.db_class.__name__,
-            row_id=getattr(row, 'id', None)
-        )
+        logger.debug("Row created", table=self.ctx.db_class.__name__, row_id=getattr(row, "id", None))
 
         return row
 
@@ -435,17 +413,13 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
         if not rows_data:
             raise ValueError("rows_data cannot be empty")
 
-        logger.debug(
-            "Creating multiple rows",
-            table=self.ctx.db_class.__name__,
-            count=len(rows_data)
-        )
+        logger.debug("Creating multiple rows", table=self.ctx.db_class.__name__, count=len(rows_data))
 
         # Process all rows through hooks and validation
         processed_rows_data = []
         for idx, row_kwargs in enumerate(rows_data):
             try:
-            
+
                 # update kwargs
                 modified_kwargs = await self.get_create_kwargs(
                     session, row_kwargs.copy()  # Copy to avoid modifying original
@@ -466,7 +440,8 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
 
                 # Pre-create hook
                 modified_kwargs = await self.ctx.db_class.pre_create_hook(
-                    session, modified_kwargs,
+                    session,
+                    modified_kwargs,
                 )
 
                 processed_rows_data.append(modified_kwargs)
@@ -487,11 +462,7 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
         session.add_all(rows)
         await session.flush()
 
-        logger.debug(
-            "Rows created",
-            table=self.ctx.db_class.__name__,
-            count=len(rows)
-        )
+        logger.debug("Rows created", table=self.ctx.db_class.__name__, count=len(rows))
 
         return rows
 
@@ -572,9 +543,7 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
                 archive_path=str(archive_path),
                 resolved_path=str(fullpath),
             )
-            raise ValueError(
-                f"Path {path} would escape archive directory"
-            ) from None
+            raise ValueError(f"Path {path} would escape archive directory") from None
 
         return fullpath
 
@@ -753,7 +722,7 @@ class TableOperations(Generic[T, ResponseT, CreateT]):
         ...     user_row: User = await ops.get_row(session, user_id=1)
         ...     user_dict: dict[str, Any] = ops.to_pydantic_dict(user_row)
         ...     print(user_dict)
-        {'id': 1, 'username': 'alice', 'email': 'alice@example.com', 
+        {'id': 1, 'username': 'alice', 'email': 'alice@example.com',
          'created_at': '2025-01-15T10:30:00'}
 
         >>> # Useful for structured logging
@@ -854,7 +823,7 @@ def create_operations(
     create_class: type[CreateT],
 ) -> TableOperations[T, ResponseT, CreateT]:
     """Create fully-typed TableOperations from explicit classes.
-    
+
     Parameters
     ----------
     db_class : type[T]
@@ -863,7 +832,7 @@ def create_operations(
         Pydantic response model class
     create_class : type[CreateT]
         Pydantic creation model class
-        
+
     Returns
     -------
     TableOperations[T, ResponseT, CreateT]

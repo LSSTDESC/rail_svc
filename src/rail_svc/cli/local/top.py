@@ -7,9 +7,11 @@ from .base import CliOperations
 
 def make_table_group(name: str, ops, desc: str) -> click.Group:
     """Create table CLI group with all commands."""
+
     @click.group(name=name, help=desc)
-    def grp(): pass
-    
+    def grp():
+        pass
+
     cli = CliOperations(ops, grp)
     cli.register_all_create_commands()
     cli.register_all_read_commands()

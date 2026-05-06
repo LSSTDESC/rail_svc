@@ -28,9 +28,7 @@ class CatalogBandAssoc(Base):
 
     __tablename__ = "catalog_band_assoc"
 
-    __table_args__ = (
-        UniqueConstraint('catalog_tag_id', 'band_alias', name='uq_catalog_band_alias'),
-    )
+    __table_args__ = (UniqueConstraint("catalog_tag_id", "band_alias", name="uq_catalog_band_alias"),)
 
     # Primary key
     id_: Mapped[int] = mapped_column(primary_key=True)

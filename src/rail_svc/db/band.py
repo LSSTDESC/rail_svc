@@ -1,6 +1,5 @@
 """Database model for CatalogTag table"""
 
-
 from pydantic import BaseModel
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -41,7 +40,6 @@ class Band(Base):
 
     #: Transmission at given wavelengths
     band_transmission: Mapped[list[float]] = mapped_column()
-
 
     # Pydantic integration
     @classmethod

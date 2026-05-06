@@ -29,9 +29,9 @@ def display_table(data, col_names):
     """
     if not data:
         return ""
-    
-    rows = [[item.get(col, '') for col in col_names] for item in data]
-    return tabulate(rows, headers=col_names, tablefmt='simple')
+
+    rows = [[item.get(col, "") for col in col_names] for item in data]
+    return tabulate(rows, headers=col_names, tablefmt="simple")
 
 
 def format_output(data, output_format):
@@ -64,9 +64,9 @@ def format_output(data, output_format):
       "age": 25
     }
     """
-    if output_format == 'json':
+    if output_format == "json":
         return json.dumps(data, indent=2)
-    elif output_format == 'yaml':
+    elif output_format == "yaml":
         return yaml.dump(data, default_flow_style=False)
     else:
         raise ValueError(f"Unknown output format: {output_format}")
@@ -154,12 +154,12 @@ def output_pydantic_list(result, output, col_names=None):
     """
     # Convert to dicts
     data = [item.model_dump() for item in result]
-    
-    if output == 'table':
+
+    if output == "table":
         if col_names is None:
             raise ValueError("Table output requires column names to be defined")
         return display_table(data, col_names)
-    
+
     return format_output(data, output)
 
 
@@ -207,12 +207,12 @@ def output_pydantic_single(result, output, col_names=None):
     """
     # Convert to dict
     data = result.model_dump()
-    
-    if output == 'table':
+
+    if output == "table":
         if col_names is None:
             raise ValueError("Table output requires column names to be defined")
         return display_table([data], col_names)
-    
+
     return format_output(data, output)
 
 
@@ -254,7 +254,7 @@ def output_pydantic(result, output_format, col_names=None):
     >>> class User(BaseModel):
     ...     name: str
     ...     age: int
-    
+
     Single model:
     >>> user = User(name='Alice', age=25)
     >>> print(output_pydantic(user, 'json'))
@@ -262,7 +262,7 @@ def output_pydantic(result, output_format, col_names=None):
       "name": "Alice",
       "age": 25
     }
-    
+
     List of models:
     >>> users = [User(name='Alice', age=25), User(name='Bob', age=30)]
     >>> print(output_pydantic(users, 'table', col_names=['name', 'age']))
@@ -274,15 +274,15 @@ def output_pydantic(result, output_format, col_names=None):
     # Normalize to list
     is_single = isinstance(result, BaseModel)
     results = [result] if is_single else result
-    
+
     # Convert to dicts
     data = [item.model_dump() for item in results]
-    
+
     # Handle table output
-    if output_format == 'table':
+    if output_format == "table":
         if col_names is None:
             raise ValueError("Table output requires column names")
         return display_table(data, col_names)
-    
+
     # Handle other formats
     return format_output(data, output_format)

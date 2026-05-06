@@ -112,8 +112,11 @@ class DatasetOperations(FileValidatedOperations[db.Dataset, models.Dataset, mode
         """
         # 1. Resolve catalog_tag foreign key
         catalog_tag_id, catalog_tag_obj = await db_funcs.read.lookup_by_id_or_name(
-            db.CatalogTag, session, catalog_tag_id, catalog_tag_name,
-            need_object=validate_file and path is not None
+            db.CatalogTag,
+            session,
+            catalog_tag_id,
+            catalog_tag_name,
+            need_object=validate_file and path is not None,
         )
 
         # 2. Process path and determine n_objects
@@ -134,20 +137,20 @@ class DatasetOperations(FileValidatedOperations[db.Dataset, models.Dataset, mode
 
     def get_file_length(self, path: Path) -> int:
         """Extract number of objects from hdf5 file.
-    
+
         Parameters
         ----------
         path : Path
             Absolute path to the dataset file
-        
+
         Returns
         -------
         int
             Number of objects in file
-        
+
         """
         return tables_io.hdf5.get_input_data_length(str(path))
-    
+
 
 # Module-level singleton
 dataset: DatasetOperations = DatasetOperations(TableContext.from_db_class(db.Dataset))

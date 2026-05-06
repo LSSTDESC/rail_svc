@@ -29,12 +29,12 @@ async def delete_row(
     capture_data: bool = True,
 ) -> dict[str, Any] | None:
     """Delete a single row by primary key with automatic session management.
-    
+
     The deletion is automatically committed. Pre and post-delete hooks
     are called within the transaction - if either hook raises an exception,
     the deletion is rolled back. Creates and manages its own database
     session and transaction.
-    
+
     Parameters
     ----------
     table_ops
@@ -44,12 +44,12 @@ async def delete_row(
     capture_data
         If True, capture row data before deletion and return it.
         Set to False for performance if you don't need the data.
-        
+
     Returns
     -------
     dict[str, Any] | None
         Dictionary of deleted row data if capture_data=True, else None
-        
+
     Raises
     ------
     KeyError
@@ -58,14 +58,14 @@ async def delete_row(
         If deletion violates database constraints (e.g., foreign key)
     Exception
         If pre or post-delete hooks raise an exception
-        
+
     Notes
     -----
     - Pre-delete hook is called before deletion with access to the row object
     - Post-delete hook is called after deletion but before commit
     - If any hook raises an exception, the deletion is rolled back
     - The deletion is automatically committed
-    
+
     See Also
     --------
     delete_rows : Delete multiple rows atomically
@@ -83,11 +83,11 @@ async def delete_rows(
     capture_data: bool = False,
 ) -> list[dict[str, Any]] | None:
     """Delete multiple rows atomically with automatic session management.
-    
+
     All rows are deleted in a single transaction - if any deletion fails,
     all deletions are rolled back. Creates and manages its own database
     session and transaction.
-    
+
     Parameters
     ----------
     table_ops
@@ -96,12 +96,12 @@ async def delete_rows(
         List of primary keys to delete
     capture_data
         If True, capture data for all deleted rows and return it
-        
+
     Returns
     -------
     list[dict[str, Any]] | None
         List of deleted row data dicts if capture_data=True, else None
-        
+
     Raises
     ------
     ValueError
@@ -112,14 +112,14 @@ async def delete_rows(
         If any deletion violates constraints
     Exception
         If any pre or post-delete hook raises an exception
-        
+
     Notes
     -----
     - All deletions are performed atomically - partial success is not possible
     - Pre and post-delete hooks are called for each row
     - Deletions are committed to database before returning
     - If any hook raises an exception, all deletions are rolled back
-    
+
     See Also
     --------
     delete_row : Delete a single row
@@ -135,31 +135,31 @@ async def bulk_delete_rows(
     row_ids: list[int],
 ) -> int:
     """Delete multiple rows using bulk SQL operation with automatic session management.
-    
+
     This is much faster than delete_rows() but does NOT call hooks
     and does NOT return deleted row data. Creates and manages its own
     database session and transaction.
-    
+
     Parameters
     ----------
     table_ops
         Table operations instance (e.g., from rail_svc.tables)
     row_ids
         List of primary keys to delete
-        
+
     Returns
     -------
     int
         Number of rows actually deleted (may be less than len(row_ids)
         if some IDs didn't exist)
-        
+
     Raises
     ------
     ValueError
         If row_ids is empty
     IntegrityError
         If deletion violates constraints
-        
+
     Notes
     -----
     - Does NOT call pre/post-delete hooks
@@ -167,7 +167,7 @@ async def bulk_delete_rows(
     - Does NOT capture deleted row data
     - Much faster for large deletions
     - Returns actual count of deleted rows (may differ from len(row_ids))
-    
+
     See Also
     --------
     delete_rows : Delete with hooks and optional data capture

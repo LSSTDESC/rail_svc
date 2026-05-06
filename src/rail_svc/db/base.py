@@ -25,7 +25,7 @@ Example Hook Implementation:
     ...     async def after_create_hook(cls, session, row):
     ...         # Critical: let exceptions propagate
     ...         await create_user_preferences(session, row.id)
-    ...         
+    ...
     ...         # Non-critical: catch and log
     ...         try:
     ...             await cache.set(f"user:{row.id}", row.to_dict())
@@ -65,7 +65,7 @@ class Base(DeclarativeBase):
         - Shared metadata for all models
         - Required interface for Pydantic integration
         - Lifecycle hooks for create, update, and delete operations
-    
+
     Subclasses must implement the abstract methods for Pydantic model integration.
     Subclasses may override hook methods to add custom behavior at various points
     in the row lifecycle.
@@ -73,13 +73,12 @@ class Base(DeclarativeBase):
 
     id_: int
     name: str
-    
+
     # Default pagination limit - subclasses can override via get_pagination_limit()
     default_pagination_limit: ClassVar[int] = 100
 
     metadata: ClassVar[MetaData] = MetaData(
-        schema=config.db.table_schema or None,
-        naming_convention=NAMING_CONVENTION
+        schema=config.db.table_schema or None, naming_convention=NAMING_CONVENTION
     )
 
     @classmethod
@@ -299,7 +298,6 @@ class Base(DeclarativeBase):
         """
         return [cls.to_pydantic_dict(row) for row in rows]
 
-    
     @classmethod
     def get_pagination_limit(cls) -> int:
         """Get the default pagination limit for this table.
@@ -338,12 +336,12 @@ class Base(DeclarativeBase):
          'after_update': False, 'pre_delete': False, 'after_delete': True}
         """
         return {
-            'pre_create': cls.pre_create_hook != Base.pre_create_hook,
-            'after_create': cls.after_create_hook != Base.after_create_hook,
-            'pre_update': cls.pre_update_hook != Base.pre_update_hook,
-            'after_update': cls.after_update_hook != Base.after_update_hook,
-            'pre_delete': cls.pre_delete_hook != Base.pre_delete_hook,
-            'after_delete': cls.after_delete_hook != Base.after_delete_hook,
+            "pre_create": cls.pre_create_hook != Base.pre_create_hook,
+            "after_create": cls.after_create_hook != Base.after_create_hook,
+            "pre_update": cls.pre_update_hook != Base.pre_update_hook,
+            "after_update": cls.after_update_hook != Base.after_update_hook,
+            "pre_delete": cls.pre_delete_hook != Base.pre_delete_hook,
+            "after_delete": cls.after_delete_hook != Base.after_delete_hook,
         }
 
     # ============================================================================
@@ -773,6 +771,4 @@ def ensure_base_inheritance(cls: type[Any]) -> None:
     TypeError: Class BadModel must inherit from rail_svc.db.base.Base
     """
     if not issubclass(cls, Base):
-        raise TypeError(
-            f"Class {cls.__name__} must inherit from rail_svc.db.base.Base"
-        )
+        raise TypeError(f"Class {cls.__name__} must inherit from rail_svc.db.base.Base")

@@ -20,7 +20,7 @@ class WebInterfaceConfiguration(BaseModel):
         default=100,
     )
 
-    max_page_size : int = Field(
+    max_page_size: int = Field(
         description="Max page size for pagination",
         default=1000,
     )
@@ -30,19 +30,19 @@ class WebInterfaceConfiguration(BaseModel):
         default=1000,
     )
 
-    max_batch_size : int = Field(
+    max_batch_size: int = Field(
         description="Max size for batch operations",
         default=10000,
     )
 
     default_timeout: float = Field(
         description="Default query timeout (seconds)",
-        default=30.,
+        default=30.0,
     )
 
     stream_timeout: float = Field(
         description="Default streaming timeout (seconds)",
-        default=60.,
+        default=60.0,
     )
 
 

@@ -10,4 +10,4 @@ from .base import create_local_operations
 algorithm = create_local_operations(db_oper.algorithm)
 
 # Re-export for convenience
-__all__ = ['algorithm']
+__all__ = ["algorithm"]

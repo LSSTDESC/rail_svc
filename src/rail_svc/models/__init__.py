@@ -1,4 +1,3 @@
-
 from .algorithm import Algorithm, AlgorithmCreate
 from .band import Band, BandCreate
 from .catalog_band_assoc import CatalogBandAssoc, CatalogBandAssocCreate
@@ -9,20 +8,20 @@ from .estimator import Estimator, EstimatorCreate
 from .model import Model, ModelCreate
 
 __all__ = [
-    'Algorithm',
-    'AlgorithmCreate',    
-    'Band',
-    'BandCreate',    
-    'CatalogBandAssoc',
-    'CatalogBandAssocCreate',    
-    'CatalogTag',
-    'CatalogTagCreate',    
-    'Dataset',
-    'DatasetCreate',    
-    'Estimates',
-    'EstimatesCreate',    
-    'Estimator',
-    'EstimatorCreate',    
-    'Model',
-    'ModelCreate',
+    "Algorithm",
+    "AlgorithmCreate",
+    "Band",
+    "BandCreate",
+    "CatalogBandAssoc",
+    "CatalogBandAssocCreate",
+    "CatalogTag",
+    "CatalogTagCreate",
+    "Dataset",
+    "DatasetCreate",
+    "Estimates",
+    "EstimatesCreate",
+    "Estimator",
+    "EstimatorCreate",
+    "Model",
+    "ModelCreate",
 ]

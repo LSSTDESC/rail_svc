@@ -14,7 +14,6 @@ from click.decorators import FC
 from ..config import config as global_config
 from ..operations.client import RailClient
 
-
 # Configuration defaults
 DEFAULT_PAGE_SIZE = global_config.web_interface.default_page_size
 MAX_PAGE_SIZE = global_config.web_interface.max_page_size
@@ -105,9 +104,7 @@ class PartialArgument:
     """Wraps click.argument with partial arguments for convenient reuse"""
 
     def __init__(self, *param_decls: Any, **kwargs: Any) -> None:
-        self._partial = partial(
-            click.argument, *param_decls, cls=click.Argument, **kwargs
-        )
+        self._partial = partial(click.argument, *param_decls, cls=click.Argument, **kwargs)
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:  # pragma: no cover
         return self._partial(*args, **kwargs)
@@ -165,31 +162,20 @@ batch_size = PartialOption(
 )
 
 show_progress = PartialOption(
-    "--show-progress",
-    is_flag=True,
-    help="Show progress bar (disables output until complete)"
+    "--show-progress", is_flag=True, help="Show progress bar (disables output until complete)"
 )
 
-timeout = PartialOption(
-    "--timeout",
-    type=float,
-    default=DEFAULT_TIMEOUT,
-    help="Request timeout in seconds"
-)
+timeout = PartialOption("--timeout", type=float, default=DEFAULT_TIMEOUT, help="Request timeout in seconds")
 
 json_file = PartialOption(
     "--json-file",
     type=click.Path(exists=True, dir_okay=False, readable=True),
     required=True,
-    help="JSON file containing array of update objects (each must have 'id')"
+    help="JSON file containing array of update objects (each must have 'id')",
 )
 
 field = PartialOption(
-    "--field",
-    "-f",
-    multiple=True,
-    type=(str, str),
-    help="Field to update (format: --field name value)"
+    "--field", "-f", multiple=True, type=(str, str), help="Field to update (format: --field name value)"
 )
 
 fields = PartialOption(
@@ -198,22 +184,17 @@ fields = PartialOption(
     "field_values",
     multiple=True,
     type=(str, str),
-    help="Field to update (format: --field name value)"
+    help="Field to update (format: --field name value)",
 )
 
 
 order_by = PartialOption(
-    "--order-by",
-    "-o",
-    multiple=True,
-    help="Order by field (prefix with - for descending)"
+    "--order-by", "-o", multiple=True, help="Order by field (prefix with - for descending)"
 )
 
 
 json_data = PartialOption(
-    "--json-data",
-    type=str,
-    help="JSON string of fields to update (alternative to --field)"
+    "--json-data", type=str, help="JSON string of fields to update (alternative to --field)"
 )
 
 filters = PartialOption(
@@ -240,9 +221,7 @@ with_count = PartialOption(
 
 
 no_validate = PartialOption(
-    "--no-validate",
-    is_flag=True,
-    help="Skip Pydantic validation (faster, less safe)"
+    "--no-validate", is_flag=True, help="Skip Pydantic validation (faster, less safe)"
 )
 
 no_refresh = PartialOption(

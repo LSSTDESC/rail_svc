@@ -49,7 +49,9 @@ logger = logging.getLogger(__name__)
 __all__ = ["CatalogBandAssocOperations", "catalog_band_assoc"]
 
 
-class CatalogBandAssocOperations(TableOperations[db.CatalogBandAssoc, models.CatalogBandAssoc, models.CatalogBandAssocCreate]):
+class CatalogBandAssocOperations(
+    TableOperations[db.CatalogBandAssoc, models.CatalogBandAssoc, models.CatalogBandAssocCreate]
+):
     """Create operations for CatalogBandAssoc table.
 
     Handles automatic lookup of catalog_tag and band by either ID or name.
