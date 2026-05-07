@@ -13,6 +13,7 @@ from .base import Base
 
 if TYPE_CHECKING:
     from .catalog_tag import CatalogTag
+    from .estimates import Estimates
 
 logger = structlog.get_logger(__name__)
 
@@ -48,6 +49,12 @@ class Dataset(Base):
     catalog_tag: Mapped["CatalogTag"] = relationship(
         "CatalogTag",
         back_populates="datasets",
+        viewonly=True,
+    )
+
+    estimates: Mapped[list["Estimates"]] = relationship(
+        "Estimates",
+        back_populates="dataset",
         viewonly=True,
     )
 

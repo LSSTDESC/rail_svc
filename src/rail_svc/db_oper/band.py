@@ -5,12 +5,14 @@ Provides CRUD operations and Pydantic conversions for the Band table.
 """
 
 from .. import db, models
-from .base import create_operations
+from .base import TableContext, TableOperations
 
-__all__ = ["band"]
 
-band = create_operations(
-    db.Band,
-    models.Band,
-    models.BandCreate,
-)
+class BandOperations(TableOperations[db.Band, models.Band, models.BandCreate]):
+    """Create operations for Band table."""
+
+
+__all__ = ["BandOperations", "band"]
+
+# Module-level singleton
+band: BandOperations = BandOperations(TableContext.from_db_class(db.Band))

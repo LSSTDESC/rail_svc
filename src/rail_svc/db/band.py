@@ -1,11 +1,15 @@
 """Database model for CatalogTag table"""
 
+from typing import TYPE_CHECKING
 from pydantic import BaseModel
 from sqlalchemy import String, JSON
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .. import models
 from .base import Base
+
+if TYPE_CHECKING:
+    from .catalog_band_assoc import CatalogBandAssoc
 
 
 class Band(Base):
@@ -40,6 +44,13 @@ class Band(Base):
 
     #: Transmission at given wavelengths
     band_transmission: Mapped[list[float]] = mapped_column(JSON)
+
+    # Relationships - read-only access to tagged objects
+    catalog_assocs: Mapped[list["CatalogBandAssoc"]] = relationship(
+        "CatalogBandAssoc",
+        back_populates="band",
+        viewonly=True,
+    )
 
     # Pydantic integration
     @classmethod

@@ -10,8 +10,8 @@ from .. import models
 from .base import Base
 
 if TYPE_CHECKING:
+    from .catalog_band_assoc import CatalogBandAssoc
     from .dataset import Dataset
-    from .estimator import Estimator
     from .model import Model
 
 
@@ -49,8 +49,9 @@ class CatalogTag(Base):
     name: Mapped[str] = mapped_column(String(255), index=True, unique=True)
 
     # Relationships - read-only access to tagged objects
-    estimators: Mapped[list["Estimator"]] = relationship(
-        "Estimator",
+
+    band_assocs: Mapped[list["CatalogBandAssoc"]] = relationship(
+        "CatalogBandAssoc",
         back_populates="catalog_tag",
         viewonly=True,
     )

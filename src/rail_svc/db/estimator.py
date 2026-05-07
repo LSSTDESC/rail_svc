@@ -13,6 +13,7 @@ from .base import Base
 if TYPE_CHECKING:
     from .algorithm import Algorithm
     from .catalog_tag import CatalogTag
+    from .estimates import Estimates
     from .model import Model
 
 
@@ -68,6 +69,12 @@ class Estimator(Base):
     model: Mapped["Model"] = relationship(
         "Model",
         back_populates="estimators",
+        viewonly=True,
+    )
+
+    estimates: Mapped[list["Estimates"]] = relationship(
+        "Estimates",
+        back_populates="estimator",
         viewonly=True,
     )
 
@@ -140,7 +147,7 @@ class Estimator(Base):
         Algorithm
             The algorithm instance
         """
-        return self.model.algo
+        return self.model.algorithm
 
     @property
     def catalog_tag(self) -> "CatalogTag":

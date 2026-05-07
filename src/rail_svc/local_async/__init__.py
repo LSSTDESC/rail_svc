@@ -25,17 +25,26 @@ Examples
 """
 
 from .. import db_oper
-from .base import create_local_operations
+from .base import (
+    AlgorithmLocalOperations,
+    BandLocalOperations,
+    CatalogBandAssocOperations,
+    CatalogTagLocalOperations,
+    DatasetLocalOperations,
+    EstimatesLocalOperations,
+    EstimatorLocalOperations,
+    ModelLocalOperations,
+)
 
 # Create local operations - each has all methods via dynamic binding
-algorithm = create_local_operations(db_oper.algorithm)
-band = create_local_operations(db_oper.band)
-catalog_band_assoc = create_local_operations(db_oper.catalog_band_assoc)
-catalog_tag = create_local_operations(db_oper.catalog_tag)
-dataset = create_local_operations(db_oper.dataset)
-estimates = create_local_operations(db_oper.estimates)
-estimator = create_local_operations(db_oper.estimator)
-model = create_local_operations(db_oper.model)
+algorithm = AlgorithmLocalOperations(db_oper.algorithm)
+band = BandLocalOperations(db_oper.band)
+catalog_band_assoc = CatalogBandAssocOperations(db_oper.catalog_band_assoc)
+catalog_tag = CatalogTagLocalOperations(db_oper.catalog_tag)
+dataset = DatasetLocalOperations(db_oper.dataset)
+estimates = EstimatesLocalOperations(db_oper.estimates)
+estimator = EstimatorLocalOperations(db_oper.estimator)
+model = ModelLocalOperations(db_oper.model)
 
 __all__ = [
     "algorithm",

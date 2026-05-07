@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-import functools
 from abc import abstractmethod
 from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
 from pydantic import BaseModel, ValidationError
 from sqlalchemy import insert
@@ -173,175 +172,6 @@ class TableOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
     ...         # pydantic_user is type UserResponse (ResponseT)
     """
 
-    if TYPE_CHECKING:
-        # pylint: disable=unused-argument
-
-        async def get_row(
-            self,
-            session: AsyncSession,
-            row_id: int,
-        ) -> T: ...
-
-        async def get_row_by_name(
-            self,
-            session: AsyncSession,
-            name: str,
-        ) -> T: ...
-
-        async def get_rows(
-            self,
-            session: AsyncSession,
-            skip: int = 0,
-            limit: int | None = None,
-        ) -> Sequence[T]: ...
-
-        async def get_rows_streaming(
-            self,
-            session: AsyncSession,
-            skip: int = 0,
-            limit: int | None = None,
-        ) -> AsyncIterator[T]: ...
-
-        async def get_row_or_none(
-            self,
-            session: AsyncSession,
-            row_id: int,
-        ) -> T | None: ...
-
-        async def count_rows(
-            self,
-            session: AsyncSession,
-        ) -> int: ...
-
-        async def lookup_by_id_or_name(
-            self,
-            session: AsyncSession,
-            row_id: int | None,
-            name: str | None,
-            *,
-            need_object: bool = False,
-        ) -> tuple[int, T | None]: ...
-
-        async def update_row(
-            self,
-            session: AsyncSession,
-            row_id: int,
-            **kwargs: Any,
-        ) -> T: ...
-
-        async def update_rows(
-            self,
-            session: AsyncSession,
-            updates: Sequence[dict[str, Any]],
-        ) -> list[T]: ...
-
-        async def delete_row(
-            self,
-            session: AsyncSession,
-            row_id: int,
-            *,
-            capture_data: bool = True,
-        ) -> dict[str, Any] | None: ...
-
-        async def delete_rows(
-            self,
-            session: AsyncSession,
-            row_ids: list[int],
-            *,
-            capture_data: bool = False,
-        ) -> list[dict[str, Any]] | None: ...
-
-        async def bulk_delete_rows(
-            self,
-            session: AsyncSession,
-            row_ids: list[int],
-        ) -> int: ...
-
-        async def filter_rows(
-            self,
-            session: AsyncSession,
-            filters: list[Filter] | None = None,
-            logical_op: str = "and",
-            order_by: OrderBy | list[OrderBy] | None = None,
-            skip: int = 0,
-            limit: int | None = None,
-        ) -> Sequence[T]: ...
-
-        async def filter_rows_streaming(
-            self,
-            session: AsyncSession,
-            filters: list[Filter] | None = None,
-            logical_op: str = "and",
-            order_by: OrderBy | list[OrderBy] | None = None,
-            skip: int = 0,
-            limit: int | None = None,
-        ) -> AsyncIterator[T]: ...
-
-        async def count_filtered_rows(
-            self,
-            session: AsyncSession,
-            filters: list[Filter] | None = None,
-            logical_op: str = "and",
-        ) -> int: ...
-
-        async def filter_one(
-            self,
-            session: AsyncSession,
-            filters: list[Filter],
-            logical_op: str = "and",
-        ) -> T: ...
-
-        async def filter_one_or_none(
-            self,
-            session: AsyncSession,
-            filters: list[Filter],
-            logical_op: str = "and",
-        ) -> T | None: ...
-
-        async def find_by(
-            self,
-            session: AsyncSession,
-            order_by: OrderBy | list[OrderBy] | None = None,
-            skip: int = 0,
-            limit: int | None = None,
-            **kwargs: Any,
-        ) -> Sequence[T]: ...
-
-        async def find_one_by(
-            self,
-            session: AsyncSession,
-            **kwargs: Any,
-        ) -> T: ...
-
-    _DELEGATED_METHODS = {
-        # READ operations
-        "read": [
-            "get_row",
-            "get_row_by_name",
-            "get_rows",
-            "get_rows_streaming",
-            "get_row_or_none",
-            "count_rows",
-            "lookup_by_id_or_name",
-        ],
-        # UPDATE operations
-        "update": [
-            "update_row",
-            "update_rows",
-        ],
-        # DELETE operations
-        "delete": ["delete_row", "delete_rows", "bulk_delete_rows"],
-        "filter": [
-            "filter_rows",
-            "filter_rows_streaming",
-            "count_filtered_rows",
-            "filter_one",
-            "filter_one_or_none",
-            "find_by",
-            "find_one_by",
-        ],
-    }
-
     def __init__(self, context: TableContext[T, ResponseT, CreateT]) -> None:
         """
         Initialize operation with context.
@@ -353,28 +183,172 @@ class TableOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             class and Pydantic model classes
         """
         self.ctx = context
-        self._bind_delegated_methods()
 
-    def _bind_delegated_methods(self) -> None:
-        """
-        Bind all delegated methods to this instance.
+    async def get_row(
+        self,
+        session: AsyncSession,
+        row_id: int,
+    ) -> T:
+        return await db_funcs.read.get_row(self.ctx.db_class, session, row_id)
 
-        This method dynamically attaches CRUD operations from the db_funcs
-        modules to this instance, pre-binding them with the database class
-        from the context.
+    async def get_row_by_name(
+        self,
+        session: AsyncSession,
+        name: str,
+    ) -> T:
+        return await db_funcs.read.get_row_by_name(self.ctx.db_class, session, name)
 
-        Notes
-        -----
-        The delegated methods are defined in _DELEGATED_METHODS and organized
-        by operation type (create, read, update, delete).
-        """
-        for module_name, func_list in self._DELEGATED_METHODS.items():
-            for func_name in func_list:
-                module = getattr(db_funcs, module_name)
-                func = getattr(module, func_name)
-                bound_func = functools.partial(func, self.ctx.db_class)
-                functools.update_wrapper(bound_func, func)
-                setattr(self, func_name, bound_func)
+    async def get_rows(
+        self,
+        session: AsyncSession,
+        skip: int = 0,
+        limit: int | None = None,
+    ) -> Sequence[T]:
+        return await db_funcs.read.get_rows(self.ctx.db_class, session, skip, limit)
+
+    async def get_rows_streaming(
+        self,
+        session: AsyncSession,
+        skip: int = 0,
+        limit: int | None = None,
+    ) -> AsyncIterator[T]:
+        async for row in db_funcs.read.get_rows_streaming(self.ctx.db_class, session, skip, limit):
+            yield row
+
+    async def get_row_or_none(
+        self,
+        session: AsyncSession,
+        row_id: int,
+    ) -> T | None:
+        return await db_funcs.read.get_row_or_none(self.ctx.db_class, session, row_id)
+
+    async def count_rows(
+        self,
+        session: AsyncSession,
+    ) -> int:
+        return await db_funcs.read.count_rows(self.ctx.db_class, session)
+
+    async def lookup_by_id_or_name(
+        self,
+        session: AsyncSession,
+        row_id: int | None,
+        name: str | None,
+        *,
+        need_object: bool = False,
+    ) -> tuple[int, T | None]:
+        return await db_funcs.read.lookup_by_id_or_name(
+            self.ctx.db_class, session, row_id, name, need_object=need_object
+        )
+
+    async def update_row(
+        self,
+        session: AsyncSession,
+        row_id: int,
+        **kwargs: Any,
+    ) -> T:
+        return await db_funcs.update.update_row(self.ctx.db_class, session, row_id, **kwargs)
+
+    async def update_rows(
+        self,
+        session: AsyncSession,
+        updates: Sequence[dict[str, Any]],
+    ) -> list[T]:
+        return await db_funcs.update.update_rows(self.ctx.db_class, session, updates)
+
+    async def delete_row(
+        self,
+        session: AsyncSession,
+        row_id: int,
+        *,
+        capture_data: bool = True,
+    ) -> dict[str, Any] | None:
+        return await db_funcs.delete.delete_row(self.ctx.db_class, session, row_id, capture_data=capture_data)
+
+    async def delete_rows(
+        self,
+        session: AsyncSession,
+        row_ids: list[int],
+        *,
+        capture_data: bool = False,
+    ) -> list[dict[str, Any]] | None:
+        return await db_funcs.delete.delete_rows(
+            self.ctx.db_class, session, row_ids, capture_data=capture_data
+        )
+
+    async def bulk_delete_rows(
+        self,
+        session: AsyncSession,
+        row_ids: list[int],
+    ) -> int:
+        return await db_funcs.delete.bulk_delete_rows(self.ctx.db_class, session, row_ids)
+
+    async def filter_rows(
+        self,
+        session: AsyncSession,
+        filters: list[Filter] | None = None,
+        logical_op: str = "and",
+        order_by: OrderBy | list[OrderBy] | None = None,
+        skip: int = 0,
+        limit: int | None = None,
+    ) -> Sequence[T]:
+        return await db_funcs.filter.filter_rows(
+            self.ctx.db_class, session, filters, logical_op, order_by, skip, limit
+        )
+
+    async def filter_rows_streaming(
+        self,
+        session: AsyncSession,
+        filters: list[Filter] | None = None,
+        logical_op: str = "and",
+        order_by: OrderBy | list[OrderBy] | None = None,
+        skip: int = 0,
+        limit: int | None = None,
+    ) -> AsyncIterator[T]:
+        async for row in  db_funcs.filter.filter_rows_streaming(
+                self.ctx.db_class, session, filters, logical_op, order_by, skip, limit
+            ):
+            yield row
+
+    async def count_filtered_rows(
+        self,
+        session: AsyncSession,
+        filters: list[Filter] | None = None,
+        logical_op: str = "and",
+    ) -> int:
+        return await db_funcs.filter.count_filtered_rows(self.ctx.db_class, session, filters, logical_op)
+
+    async def filter_one(
+        self,
+        session: AsyncSession,
+        filters: list[Filter],
+        logical_op: str = "and",
+    ) -> T:
+        return await db_funcs.filter.filter_one(self.ctx.db_class, session, filters, logical_op)
+
+    async def filter_one_or_none(
+        self,
+        session: AsyncSession,
+        filters: list[Filter],
+        logical_op: str = "and",
+    ) -> T | None:
+        return await db_funcs.filter.filter_one_or_none(self.ctx.db_class, session, filters, logical_op)
+
+    async def find_by(
+        self,
+        session: AsyncSession,
+        order_by: OrderBy | list[OrderBy] | None = None,
+        skip: int = 0,
+        limit: int | None = None,
+        **kwargs: Any,
+    ) -> Sequence[T]:
+        return await db_funcs.filter.find_by(self.ctx.db_class, session, order_by, skip, limit, **kwargs)
+
+    async def find_one_by(
+        self,
+        session: AsyncSession,
+        **kwargs: Any,
+    ) -> T:
+        return await db_funcs.filter.find_one_by(self.ctx.db_class, session, **kwargs)
 
     async def get_create_kwargs(
         self,

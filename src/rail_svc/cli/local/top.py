@@ -2,14 +2,17 @@
 
 from typing import Any, TypeVar
 
+import asyncio
 import click
 from pydantic import BaseModel
 
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.schema import CreateSchema
 
-from ... import __version__, local, db
+from ... import __version__, local_sync, db
 from ...db.base import Base
+from ...config import config
+
 from .base import CliOperations
 
 T = TypeVar("T", bound=Base)
@@ -73,14 +76,14 @@ def make_table_group(name: str, ops: Any, desc: str) -> click.Group:  # type: ig
 
 # One-line per table
 TABLES = [
-    ("algorithm", local.algorithm, "Manage Algorithm table"),
-    ("band", local.band, "Manage Band table"),
-    ("catalog-band-assoc", local.catalog_band_assoc, "Manage CatalogBandAssoc table"),
-    ("catalog-tag", local.catalog_tag, "Manage CatalogTag table"),
-    ("dataset", local.dataset, "Manage Dataset table"),
-    ("estimates", local.estimates, "Manage Estimates table"),
-    ("estimator", local.estimator, "Manage Estimator table"),
-    ("model", local.model, "Manage Model table"),
+    ("algorithm", local_sync.algorithm, "Manage Algorithm table"),
+    ("band", local_sync.band, "Manage Band table"),
+    ("catalog-band-assoc", local_sync.catalog_band_assoc, "Manage CatalogBandAssoc table"),
+    ("catalog-tag", local_sync.catalog_tag, "Manage CatalogTag table"),
+    ("dataset", local_sync.dataset, "Manage Dataset table"),
+    ("estimates", local_sync.estimates, "Manage Estimates table"),
+    ("estimator", local_sync.estimator, "Manage Estimator table"),
+    ("model", local_sync.model, "Manage Model table"),
 ]
 
 
@@ -93,7 +96,5 @@ def cli() -> None:
     """Administrative CLI for rail-svc."""
 
 
-
-    
 if __name__ == "__main__":
     cli()

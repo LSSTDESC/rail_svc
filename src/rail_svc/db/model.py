@@ -52,7 +52,7 @@ class Model(Base):
     )
 
     # Relationship - read-only access to associated algorithm
-    algo: Mapped[Algorithm] = relationship(
+    algorithm: Mapped[Algorithm] = relationship(
         "Algorithm",
         back_populates="models",
         viewonly=True,

@@ -10,7 +10,6 @@ from .. import models
 from .base import Base
 
 if TYPE_CHECKING:
-    from .estimator import Estimator
     from .model import Model
 
 
@@ -48,12 +47,6 @@ class Algorithm(Base):
     class_name: Mapped[str] = mapped_column(String(512))
 
     # Relationships - view-only access to associated objects
-    estimators: Mapped[list["Estimator"]] = relationship(
-        "Estimator",
-        back_populates="algorithm",
-        viewonly=True,
-    )
-
     models: Mapped[list["Model"]] = relationship(
         "Model",
         back_populates="algorithm",

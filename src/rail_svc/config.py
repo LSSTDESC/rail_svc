@@ -138,7 +138,7 @@ class DatabaseConfiguration(BaseModel):
     """
 
     url: str = Field(
-        default="sqlite:///rail_svc.db",
+        default="sqlite+aiosqlite:///rail_svc.db",
         description="The URL for the rail-svc database",
     )
 
@@ -161,7 +161,9 @@ class DatabaseConfiguration(BaseModel):
     @classmethod
     def validate_url(cls, v: str) -> str:
         """Validate database URL scheme"""
-        if v and not v.startswith(("postgresql://", "sqlite+aiosqlite://", "mysql://", "postgresql+psycopg2://")):
+        if v and not v.startswith(
+            ("postgresql://", "sqlite+aiosqlite://", "mysql://", "postgresql+psycopg2://")
+        ):
             raise ValueError(
                 "Database URL must start with a valid scheme (postgresql://, sqlite+aiosqlite://, mysql://)"
             )

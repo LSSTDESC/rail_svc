@@ -2,19 +2,17 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import Callable
 from typing import Any, TypeVar, cast
 
 import aiofiles
 import click
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncEngine
 
 from ...db.base import Base
 from ...db.session import init_db
 from ...db_funcs.filter import Filter, FilterOp, OrderBy
-from ...local.base import LocalOperations, SyncLocalOperations
+from ...local_sync.base import SyncOperations
 from ...models.utils import OutputEnum, output_pydantic
 from .. import common_options
 
@@ -53,12 +51,11 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
 
     def __init__(
         self,
-        operations: LocalOperations[T, ResponseT, CreateT],
+        sync_oper: SyncOperations[T, ResponseT, CreateT],
         group: click.Group,
     ) -> None:
-        self.operations = operations
-        self.sync_oper = SyncLocalOperations(operations)
-        self.ctx = operations._table_ops.ctx
+        self.sync_oper = sync_oper
+        self.ctx = sync_oper.async_ops._table_ops.ctx
         self.group = group
 
     # ========================================================================
@@ -126,7 +123,6 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         elif isinstance(exc, IntegrityError):
             logger.error(
                 "Integrity constraint violation",
-                table=self.ctx.db_class.__name__,
             )
             click.echo(
                 f"Error: Integrity constraint violation{context_msg} "
@@ -137,8 +133,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             click.echo(f"Error{context_msg}: {exc}", err=True)
         else:
             logger.error(
-                "Unexpected error{context_msg}",
-                table=self.ctx.db_class.__name__,
+                "Unexpected error",
             )
             click.echo(f"Error{context_msg}: {exc}", err=True)
 
@@ -168,7 +163,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
 
             try:
                 row = self.sync_oper.get_row(row_id=row_id)
-                output_pydantic([row], output)
+                print(output_pydantic([row], output))
 
             except Exception as exc:
                 self._handle_database_error(exc, f"getting {self.ctx.class_string} with ID {row_id}")
@@ -193,7 +188,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
 
             try:
                 row = self.sync_oper.get_row_by_name(name=name)
-                output_pydantic([row], output)
+                print(output_pydantic([row], output))
 
             except Exception as exc:
                 self._handle_database_error(exc, f"getting {self.ctx.class_string} with name '{name}'")
@@ -235,7 +230,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                     skip=skip,
                     limit=limit or page_size,
                 )
-                output_pydantic(rows, output)
+                print(output_pydantic(rows, output))
 
             except Exception as exc:
                 self._handle_database_error(exc, f"listing {self.ctx.class_string} rows")
@@ -268,7 +263,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 if row is None:
                     click.echo(f"No {self.ctx.class_string} found with ID {row_id}")
                 else:
-                    output_pydantic([row], output)
+                    print(output_pydantic([row], output))
 
             except Exception as exc:
                 self._handle_database_error(exc, f"getting {self.ctx.class_string} with ID {row_id}")
@@ -280,8 +275,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         """
 
         @self.group.command(name="count", help=f"Count total {self.ctx.class_string} rows")
-        def command(
-        ) -> None:
+        def command() -> None:
             """Count total rows in the table."""
 
             # Ensure database engine is initialized
@@ -321,7 +315,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
 
             try:
                 row = self.sync_oper.lookup_by_id_or_name(row_id=row_id, name=name)
-                output_pydantic([cast(ResponseT, row)], output)
+                print(output_pydantic([cast(ResponseT, row)], output))
 
             except Exception as exc:
                 identifier = f"ID {row_id}" if row_id else f"name '{name}'"
@@ -412,7 +406,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             try:
                 row = self.sync_oper.create_row(validate=not no_validate, **row_data)
                 click.echo(f"Created {self.ctx.class_string} successfully")
-                output_pydantic([row], output)
+                print(output_pydantic([row], output))
 
             except Exception as exc:
                 self._handle_database_error(exc, f"creating {self.ctx.class_string}")
@@ -467,7 +461,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             try:
                 rows = self.sync_oper.create_rows(rows_data=rows_data, validate=not no_validate)
                 click.echo(f"Successfully created {len(rows)} {self.ctx.class_string} rows")
-                output_pydantic(rows, output)
+                print(output_pydantic(rows, output))
 
             except Exception as exc:
                 self._handle_database_error(exc, f"creating {self.ctx.class_string} rows")
@@ -535,7 +529,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                     f"Successfully created {len(rows)} {self.ctx.class_string} rows "
                     f"in batches of {batch_size}"
                 )
-                output_pydantic(rows, output)
+                print(output_pydantic(rows, output))
 
             except Exception as exc:
                 self._handle_database_error(exc, f"creating {self.ctx.class_string} rows in batches")
@@ -679,7 +673,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             try:
                 row = self.sync_oper.update_row(row_id=row_id, **update_data)
                 click.echo(f"Successfully updated {self.ctx.class_string} with ID {row_id}")
-                output_pydantic([row], output)
+                print(output_pydantic([row], output))
 
             except Exception as exc:
                 self._handle_database_error(exc, f"updating {self.ctx.class_string} with ID {row_id}")
@@ -748,7 +742,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             try:
                 rows = self.sync_oper.update_rows(updates=updates)
                 click.echo(f"Successfully updated {len(rows)} {self.ctx.class_string} rows")
-                output_pydantic(rows, output)
+                print(output_pydantic(rows, output))
 
             except Exception as exc:
                 self._handle_database_error(exc, f"updating {self.ctx.class_string} rows")
@@ -809,7 +803,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 if deleted_data and not no_capture:
                     click.echo("\nDeleted data:")
                     # Convert dict to list for output_pydantic compatibility
-                    output_pydantic([cast(ResponseT, deleted_data)], output)
+                    print(output_pydantic([cast(ResponseT, deleted_data)], output))
 
             except Exception as exc:
                 self._handle_database_error(exc, f"deleting {self.ctx.class_string} with ID {row_id}")
@@ -896,7 +890,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
 
                 if deleted_data and capture_data:
                     click.echo("\nDeleted data:")
-                    output_pydantic(cast(list[ResponseT], deleted_data), output)
+                    print(output_pydantic(cast(list[ResponseT], deleted_data), output))
 
             except Exception as exc:
                 self._handle_database_error(exc, f"deleting {len(ids_list)} {self.ctx.class_string} rows")
@@ -1131,7 +1125,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 )
 
                 click.echo(f"Found {len(rows)} matching {self.ctx.class_string} rows")
-                output_pydantic(rows, output)
+                print(output_pydantic(rows, output))
 
             except Exception as exc:
                 self._handle_database_error(exc, f"filtering {self.ctx.class_string} rows")
@@ -1285,7 +1279,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 )
 
                 click.echo(f"Found {len(rows)} matching {self.ctx.class_string} rows")
-                output_pydantic(rows, output)
+                print(output_pydantic(rows, output))
 
             except Exception as exc:
                 self._handle_database_error(exc, f"finding {self.ctx.class_string} rows")
@@ -1335,7 +1329,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
 
             try:
                 row = self.sync_oper.find_one_by(**kwargs)
-                output_pydantic([row], output)
+                print(output_pydantic([row], output))
 
             except Exception as exc:
                 self._handle_database_error(exc, f"finding {self.ctx.class_string}")

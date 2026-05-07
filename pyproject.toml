@@ -45,6 +45,9 @@ dependencies = [
 server = [
 ]
 
+
+
+
 dev = [
     "pytest-async",
     "pytest-asyncio",
@@ -74,7 +77,7 @@ all = [
 ]
 
 [project.scripts]
-pz-rail-svc-local = "rail_svc.cli.local.top:main"
+pz-rail-svc-local = "rail_svc.cli.local.top:cli"
 
 [project.urls]
 Source = "https://github.com/LSSTDESC/rail_pz_svc"

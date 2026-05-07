@@ -191,7 +191,6 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
         if not path.exists():
             logger.error(
                 "Model file not found:",
-                path=path,
             )
             raise FileNotFoundError(f"Model file {path} not found")
 
@@ -203,7 +202,6 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
         except Exception as exc:
             logger.error(
                 "Failed to read model file",
-                path=path,
             )
             raise ValueError(f"Could not read model from {path}: {exc}") from exc
 
@@ -225,8 +223,6 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
             if algo.class_name != expected_estimator_class:
                 logger.error(
                     "Algorithm class mismatch",
-                    expect_class=expected_estimator_class,
-                    actual_class=algo.class_name,
                 )
                 raise ValueError(
                     f"Algorithm mismatch: model expects '{expected_estimator_class}' "

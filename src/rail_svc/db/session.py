@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     AsyncEngine,
@@ -7,15 +7,14 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
 )
 
-from ..config import Configuration as global_config
-
+from ..config import config as global_config
 
 # Global engine and session factory
 _engine: AsyncEngine | None = None
 _async_session_factory: async_sessionmaker[AsyncSession] | None = None
 
 
-def init_db(database_url: str|None, **engine_kwargs) -> None:
+def init_db(database_url: str | None = None, **engine_kwargs) -> None:
     """
     Initialize the database engine and session factory.
 
@@ -31,17 +30,13 @@ def init_db(database_url: str|None, **engine_kwargs) -> None:
     >>> init_db("sqlite+aiosqlite:///./test.db", echo=True)
     >>> init_db("postgresql+asyncpg://user:pass@localhost/dbname")
     """
-    global _engine, _async_session_factory
+    global _engine, _async_session_factory  # pylint: disable=global-statement
 
     if database_url is None:
-        database_url = global_config.db.url        
-        
-    _engine = create_async_engine(
-        database_url,
-        echo=engine_kwargs.get("echo", False),
-        **engine_kwargs
-    )
-    
+        database_url = global_config.db.url
+
+    _engine = create_async_engine(database_url, echo=engine_kwargs.get("echo", False), **engine_kwargs)
+
     _async_session_factory = async_sessionmaker(
         _engine,
         class_=AsyncSession,
@@ -50,7 +45,7 @@ def init_db(database_url: str|None, **engine_kwargs) -> None:
 
 
 @asynccontextmanager
-async def get_session() -> AsyncGenerator[AsyncSession, None]:
+async def get_session() -> AsyncGenerator[AsyncSession]:
     """
     Get an async database session.
 
@@ -71,10 +66,8 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
     ...     users = result.scalars().all()
     """
     if _async_session_factory is None:
-        raise RuntimeError(
-            "Database not initialized. Call init_db() first."
-        )
-    
+        raise RuntimeError("Database not initialized. Call init_db() first.")
+
     async with _async_session_factory() as session:
         try:
             yield session
@@ -97,7 +90,7 @@ async def close_db() -> None:
     --------
     >>> await close_db()
     """
-    global _engine
+    global _engine  # pylint: disable=global-statement
     if _engine:
         await _engine.dispose()
         _engine = None
