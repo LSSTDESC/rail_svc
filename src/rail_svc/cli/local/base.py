@@ -386,9 +386,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 row_data = {}
                 for field in fields:
                     if "=" not in field:
-                        click.echo(
-                            f"Error: Invalid field format '{field}'. " "Use KEY=VALUE format.", err=True
-                        )
+                        click.echo(f"Error: Invalid field format '{field}'. Use KEY=VALUE format.", err=True)
                         raise click.Abort()
 
                     key, value = field.split("=", 1)
@@ -648,9 +646,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 update_data = {}
                 for field in fields:
                     if "=" not in field:
-                        click.echo(
-                            f"Error: Invalid field format '{field}'. " "Use KEY=VALUE format.", err=True
-                        )
+                        click.echo(f"Error: Invalid field format '{field}'. Use KEY=VALUE format.", err=True)
                         raise click.Abort()
 
                     key, value = field.split("=", 1)
@@ -878,7 +874,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             # Confirmation prompt unless --confirm flag
             if not confirm:
                 if not click.confirm(
-                    f"Are you sure you want to delete {len(ids_list)} " f"{self.ctx.class_string} rows?"
+                    f"Are you sure you want to delete {len(ids_list)} {self.ctx.class_string} rows?"
                 ):
                     click.echo("Deletion cancelled")
                     return
@@ -963,7 +959,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
 
             # Confirmation prompt unless --confirm flag
             if not confirm:
-                click.echo(f"WARNING: This will bulk delete {len(ids_list)} rows " f"without calling hooks.")
+                click.echo(f"WARNING: This will bulk delete {len(ids_list)} rows without calling hooks.")
                 if not click.confirm("Are you sure you want to continue?"):
                     click.echo("Deletion cancelled")
                     return
@@ -1064,7 +1060,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 parts = filter_spec.split(":", 2)
                 if len(parts) != 3:
                     click.echo(
-                        f"Error: Invalid filter format '{filter_spec}'. " "Use FIELD:OPERATOR:VALUE", err=True
+                        f"Error: Invalid filter format '{filter_spec}'. Use FIELD:OPERATOR:VALUE", err=True
                     )
                     raise click.Abort()
 
@@ -1086,8 +1082,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
 
                 if op_str not in op_map:
                     click.echo(
-                        f"Error: Unknown operator '{op_str}'. "
-                        f"Valid operators: {', '.join(op_map.keys())}",
+                        f"Error: Unknown operator '{op_str}'. Valid operators: {', '.join(op_map.keys())}",
                         err=True,
                     )
                     raise click.Abort()
@@ -1160,7 +1155,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 parts = filter_spec.split(":", 2)
                 if len(parts) != 3:
                     click.echo(
-                        f"Error: Invalid filter format '{filter_spec}'. " "Use FIELD:OPERATOR:VALUE", err=True
+                        f"Error: Invalid filter format '{filter_spec}'. Use FIELD:OPERATOR:VALUE", err=True
                     )
                     raise click.Abort()
 
@@ -1249,7 +1244,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             kwargs = {}
             for condition in conditions:
                 if "=" not in condition:
-                    click.echo(f"Error: Invalid condition format '{condition}'. " "Use KEY=VALUE", err=True)
+                    click.echo(f"Error: Invalid condition format '{condition}'. Use KEY=VALUE", err=True)
                     raise click.Abort()
 
                 key, value = condition.split("=", 1)
@@ -1314,7 +1309,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             kwargs = {}
             for condition in conditions:
                 if "=" not in condition:
-                    click.echo(f"Error: Invalid condition format '{condition}'. " "Use KEY=VALUE", err=True)
+                    click.echo(f"Error: Invalid condition format '{condition}'. Use KEY=VALUE", err=True)
                     raise click.Abort()
 
                 key, value = condition.split("=", 1)

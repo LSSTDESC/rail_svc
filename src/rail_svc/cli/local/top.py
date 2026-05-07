@@ -1,18 +1,16 @@
 """CLI entry point for rail-svc-client."""
 
+import asyncio
 from typing import Any, TypeVar
 
-import asyncio
 import click
 from pydantic import BaseModel
-
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.schema import CreateSchema
 
-from ... import __version__, local_sync, db
-from ...db.base import Base
+from ... import __version__, db, local_sync
 from ...config import config
-
+from ...db.base import Base
 from .base import CliOperations
 
 T = TypeVar("T", bound=Base)
@@ -58,7 +56,7 @@ def init(*, reset: bool) -> None:
     asyncio.run(_init_db())
 
 
-def make_table_group(name: str, ops: Any, desc: str) -> click.Group:  # type: ignore
+def make_table_group(name: str, ops: Any, desc: str) -> click.Group:
     """Create table CLI group with all commands."""
 
     @click.group(name=name, help=desc)

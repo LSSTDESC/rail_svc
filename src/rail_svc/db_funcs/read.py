@@ -114,7 +114,7 @@ async def get_row_by_name(
         raise AttributeError(f"{the_class.__name__} does not have a 'name' attribute")
 
     logger.debug("Getting row by name", table=the_class.__name__, name=name)
-    query = select(the_class).where(the_class.name == name)
+    query = select(the_class).where(the_class.name == name)  # type: ignore
     rows = await session.scalars(query)
     row = rows.first()
 
@@ -299,7 +299,7 @@ async def count_rows(
     ensure_base_inheritance(the_class)
 
     logger.debug("Counting rows", table=the_class.__name__)
-    q = select(func.count()).select_from(the_class)
+    q = select(func.count()).select_from(the_class)  # pylint: disable=not-callable
     result = await session.execute(q)
     count = result.scalar_one()
 
@@ -409,7 +409,7 @@ async def lookup_by_id_or_name(
                 name=name,
                 id=the_object.id_,
             )
-            return the_object.id_, the_object
+            return the_object.id_, the_object  # type: ignore
         except NoResultFound:
             logger.error(
                 "Record not found by name",

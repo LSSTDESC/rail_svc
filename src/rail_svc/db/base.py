@@ -39,7 +39,7 @@ from typing import Any, ClassVar, TypeVar
 from pydantic import BaseModel
 from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Mapped
 
 from ..config import config
 
@@ -71,8 +71,8 @@ class Base(DeclarativeBase):
     in the row lifecycle.
     """
 
-    id_: int
-    name: str
+    id_: Mapped[int] | None = None
+    name: Mapped[str] | None = None
 
     # Default pagination limit - subclasses can override via get_pagination_limit()
     default_pagination_limit: ClassVar[int] = 100

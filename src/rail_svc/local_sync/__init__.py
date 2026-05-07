@@ -1,14 +1,8 @@
 from .. import local_async
-from .base import (
-    AlgorithmSyncOperations,
-    BandSyncOperations,
-    CatalogBandAssocOperations,
-    CatalogTagSyncOperations,
-    DatasetSyncOperations,
-    EstimatesSyncOperations,
-    EstimatorSyncOperations,
-    ModelSyncOperations,
-)
+from .base import (AlgorithmSyncOperations, BandSyncOperations,
+                   CatalogBandAssocOperations, CatalogTagSyncOperations,
+                   DatasetSyncOperations, EstimatesSyncOperations,
+                   EstimatorSyncOperations, ModelSyncOperations)
 
 algorithm = AlgorithmSyncOperations(local_async.algorithm)
 band = BandSyncOperations(local_async.band)

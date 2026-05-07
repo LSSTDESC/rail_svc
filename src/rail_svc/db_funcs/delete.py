@@ -302,11 +302,11 @@ async def bulk_delete_rows(
 
     try:
         # Use SQL DELETE statement for maximum performance
-        stmt = delete(the_class).where(the_class.id_.in_(row_ids))
+
+        stmt = delete(the_class).where(the_class.id_.in_(row_ids))  # type: ignore
         result = await session.execute(stmt)
         await session.commit()
-
-        deleted_count = result.rowcount
+        deleted_count = result.rowcount  # type: ignore
 
         logger.info(
             "Bulk delete completed",

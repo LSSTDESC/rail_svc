@@ -1,11 +1,8 @@
-from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
-from sqlalchemy.ext.asyncio import (
-    AsyncSession,
-    AsyncEngine,
-    create_async_engine,
-    async_sessionmaker,
-)
+from contextlib import asynccontextmanager
+from typing import Any
+
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
 from ..config import config as global_config
 
@@ -14,7 +11,7 @@ _engine: AsyncEngine | None = None
 _async_session_factory: async_sessionmaker[AsyncSession] | None = None
 
 
-def init_db(database_url: str | None = None, **engine_kwargs) -> None:
+def init_db(database_url: str | None = None, **engine_kwargs: Any) -> None:
     """
     Initialize the database engine and session factory.
 

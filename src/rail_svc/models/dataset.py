@@ -25,7 +25,7 @@ class DatasetCreate(DatasetBase):
     catalog_tag_name: str = Field(..., description="Name of the associated catalog tag")
 
     #: Validate the files before loading
-    validate_file: bool = Field(False, description="Whether to validate the file before loading")
+    validate_file: bool = Field(default=False, description="Whether to validate the file before loading")
 
 
 class Dataset(DatasetBase):

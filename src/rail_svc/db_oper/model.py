@@ -9,8 +9,9 @@ model file validation.
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, override
 
+import anyio
 from rail.core.model import Model as RailModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -35,6 +36,7 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
     with optional model file validation.
     """
 
+    @override
     async def get_create_kwargs(
         self,
         session: AsyncSession,
@@ -187,8 +189,8 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
         This method performs synchronous file I/O in an executor to
         avoid blocking the async event loop.
         """
-        # Check file exists (fast check, can be sync)
-        if not path.exists():
+        async_path = anyio.Path(path)
+        if not await async_path.exists():
             logger.error(
                 "Model file not found:",
             )

@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
+import anyio
 from pydantic import BaseModel, ValidationError
 from sqlalchemy import insert
 from sqlalchemy.exc import IntegrityError
@@ -304,9 +305,9 @@ class TableOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         skip: int = 0,
         limit: int | None = None,
     ) -> AsyncIterator[T]:
-        async for row in  db_funcs.filter.filter_rows_streaming(
-                self.ctx.db_class, session, filters, logical_op, order_by, skip, limit
-            ):
+        async for row in db_funcs.filter.filter_rows_streaming(
+            self.ctx.db_class, session, filters, logical_op, order_by, skip, limit
+        ):
             yield row
 
     async def count_filtered_rows(
@@ -525,10 +526,10 @@ class TableOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         processed_rows_data = []
         for idx, row_kwargs in enumerate(rows_data):
             try:
-
                 # update kwargs
                 modified_kwargs = await self.get_create_kwargs(
-                    session, **row_kwargs.copy()  # Copy to avoid modifying original
+                    session,
+                    **row_kwargs.copy(),  # Copy to avoid modifying original
                 )
 
                 # Validate if requested
@@ -1260,7 +1261,8 @@ class FileValidatedOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]
         # Reserved for future use: validate data matches reference_obj schema
         _ = reference_obj
 
-        if not path.exists():
+        asnyc_path = anyio.Path(path)
+        if not await asnyc_path.exists():
             logger.error(
                 "Data file not found",
                 table=self.ctx.db_class.__name__,

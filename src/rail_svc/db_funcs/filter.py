@@ -152,12 +152,12 @@ def _apply_filter(
         query = query.where(field >= filter_obj.value)
 
     elif filter_obj.op == FilterOp.IN:
-        if not isinstance(filter_obj.value, (list, tuple, set)):
+        if not isinstance(filter_obj.value, list | tuple | set):
             raise ValueError(f"IN operator requires list/tuple/set, got {type(filter_obj.value)}")
         query = query.where(field.in_(filter_obj.value))
 
     elif filter_obj.op == FilterOp.NOT_IN:
-        if not isinstance(filter_obj.value, (list, tuple, set)):
+        if not isinstance(filter_obj.value, list | tuple | set):
             raise ValueError(f"NOT_IN operator requires list/tuple/set, got {type(filter_obj.value)}")
         query = query.where(field.not_in(filter_obj.value))
 
@@ -174,7 +174,7 @@ def _apply_filter(
         query = query.where(field.is_not(None))
 
     elif filter_obj.op == FilterOp.BETWEEN:
-        if not isinstance(filter_obj.value, (list, tuple)) or len(filter_obj.value) != 2:
+        if not isinstance(filter_obj.value, list | tuple) or len(filter_obj.value) != 2:
             raise ValueError("BETWEEN operator requires list/tuple of exactly 2 values")
         query = query.where(field.between(filter_obj.value[0], filter_obj.value[1]))
 
@@ -544,7 +544,7 @@ async def count_filtered_rows(
     )
 
     # Start with count query
-    query = select(func.count()).select_from(the_class)
+    query = select(func.count()).select_from(the_class)  # pylint: disable=not-callable
 
     # Apply filters
     if filters:

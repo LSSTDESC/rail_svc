@@ -9,6 +9,11 @@ __pycache__/
 # Mac stuff
 *.DS_Store
 
+
+# package created stuff
+rail_svc.db
+
+
 # Distribution / packaging
 .Python
 build/

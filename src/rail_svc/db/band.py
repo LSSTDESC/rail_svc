@@ -1,8 +1,9 @@
 """Database model for CatalogTag table"""
 
 from typing import TYPE_CHECKING
+
 from pydantic import BaseModel
-from sqlalchemy import String, JSON
+from sqlalchemy import JSON, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .. import models
