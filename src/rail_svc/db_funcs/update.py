@@ -3,21 +3,21 @@
 This module provides functions for updating existing database rows.
 """
 
-from typing import Any
 from collections.abc import Sequence
+from typing import Any
 
-from sqlalchemy.exc import StatementError
-from sqlalchemy.ext.asyncio import async_scoped_session
 import structlog
+from sqlalchemy.exc import StatementError
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from rail_svc.db.base import ensure_base_inheritance, T
+from rail_svc.db.base import T, ensure_base_inheritance
 
 logger = structlog.get_logger(__name__)
 
 
 async def update_row(
     the_class: type[T],
-    session: async_scoped_session,
+    session: AsyncSession,
     row_id: int,
     **kwargs: Any,
 ) -> T:
@@ -127,7 +127,7 @@ async def update_row(
 
 async def update_rows(
     the_class: type[T],
-    session: async_scoped_session,
+    session: AsyncSession,
     updates: Sequence[dict[str, Any]],
 ) -> list[T]:
     """Update multiple rows atomically.

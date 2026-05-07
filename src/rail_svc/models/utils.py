@@ -1,10 +1,21 @@
 from __future__ import annotations
 
-from typing import Any, cast
 import json
+from collections.abc import Sequence
+from enum import Enum, auto
+from typing import Any, cast
+
 import yaml
 from pydantic import BaseModel
 from tabulate import tabulate
+
+
+class OutputEnum(Enum):
+    """Options for output format"""
+
+    yaml = auto()  # pylint: disable=invalid-name
+    json = auto()  # pylint: disable=invalid-name
+    table = auto()  # pylint: disable=invalid-name
 
 
 def display_table(data: list[dict[str, Any]], col_names: list[str]) -> str:
@@ -35,7 +46,7 @@ def display_table(data: list[dict[str, Any]], col_names: list[str]) -> str:
     return tabulate(rows, headers=col_names, tablefmt="simple")
 
 
-def format_output(data: list[dict[str, Any]] | dict[str, Any], output_format: str) -> str:
+def format_output(data: list[dict[str, Any]] | dict[str, Any], output_format: OutputEnum) -> str:
     """
     Format data as JSON or YAML.
 
@@ -65,15 +76,14 @@ def format_output(data: list[dict[str, Any]] | dict[str, Any], output_format: st
       "age": 25
     }
     """
-    if output_format == "json":
+    if output_format == OutputEnum.json:
         return json.dumps(data, indent=2)
-    elif output_format == "yaml":
+    if output_format == OutputEnum.yaml:
         return yaml.dump(data, default_flow_style=False)
-    else:
-        raise ValueError(f"Unknown output format: {output_format}")
+    raise ValueError(f"Unknown output format: {output_format.name}")
 
 
-def output_json(response: dict[str, Any] | list | str, output: str) -> str:
+def output_json(response: dict[str, Any] | list | str, output_format: OutputEnum) -> str:
     """
     Output JSON data in the specified format.
 
@@ -107,10 +117,12 @@ def output_json(response: dict[str, Any] | list | str, output: str) -> str:
     else:
         data = response
 
-    return format_output(data, output)
+    return format_output(data, output_format)
 
 
-def output_pydantic_list(result: list[BaseModel], output: str, col_names: list[str] | None=None) -> str:
+def output_pydantic_list(
+    result: Sequence[BaseModel], output_format: OutputEnum, col_names: list[str] | None = None
+) -> str:
     """
     Output a list of Pydantic models in the specified format.
 
@@ -118,7 +130,7 @@ def output_pydantic_list(result: list[BaseModel], output: str, col_names: list[s
     ----------
     result
         List of Pydantic model instances to output
-    output
+    output_format
         Output format: 'json', 'yaml', or 'table'
     col_names, optional
         Column names for table output. Required if output is 'table'
@@ -156,15 +168,17 @@ def output_pydantic_list(result: list[BaseModel], output: str, col_names: list[s
     # Convert to dicts
     data = [item.model_dump() for item in result]
 
-    if output == "table":
+    if output_format == OutputEnum.table:
         if col_names is None:
             raise ValueError("Table output requires column names to be defined")
         return display_table(data, col_names)
 
-    return format_output(data, output)
+    return format_output(data, output_format)
 
 
-def output_pydantic_single(result: BaseModel, output: str, col_names: list[str] | None=None) -> str:
+def output_pydantic_single(
+    result: BaseModel, output_format: OutputEnum, col_names: list[str] | None = None
+) -> str:
     """
     Output a single Pydantic model in the specified format.
 
@@ -172,7 +186,7 @@ def output_pydantic_single(result: BaseModel, output: str, col_names: list[str] 
     ----------
     result
         Pydantic model instance to output
-    output
+    output_format
         Output format: 'json', 'yaml', or 'table'
     col_names, optional
         Column names for table output. Required if output is 'table'
@@ -209,15 +223,17 @@ def output_pydantic_single(result: BaseModel, output: str, col_names: list[str] 
     # Convert to dict
     data = result.model_dump()
 
-    if output == "table":
+    if output_format == OutputEnum.table:
         if col_names is None:
             raise ValueError("Table output requires column names to be defined")
         return display_table([data], col_names)
 
-    return format_output(data, output)
+    return format_output(data, output_format)
 
 
-def output_pydantic(result: BaseModel | list[BaseModel], output_format: str, col_names: list[str] | None=None) -> str:
+def output_pydantic(
+    result: BaseModel | Sequence[BaseModel], output_format: OutputEnum, col_names: list[str] | None = None
+) -> str:
     """
     Output Pydantic model(s) in the specified format.
 
@@ -280,7 +296,7 @@ def output_pydantic(result: BaseModel | list[BaseModel], output_format: str, col
     data = [item.model_dump() for item in results]
 
     # Handle table output
-    if output_format == "table":
+    if output_format == OutputEnum.table:
         if col_names is None:
             raise ValueError("Table output requires column names")
         return display_table(data, col_names)

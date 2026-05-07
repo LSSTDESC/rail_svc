@@ -16,12 +16,11 @@ File validation includes:
 from pathlib import Path
 from typing import Any
 
+import qp
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import qp
-
 from .. import db, db_funcs, models
-from .base import TableContext, FileValidatedOperations
+from .base import FileValidatedOperations, TableContext
 
 __all__ = ["EstimatesOperations", "estimates"]
 
@@ -133,7 +132,9 @@ class EstimatesOperations(FileValidatedOperations[db.Estimates, models.Estimates
         )
 
         # 2. Process path and determine n_objects
-        n_objects = await self._process_path(path, dataset_obj, validate_file=validate_file, extra_kwargs=extra_kwargs)
+        n_objects = await self._process_path(
+            path, dataset_obj, validate_file=validate_file, extra_kwargs=extra_kwargs
+        )
 
         # 3. Build final kwargs
         result = {

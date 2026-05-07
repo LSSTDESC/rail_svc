@@ -10,17 +10,13 @@ session management.
 """
 
 from collections.abc import Sequence
-from typing import TypeVar, Any
+from typing import Any
 
 from pydantic import BaseModel
 
 from ..db.base import Base
-from ..db_oper.base import TableOperations
 from ..db.session import get_session
-
-T = TypeVar("T", bound=Base)
-ResponseT = TypeVar("ResponseT", bound=BaseModel)
-CreateT = TypeVar("CreateT", bound=BaseModel)
+from ..db_oper.base import TableOperations
 
 
 async def update_row[T: Base, ResponseT: BaseModel, CreateT: BaseModel](

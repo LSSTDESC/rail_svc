@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import click
-
-from structlog import get_logger
-
 from httpx import HTTPError, TimeoutException
 from pydantic_core import ValidationError as CoreValidationError
+from structlog import get_logger
 
 logger = get_logger(__name__)
 

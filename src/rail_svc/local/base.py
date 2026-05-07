@@ -4,20 +4,18 @@ from __future__ import annotations
 
 import asyncio
 import functools
-from typing import TypeVar
+from collections.abc import AsyncIterator, Callable, Sequence
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
 from ..db.base import Base
-from ..db_oper import TableOperations
-
+from ..db_funcs.filter import Filter, OrderBy
+from ..db_oper.base import TableOperations
 # Import the API modules that contain the functions
-from . import read, create, update, delete, filter as filter_ops
-
-# Type variables
-T = TypeVar("T", bound=Base)
-ResponseT = TypeVar("ResponseT", bound=BaseModel)
-CreateT = TypeVar("CreateT", bound=BaseModel)
+from . import create, delete
+from . import filter as filter_ops
+from . import read, update
 
 
 class LocalOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
@@ -35,7 +33,157 @@ class LocalOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
     >>> algos = await algorithm.get_rows(limit=10)
     """
 
-    _DELEGATED_METHODS = {
+    if TYPE_CHECKING:
+        # pylint: disable=unused-argument
+
+        async def create_row(
+            self,
+            *,
+            validate: bool = True,
+            **kwargs: Any,
+        ) -> ResponseT: ...
+
+        async def create_rows(
+            self,
+            rows_data: Sequence[dict[str, Any]],
+            *,
+            validate: bool = True,
+        ) -> list[ResponseT]: ...
+
+        async def create_rows_batched(
+            self,
+            rows_data: Sequence[dict[str, Any]],
+            *,
+            validate: bool = True,
+            batch_size: int = 1000,
+        ) -> list[ResponseT]: ...
+
+        async def bulk_insert_rows(
+            self,
+            rows_data: Sequence[dict[str, Any]],
+            *,
+            validate: bool = True,
+        ) -> int: ...
+
+        async def get_row(
+            self,
+            row_id: int,
+        ) -> ResponseT: ...
+
+        async def get_row_by_name(
+            self,
+            name: str,
+        ) -> ResponseT: ...
+
+        async def get_rows(
+            self,
+            skip: int = 0,
+            limit: int | None = None,
+        ) -> list[ResponseT]: ...
+
+        async def get_rows_streaming(
+            self,
+            skip: int = 0,
+            limit: int | None = None,
+        ) -> AsyncIterator[ResponseT]: ...
+
+        async def get_row_or_none(
+            self,
+            row_id: int,
+        ) -> ResponseT | None: ...
+
+        async def count_rows(
+            self,
+        ) -> int: ...
+
+        async def lookup_by_id_or_name(
+            self,
+            row_id: int | None,
+            name: str | None,
+            *,
+            need_object: bool = False,
+        ) -> tuple[int, ResponseT | None]: ...
+
+        async def update_row(
+            self,
+            row_id: int,
+            **kwargs: Any,
+        ) -> ResponseT: ...
+
+        async def update_rows(
+            self,
+            updates: Sequence[dict[str, Any]],
+        ) -> list[ResponseT]: ...
+
+        async def delete_row(
+            self,
+            row_id: int,
+            *,
+            capture_data: bool = True,
+        ) -> dict[str, Any] | None: ...
+
+        async def delete_rows(
+            self,
+            row_ids: list[int],
+            *,
+            capture_data: bool = False,
+        ) -> list[dict[str, Any]] | None: ...
+
+        async def bulk_delete_rows(
+            self,
+            row_ids: list[int],
+        ) -> int: ...
+
+        async def filter_rows(
+            self,
+            filters: list[Filter] | None = None,
+            logical_op: str = "and",
+            order_by: OrderBy | list[OrderBy] | None = None,
+            skip: int = 0,
+            limit: int | None = None,
+        ) -> list[ResponseT]: ...
+
+        async def filter_rows_streaming(
+            self,
+            filters: list[Filter] | None = None,
+            logical_op: str = "and",
+            order_by: OrderBy | list[OrderBy] | None = None,
+            skip: int = 0,
+            limit: int | None = None,
+        ) -> AsyncIterator[ResponseT]: ...
+
+        async def count_filtered_rows(
+            self,
+            filters: list[Filter] | None = None,
+            logical_op: str = "and",
+        ) -> int: ...
+
+        async def filter_one(
+            self,
+            filters: list[Filter],
+            logical_op: str = "and",
+        ) -> ResponseT: ...
+
+        async def filter_one_or_none(
+            self,
+            filters: list[Filter],
+            logical_op: str = "and",
+        ) -> ResponseT | None: ...
+
+        async def find_by(
+            self,
+            order_by: OrderBy | list[OrderBy] | None = None,
+            skip: int = 0,
+            limit: int | None = None,
+            **kwargs: Any,
+        ) -> list[ResponseT]: ...
+
+        async def find_one_by(
+            self,
+            **kwargs: Any,
+        ) -> ResponseT: ...
+
+    DELEGATED_METHODS = {
         # Module name -> list of function names
         "read": [
             "get_row",
@@ -83,13 +231,6 @@ class LocalOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         self._table_ops = table_operations
         self._bind_delegated_methods()
 
-    @overload
-    def __getattr__(self, name: str) -> Callable[..., Any]: ...
-    
-    def __getattr__(self, name: str) -> Any:
-        # This will be called for dynamically added methods
-        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
-        
     def _bind_delegated_methods(self) -> None:
         """Bind all delegated methods to this instance.
 
@@ -106,7 +247,7 @@ class LocalOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             "filter": filter_ops,
         }
 
-        for module_name, func_list in self._DELEGATED_METHODS.items():
+        for module_name, func_list in self.DELEGATED_METHODS.items():
             module = module_map[module_name]
             for func_name in func_list:
                 func = getattr(module, func_name)
@@ -143,25 +284,171 @@ class SyncLocalOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
     >>> result = algo_sync.get_row(row_id=1)  # No await needed
     """
 
+    if TYPE_CHECKING:
+        # pylint: disable=unused-argument
+
+        def create_row(
+            self,
+            *,
+            validate: bool = True,
+            **kwargs: Any,
+        ) -> ResponseT: ...
+
+        def create_rows(
+            self,
+            rows_data: Sequence[dict[str, Any]],
+            *,
+            validate: bool = True,
+        ) -> list[ResponseT]: ...
+
+        def create_rows_batched(
+            self,
+            rows_data: Sequence[dict[str, Any]],
+            *,
+            validate: bool = True,
+            batch_size: int = 1000,
+        ) -> list[ResponseT]: ...
+
+        def bulk_insert_rows(
+            self,
+            rows_data: Sequence[dict[str, Any]],
+            *,
+            validate: bool = True,
+        ) -> int: ...
+
+        def get_row(
+            self,
+            row_id: int,
+        ) -> ResponseT: ...
+
+        def get_row_by_name(
+            self,
+            name: str,
+        ) -> ResponseT: ...
+
+        def get_rows(
+            self,
+            skip: int = 0,
+            limit: int | None = None,
+        ) -> list[ResponseT]: ...
+
+        def get_rows_streaming(
+            self,
+            skip: int = 0,
+            limit: int | None = None,
+        ) -> AsyncIterator[ResponseT]: ...
+
+        def get_row_or_none(
+            self,
+            row_id: int,
+        ) -> ResponseT | None: ...
+
+        def count_rows(
+            self,
+        ) -> int: ...
+
+        def lookup_by_id_or_name(
+            self,
+            row_id: int | None,
+            name: str | None,
+            *,
+            need_object: bool = False,
+        ) -> tuple[int, ResponseT | None]: ...
+
+        def update_row(
+            self,
+            row_id: int,
+            **kwargs: Any,
+        ) -> ResponseT: ...
+
+        def update_rows(
+            self,
+            updates: Sequence[dict[str, Any]],
+        ) -> list[ResponseT]: ...
+
+        def delete_row(
+            self,
+            row_id: int,
+            *,
+            capture_data: bool = True,
+        ) -> dict[str, Any] | None: ...
+
+        def delete_rows(
+            self,
+            row_ids: list[int],
+            *,
+            capture_data: bool = False,
+        ) -> list[dict[str, Any]] | None: ...
+
+        def bulk_delete_rows(
+            self,
+            row_ids: list[int],
+        ) -> int: ...
+
+        def filter_rows(
+            self,
+            filters: list[Filter] | None = None,
+            logical_op: str = "and",
+            order_by: OrderBy | list[OrderBy] | None = None,
+            skip: int = 0,
+            limit: int | None = None,
+        ) -> list[ResponseT]: ...
+
+        def filter_rows_streaming(
+            self,
+            filters: list[Filter] | None = None,
+            logical_op: str = "and",
+            order_by: OrderBy | list[OrderBy] | None = None,
+            skip: int = 0,
+            limit: int | None = None,
+        ) -> AsyncIterator[ResponseT]: ...
+
+        def count_filtered_rows(
+            self,
+            filters: list[Filter] | None = None,
+            logical_op: str = "and",
+        ) -> int: ...
+
+        def filter_one(
+            self,
+            filters: list[Filter],
+            logical_op: str = "and",
+        ) -> ResponseT: ...
+
+        def filter_one_or_none(
+            self,
+            filters: list[Filter],
+            logical_op: str = "and",
+        ) -> ResponseT | None: ...
+
+        def find_by(
+            self,
+            order_by: OrderBy | list[OrderBy] | None = None,
+            skip: int = 0,
+            limit: int | None = None,
+            **kwargs: Any,
+        ) -> list[ResponseT]: ...
+
+        def find_one_by(
+            self,
+            **kwargs: Any,
+        ) -> ResponseT: ...
+
     def __init__(self, async_ops: LocalOperations[T, ResponseT, CreateT]) -> None:
         self._async_ops = async_ops
         self._bind_sync_methods()
 
-    @overload
-    def __getattr__(self, name: str) -> Callable[..., Any]: ...
-    
-    def __getattr__(self, name: str) -> Any:
-        # This will be called for dynamically added methods
-        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
-        
     def _bind_sync_methods(self) -> None:
         """Bind synchronous wrapper methods to this instance."""
-        for module_name, func_list in LocalOperations._DELEGATED_METHODS.items():
+        for _module_name, func_list in LocalOperations.DELEGATED_METHODS.items():
             for func_name in func_list:
                 async_func = getattr(self._async_ops, func_name)
 
-                def make_sync(afunc):
-                    def sync_wrapper(*args, **kwargs):
+                def make_sync(afunc: Callable) -> Callable:
+                    """Make a sync wrapper for a function"""
+
+                    def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+                        """Wrap a function with asyncio.run"""
                         return asyncio.run(afunc(*args, **kwargs))
 
                     functools.update_wrapper(sync_wrapper, afunc)

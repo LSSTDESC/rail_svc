@@ -1,46 +1,263 @@
-"""API layer functions for filtering database records.
+"""Database row filtering functions for rail-svc.
 
-Provides high-level convenience functions for flexible filtering with automatic
-session management. These functions support various comparison operators, logical
-operators, and efficient streaming for large result sets.
-
-For operations requiring explicit transaction control or complex multi-table queries,
-use the TableOperations methods directly with explicit session management.
+This module provides flexible filtering capabilities for database queries
+with support for various comparison operators, logical operators, and
+efficient streaming for large result sets.
 """
 
-from collections.abc import AsyncIterator
-from typing import TypeVar, Any
+from collections.abc import AsyncIterator, Sequence
+from enum import StrEnum
+from typing import Any
 
-from pydantic import BaseModel
+import structlog
+from sqlalchemy import Select, asc, desc, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..db.base import Base
-from ..db_oper.base import TableOperations
-from ..db.session import get_session
-from ..db_funcs.filter import Filter, OrderBy
+from rail_svc.db.base import T, ensure_base_inheritance
 
-T = TypeVar("T", bound=Base)
-ResponseT = TypeVar("ResponseT", bound=BaseModel)
-CreateT = TypeVar("CreateT", bound=BaseModel)
+logger = structlog.get_logger(__name__)
 
 
-async def filter_rows[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
-    table_ops: TableOperations[T, ResponseT, CreateT],
+class FilterOp(StrEnum):
+    """Comparison operators for filtering."""
+
+    EQ = "eq"  # Equal (==)
+    NE = "ne"  # Not equal (!=)
+    LT = "lt"  # Less than (<)
+    LE = "le"  # Less than or equal (<=)
+    GT = "gt"  # Greater than (>)
+    GE = "ge"  # Greater than or equal (>=)
+    IN = "in"  # In list
+    NOT_IN = "not_in"  # Not in list
+    LIKE = "like"  # SQL LIKE pattern matching
+    ILIKE = "ilike"  # Case-insensitive LIKE
+    IS_NULL = "is_null"  # IS NULL
+    IS_NOT_NULL = "is_not_null"  # IS NOT NULL
+    BETWEEN = "between"  # BETWEEN two values
+    CONTAINS = "contains"  # Array contains (for PostgreSQL arrays)
+    STARTS_WITH = "starts_with"  # String starts with
+    ENDS_WITH = "ends_with"  # String ends with
+
+
+class Filter:
+    """Represents a single filter condition.
+
+    Parameters
+    ----------
+    field
+        Name of the column to filter on
+    op
+        Comparison operator to use
+    value
+        Value to compare against (not needed for IS_NULL/IS_NOT_NULL)
+
+    Examples
+    --------
+    >>> Filter("age", FilterOp.GT, 18)
+    >>> Filter("status", FilterOp.IN, ["active", "pending"])
+    >>> Filter("deleted_at", FilterOp.IS_NULL)
+    >>> Filter("name", FilterOp.LIKE, "John%")
+    """
+
+    def __init__(
+        self,
+        field: str,
+        op: FilterOp,
+        value: Any = None,
+    ):
+        self.field = field
+        self.op = op
+        self.value = value
+
+    def __repr__(self) -> str:
+        return f"Filter({self.field} {self.op} {self.value})"
+
+
+class OrderBy:
+    """Represents an ordering directive.
+
+    Parameters
+    ----------
+    field
+        Name of the column to order by
+    descending
+        If True, order descending; if False, order ascending
+
+    Examples
+    --------
+    >>> OrderBy("created_at", descending=True)  # Most recent first
+    >>> OrderBy("name", descending=False)       # Alphabetical
+    """
+
+    def __init__(self, field: str, *, descending: bool = False):
+        self.field = field
+        self.descending = descending
+
+    def __repr__(self) -> str:
+        direction = "DESC" if self.descending else "ASC"
+        return f"OrderBy({self.field} {direction})"
+
+
+def _apply_filter(
+    query: Select,
+    the_class: type[T],
+    filter_obj: Filter,
+) -> Select:
+    """Apply a single filter to a query.
+
+    Parameters
+    ----------
+    query
+        SQLAlchemy select statement
+    the_class
+        The model class being queried
+    filter_obj
+        Filter to apply
+
+    Returns
+    -------
+    Select
+        Modified query with filter applied
+
+    Raises
+    ------
+    AttributeError
+        If field doesn't exist on the model
+    ValueError
+        If filter operator is invalid or value is wrong type
+    """
+    # Verify field exists
+    if not hasattr(the_class, filter_obj.field):
+        raise AttributeError(f"{the_class.__name__} does not have field '{filter_obj.field}'")
+
+    field = getattr(the_class, filter_obj.field)
+
+    # Apply operator
+    if filter_obj.op == FilterOp.EQ:
+        query = query.where(field == filter_obj.value)
+
+    elif filter_obj.op == FilterOp.NE:
+        query = query.where(field != filter_obj.value)
+
+    elif filter_obj.op == FilterOp.LT:
+        query = query.where(field < filter_obj.value)
+
+    elif filter_obj.op == FilterOp.LE:
+        query = query.where(field <= filter_obj.value)
+
+    elif filter_obj.op == FilterOp.GT:
+        query = query.where(field > filter_obj.value)
+
+    elif filter_obj.op == FilterOp.GE:
+        query = query.where(field >= filter_obj.value)
+
+    elif filter_obj.op == FilterOp.IN:
+        if not isinstance(filter_obj.value, (list, tuple, set)):
+            raise ValueError(f"IN operator requires list/tuple/set, got {type(filter_obj.value)}")
+        query = query.where(field.in_(filter_obj.value))
+
+    elif filter_obj.op == FilterOp.NOT_IN:
+        if not isinstance(filter_obj.value, (list, tuple, set)):
+            raise ValueError(f"NOT_IN operator requires list/tuple/set, got {type(filter_obj.value)}")
+        query = query.where(field.not_in(filter_obj.value))
+
+    elif filter_obj.op == FilterOp.LIKE:
+        query = query.where(field.like(filter_obj.value))
+
+    elif filter_obj.op == FilterOp.ILIKE:
+        query = query.where(field.ilike(filter_obj.value))
+
+    elif filter_obj.op == FilterOp.IS_NULL:
+        query = query.where(field.is_(None))
+
+    elif filter_obj.op == FilterOp.IS_NOT_NULL:
+        query = query.where(field.is_not(None))
+
+    elif filter_obj.op == FilterOp.BETWEEN:
+        if not isinstance(filter_obj.value, (list, tuple)) or len(filter_obj.value) != 2:
+            raise ValueError("BETWEEN operator requires list/tuple of exactly 2 values")
+        query = query.where(field.between(filter_obj.value[0], filter_obj.value[1]))
+
+    elif filter_obj.op == FilterOp.CONTAINS:
+        # PostgreSQL array contains
+        query = query.where(field.contains(filter_obj.value))
+
+    elif filter_obj.op == FilterOp.STARTS_WITH:
+        if not isinstance(filter_obj.value, str):
+            raise ValueError("STARTS_WITH operator requires string value")
+        query = query.where(field.like(f"{filter_obj.value}%"))
+
+    elif filter_obj.op == FilterOp.ENDS_WITH:
+        if not isinstance(filter_obj.value, str):
+            raise ValueError("ENDS_WITH operator requires string value")
+        query = query.where(field.like(f"%{filter_obj.value}"))
+
+    else:
+        raise ValueError(f"Unknown filter operator: {filter_obj.op}")
+
+    return query
+
+
+def _apply_ordering(
+    query: Select,
+    the_class: type[T],
+    order_by: OrderBy | list[OrderBy],
+) -> Select:
+    """Apply ordering to a query.
+
+    Parameters
+    ----------
+    query
+        SQLAlchemy select statement
+    the_class
+        The model class being queried
+    order_by
+        Single OrderBy or list of OrderBy directives
+
+    Returns
+    -------
+    Select
+        Modified query with ordering applied
+
+    Raises
+    ------
+    AttributeError
+        If field doesn't exist on the model
+    """
+    # Normalize to list
+    if not isinstance(order_by, list):
+        order_by = [order_by]
+
+    for order in order_by:
+        if not hasattr(the_class, order.field):
+            raise AttributeError(f"{the_class.__name__} does not have field '{order.field}'")
+
+        field = getattr(the_class, order.field)
+        query = query.order_by(desc(field) if order.descending else asc(field))
+
+    return query
+
+
+async def filter_rows(
+    the_class: type[T],
+    session: AsyncSession,
     filters: list[Filter] | None = None,
     logical_op: str = "and",
     order_by: OrderBy | list[OrderBy] | None = None,
     skip: int = 0,
     limit: int | None = None,
-) -> list[ResponseT]:
-    """Filter rows based on conditions with automatic session management.
+) -> Sequence[T]:
+    """Filter rows based on conditions with pagination.
 
-    Loads all results into memory and returns as Pydantic models. For large
-    result sets, consider using filter_rows_streaming() instead. Creates and
-    manages its own database session.
+    Note: This method loads all results into memory. For large result sets,
+    consider using filter_rows_streaming() instead.
 
     Parameters
     ----------
-    table_ops
-        Table operations instance (e.g., from rail_svc.tables)
+    the_class
+        The SQLAlchemy model class to query
+    session
+        DB session manager
     filters
         List of Filter objects to apply. If None, returns all rows.
     logical_op
@@ -52,67 +269,136 @@ async def filter_rows[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
         Number of rows to skip before returning results (offset)
     limit
         Maximum number of rows to return. If None, uses table's default
-        pagination limit
+        pagination limit from get_pagination_limit()
 
     Returns
     -------
-    list[ResponseT]
-        List of Pydantic representations of matching rows
+    Sequence[T]
+        All matching rows within the limit
 
     Raises
     ------
+    TypeError
+        If the_class does not inherit from Base
     AttributeError
         If any filter references a non-existent field
     ValueError
         If logical_op is not "and" or "or", or filter values are invalid
 
-    Notes
-    -----
-    - All results are loaded into memory
-    - For large result sets, use filter_rows_streaming() instead
-    - Filters can use various operators (EQ, GT, LIKE, IN, etc.)
-    - Use Filter and FilterOp classes to construct filter conditions
-
-    See Also
+    Examples
     --------
-    filter_rows_streaming : Stream results for memory efficiency
-    count_filtered_rows : Count matching rows without fetching data
-    filter_one : Get exactly one matching row
-    find_by : Convenience function for simple equality filters
+    >>> # Find all active users over 18
+    >>> users = await filter_rows(
+    ...     User,
+    ...     session,
+    ...     filters=[
+    ...         Filter("status", FilterOp.EQ, "active"),
+    ...         Filter("age", FilterOp.GT, 18),
+    ...     ],
+    ...     order_by=OrderBy("created_at", descending=True),
+    ...     limit=10
+    ... )
+    >>>
+    >>> # Find users with specific usernames (OR logic)
+    >>> users = await filter_rows(
+    ...     User,
+    ...     session,
+    ...     filters=[
+    ...         Filter("username", FilterOp.EQ, "alice"),
+    ...         Filter("username", FilterOp.EQ, "bob"),
+    ...     ],
+    ...     logical_op="or"
+    ... )
+    >>>
+    >>> # Find users created in date range
+    >>> from datetime import datetime
+    >>> users = await filter_rows(
+    ...     User,
+    ...     session,
+    ...     filters=[
+    ...         Filter("created_at", FilterOp.BETWEEN, [
+    ...             datetime(2024, 1, 1),
+    ...             datetime(2024, 12, 31)
+    ...         ])
+    ...     ]
+    ... )
     """
-    async with get_session() as session:
-        rows = await table_ops.filter_rows(
-            session,
-            filters=filters,
-            logical_op=logical_op,
-            order_by=order_by,
-            skip=skip,
-            limit=limit,
-        )
-        return table_ops.to_pydantic_list(rows)
+    ensure_base_inheritance(the_class)
+
+    if logical_op not in ("and", "or"):
+        raise ValueError("logical_op must be 'and' or 'or'")
+
+    if limit is None:
+        limit = the_class.get_pagination_limit()
+
+    logger.debug(
+        "Filtering rows",
+        table=the_class.__name__,
+        filter_count=len(filters) if filters else 0,
+        logical_op=logical_op,
+        skip=skip,
+        limit=limit,
+    )
+
+    # Start with base query
+    query = select(the_class)
+
+    # Apply filters
+    if filters:
+        if logical_op == "and":
+            # Apply each filter directly (implicit AND)
+            for filter_obj in filters:
+                query = _apply_filter(query, the_class, filter_obj)
+        else:
+            # OR logic - build list of conditions
+            conditions = []
+            for filter_obj in filters:
+                # Create a temporary query to extract the condition
+                temp_query = select(the_class)
+                temp_query = _apply_filter(temp_query, the_class, filter_obj)
+                # Extract the WHERE clause
+                if temp_query.whereclause is not None:
+                    conditions.append(temp_query.whereclause)
+
+            if conditions:
+                query = query.where(or_(*conditions))
+
+    # Apply ordering
+    if order_by:
+        query = _apply_ordering(query, the_class, order_by)
+
+    # Apply pagination
+    query = query.offset(skip).limit(limit)
+
+    # Execute query
+    results = await session.scalars(query)
+    rows = results.all()
+
+    logger.debug("Filtered rows retrieved", table=the_class.__name__, result_count=len(rows))
+
+    return rows
 
 
-async def filter_rows_streaming[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
-    table_ops: TableOperations[T, ResponseT, CreateT],
+async def filter_rows_streaming(
+    the_class: type[T],
+    session: AsyncSession,
     filters: list[Filter] | None = None,
     logical_op: str = "and",
     order_by: OrderBy | list[OrderBy] | None = None,
     skip: int = 0,
     limit: int | None = None,
-) -> AsyncIterator[ResponseT]:
-    """Filter rows as an async iterator with automatic session management.
+) -> AsyncIterator[T]:
+    """Filter rows as an async iterator for memory-efficient processing.
 
-    Yields Pydantic models one at a time for memory-efficient processing of
-    large result sets. Creates and manages its own database session.
-
-    IMPORTANT: The session context remains open during the entire iteration.
-    Consuming code should process items promptly to avoid holding the
-    database connection for extended periods.
+    Use this for large result sets to avoid loading everything into memory.
+    Rows are yielded one at a time as they're retrieved from the database.
 
     Parameters
     ----------
-    table_ops
-        Table operations instance (e.g., from rail_svc.tables)
+    the_class
+        The SQLAlchemy model class to query
+    session
+        DB session manager
     filters
         List of Filter objects to apply. If None, returns all rows.
     logical_op
@@ -123,57 +409,99 @@ async def filter_rows_streaming[T: Base, ResponseT: BaseModel, CreateT: BaseMode
         Number of rows to skip before returning results (offset)
     limit
         Maximum number of rows to return. If None, uses table's default
-        pagination limit
+        pagination limit from get_pagination_limit()
 
     Yields
     ------
-    ResponseT
-        Pydantic representation of each matching row
+    T
+        Individual rows one at a time
 
     Raises
     ------
+    TypeError
+        If the_class does not inherit from Base
     AttributeError
         If any filter references a non-existent field
     ValueError
         If logical_op is not "and" or "or", or filter values are invalid
 
-    Notes
-    -----
-    - The database session remains open during the entire iteration
-    - Process items promptly to avoid long-lived connections
-    - More memory efficient than filter_rows() for large result sets
-    - For slow processing, consider using filter_rows() instead
-
-    See Also
+    Examples
     --------
-    filter_rows : Load all results into memory at once
+    >>> # Process large result set without loading all into memory
+    >>> async for user in filter_rows_streaming(
+    ...     User,
+    ...     session,
+    ...     filters=[Filter("status", FilterOp.EQ, "active")],
+    ...     limit=100000
+    ... ):
+    ...     await process_user(user)
     """
-    async with get_session() as session:
-        async for row in table_ops.filter_rows_streaming(
-            session,
-            filters=filters,
-            logical_op=logical_op,
-            order_by=order_by,
-            skip=skip,
-            limit=limit,
-        ):
-            yield table_ops.to_pydantic(row)
+    ensure_base_inheritance(the_class)
+
+    if logical_op not in ("and", "or"):
+        raise ValueError("logical_op must be 'and' or 'or'")
+
+    if limit is None:
+        limit = the_class.get_pagination_limit()
+
+    logger.debug(
+        "Streaming filtered rows",
+        table=the_class.__name__,
+        filter_count=len(filters) if filters else 0,
+        logical_op=logical_op,
+        skip=skip,
+        limit=limit,
+    )
+
+    # Start with base query
+    query = select(the_class)
+
+    # Apply filters
+    if filters:
+        if logical_op == "and":
+            for filter_obj in filters:
+                query = _apply_filter(query, the_class, filter_obj)
+        else:
+            conditions = []
+            for filter_obj in filters:
+                temp_query = select(the_class)
+                temp_query = _apply_filter(temp_query, the_class, filter_obj)
+                if temp_query.whereclause is not None:
+                    conditions.append(temp_query.whereclause)
+
+            if conditions:
+                query = query.where(or_(*conditions))
+
+    # Apply ordering
+    if order_by:
+        query = _apply_ordering(query, the_class, order_by)
+
+    # Apply pagination
+    query = query.offset(skip).limit(limit)
+
+    # Stream results
+    result = await session.stream_scalars(query)
+
+    async for row in result:
+        yield row
 
 
-async def count_filtered_rows[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
-    table_ops: TableOperations[T, ResponseT, CreateT],
+async def count_filtered_rows(
+    the_class: type[T],
+    session: AsyncSession,
     filters: list[Filter] | None = None,
     logical_op: str = "and",
 ) -> int:
-    """Count rows matching filter criteria with automatic session management.
+    """Count rows matching filter criteria.
 
     Useful for pagination metadata (e.g., "showing 10 of 245 results").
-    Creates and manages its own database session.
 
     Parameters
     ----------
-    table_ops
-        Table operations instance (e.g., from rail_svc.tables)
+    the_class
+        The SQLAlchemy model class to query
+    session
+        DB session manager
     filters
         List of Filter objects to apply. If None, counts all rows.
     logical_op
@@ -186,38 +514,77 @@ async def count_filtered_rows[T: Base, ResponseT: BaseModel, CreateT: BaseModel]
 
     Raises
     ------
+    TypeError
+        If the_class does not inherit from Base
     AttributeError
         If any filter references a non-existent field
     ValueError
         If logical_op is not "and" or "or", or filter values are invalid
 
-    See Also
+    Examples
     --------
-    filter_rows : Get the actual matching rows
+    >>> # Count active users
+    >>> count = await count_filtered_rows(
+    ...     User,
+    ...     session,
+    ...     filters=[Filter("status", FilterOp.EQ, "active")]
+    ... )
+    >>> print(f"Found {count} active users")
     """
-    async with get_session() as session:
-        return await table_ops.count_filtered_rows(
-            session,
-            filters=filters,
-            logical_op=logical_op,
-        )
+    ensure_base_inheritance(the_class)
+
+    if logical_op not in ("and", "or"):
+        raise ValueError("logical_op must be 'and' or 'or'")
+
+    logger.debug(
+        "Counting filtered rows",
+        table=the_class.__name__,
+        filter_count=len(filters) if filters else 0,
+        logical_op=logical_op,
+    )
+
+    # Start with count query
+    query = select(func.count()).select_from(the_class)
+
+    # Apply filters
+    if filters:
+        if logical_op == "and":
+            for filter_obj in filters:
+                query = _apply_filter(query, the_class, filter_obj)
+        else:
+            conditions = []
+            for filter_obj in filters:
+                temp_query = select(the_class)
+                temp_query = _apply_filter(temp_query, the_class, filter_obj)
+                if temp_query.whereclause is not None:
+                    conditions.append(temp_query.whereclause)
+
+            if conditions:
+                query = query.where(or_(*conditions))
+
+    # Execute count
+    result = await session.execute(query)
+    count = result.scalar_one()
+
+    logger.debug("Filtered row count", table=the_class.__name__, count=count)
+
+    return count
 
 
-async def filter_one[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
-    table_ops: TableOperations[T, ResponseT, CreateT],
+async def filter_one(
+    the_class: type[T],
+    session: AsyncSession,
     filters: list[Filter],
     logical_op: str = "and",
-) -> ResponseT:
-    """Filter for exactly one row with automatic session management.
-
-    Returns the single matching row as a Pydantic model. Raises an error
-    if no rows or multiple rows match. Creates and manages its own database
-    session.
+) -> T:
+    """Filter for exactly one row matching criteria.
 
     Parameters
     ----------
-    table_ops
-        Table operations instance (e.g., from rail_svc.tables)
+    the_class
+        The SQLAlchemy model class to query
+    session
+        DB session manager
     filters
         List of Filter objects to apply
     logical_op
@@ -225,11 +592,13 @@ async def filter_one[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
 
     Returns
     -------
-    ResponseT
-        Pydantic representation of the single matching row
+    T
+        The single matching row
 
     Raises
     ------
+    TypeError
+        If the_class does not inherit from Base
     AttributeError
         If any filter references a non-existent field
     ValueError
@@ -237,34 +606,59 @@ async def filter_one[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     KeyError
         If no rows match the criteria or multiple rows match
 
-    See Also
+    Examples
     --------
-    filter_one_or_none : Returns None instead of raising if not found
-    find_one_by : Convenience function for simple equality filters
+    >>> # Get user by email (should be unique)
+    >>> user = await filter_one(
+    ...     User,
+    ...     session,
+    ...     filters=[Filter("email", FilterOp.EQ, "alice@example.com")]
+    ... )
     """
-    async with get_session() as session:
-        row = await table_ops.filter_one(
-            session,
-            filters=filters,
-            logical_op=logical_op,
+    ensure_base_inheritance(the_class)
+
+    logger.debug(
+        "Filtering for single row",
+        table=the_class.__name__,
+        filter_count=len(filters),
+        logical_op=logical_op,
+    )
+
+    # Get up to 2 results to check for duplicates
+    results = await filter_rows(the_class, session, filters=filters, logical_op=logical_op, skip=0, limit=2)
+
+    if len(results) == 0:
+        logger.warning("No rows found matching filters", table=the_class.__name__)
+        raise KeyError(f"No {the_class.__name__} found matching filters")
+
+    if len(results) > 1:
+        logger.warning(
+            "Multiple rows found matching filters",
+            table=the_class.__name__,
+            count=len(results),
         )
-        return table_ops.to_pydantic(row)
+        raise KeyError(f"Multiple {the_class.__name__} rows found matching filters")
+
+    return results[0]
 
 
-async def filter_one_or_none[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
-    table_ops: TableOperations[T, ResponseT, CreateT],
+async def filter_one_or_none(
+    the_class: type[T],
+    session: AsyncSession,
     filters: list[Filter],
     logical_op: str = "and",
-) -> ResponseT | None:
-    """Filter for at most one row with automatic session management.
+) -> T | None:
+    """Filter for at most one row matching criteria.
 
     Similar to filter_one() but returns None instead of raising KeyError
-    when no rows are found. Creates and manages its own database session.
+    when no rows are found.
 
     Parameters
     ----------
-    table_ops
-        Table operations instance (e.g., from rail_svc.tables)
+    the_class
+        The SQLAlchemy model class to query
+    session
+        DB session manager
     filters
         List of Filter objects to apply
     logical_op
@@ -272,11 +666,13 @@ async def filter_one_or_none[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
 
     Returns
     -------
-    ResponseT | None
-        Pydantic representation of the single matching row, or None if no match
+    T | None
+        The single matching row, or None if no match found
 
     Raises
     ------
+    TypeError
+        If the_class does not inherit from Base
     AttributeError
         If any filter references a non-existent field
     ValueError
@@ -284,35 +680,64 @@ async def filter_one_or_none[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     KeyError
         If multiple rows match the criteria
 
-    See Also
+    Examples
     --------
-    filter_one : Raises KeyError instead of returning None when not found
+    >>> # Try to get user by username
+    >>> user = await filter_one_or_none(
+    ...     User,
+    ...     session,
+    ...     filters=[Filter("username", FilterOp.EQ, "alice")]
+    ... )
+    >>> if user is None:
+    ...     print("User not found")
     """
-    async with get_session() as session:
-        row = await table_ops.filter_one_or_none(
-            session,
-            filters=filters,
-            logical_op=logical_op,
+    ensure_base_inheritance(the_class)
+
+    logger.debug(
+        "Filtering for single row (or none)",
+        table=the_class.__name__,
+        filter_count=len(filters),
+        logical_op=logical_op,
+    )
+
+    # Get up to 2 results to check for duplicates
+    results = await filter_rows(the_class, session, filters=filters, logical_op=logical_op, skip=0, limit=2)
+
+    if len(results) == 0:
+        logger.debug("No rows found matching filters", table=the_class.__name__)
+        return None
+
+    if len(results) > 1:
+        logger.warning(
+            "Multiple rows found matching filters",
+            table=the_class.__name__,
+            count=len(results),
         )
-        return table_ops.to_pydantic(row) if row is not None else None
+        raise KeyError(f"Multiple {the_class.__name__} rows found matching filters")
+
+    return results[0]
 
 
-async def find_by[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
-    table_ops: TableOperations[T, ResponseT, CreateT],
+# Convenience function for simple equality filters
+async def find_by(
+    the_class: type[T],
+    session: AsyncSession,
     order_by: OrderBy | list[OrderBy] | None = None,
     skip: int = 0,
     limit: int | None = None,
     **kwargs: Any,
-) -> list[ResponseT]:
-    """Find rows by simple equality conditions with automatic session management.
+) -> Sequence[T]:
+    """Find rows by simple equality conditions.
 
-    Convenience wrapper around filter_rows() for the common case of filtering
-    by exact field values. Creates and manages its own database session.
+    This is a convenience wrapper around filter_rows() for the common case
+    of filtering by exact field values.
 
     Parameters
     ----------
-    table_ops
-        Table operations instance (e.g., from rail_svc.tables)
+    the_class
+        The SQLAlchemy model class to query
+    session
+        DB session manager
     order_by
         Single OrderBy or list of OrderBy directives for sorting results
     skip
@@ -324,75 +749,127 @@ async def find_by[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
 
     Returns
     -------
-    list[ResponseT]
-        List of Pydantic representations of matching rows
+    Sequence[T]
+        All matching rows
 
     Raises
     ------
+    TypeError
+        If the_class does not inherit from Base
     AttributeError
         If any field doesn't exist on the model
 
-    Notes
-    -----
-    - All kwargs are combined with AND logic (all must match)
-    - Only supports equality (==) comparisons
-    - For other operators, use filter_rows() with Filter objects
-
-    See Also
+    Examples
     --------
-    filter_rows : Full filtering with all operators
-    find_one_by : Get exactly one row by equality conditions
+    >>> # Find all active users in a specific role
+    >>> users = await find_by(
+    ...     User,
+    ...     session,
+    ...     status="active",
+    ...     role="admin",
+    ...     order_by=OrderBy("username")
+    ... )
+    >>>
+    >>> # Find users created by specific user
+    >>> users = await find_by(
+    ...     User,
+    ...     session,
+    ...     created_by_id=123,
+    ...     limit=10
+    ... )
     """
-    async with get_session() as session:
-        rows = await table_ops.find_by(
-            session,
-            order_by=order_by,
-            skip=skip,
-            limit=limit,
-            **kwargs,
-        )
-        return table_ops.to_pydantic_list(rows)
+    ensure_base_inheritance(the_class)
+
+    # Convert kwargs to Filter objects
+    filters = [Filter(field, FilterOp.EQ, value) for field, value in kwargs.items()]
+
+    return await filter_rows(
+        the_class,
+        session,
+        filters=filters,
+        logical_op="and",
+        order_by=order_by,
+        skip=skip,
+        limit=limit,
+    )
 
 
-async def find_one_by[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
-    table_ops: TableOperations[T, ResponseT, CreateT],
+async def find_one_by(
+    the_class: type[T],
+    session: AsyncSession,
     **kwargs: Any,
-) -> ResponseT:
-    """Find exactly one row by simple equality conditions with automatic session management.
+) -> T:
+    """Find exactly one row by simple equality conditions.
 
-    Convenience wrapper around filter_one() for exact field matches. Creates
-    and manages its own database session.
+    Convenience wrapper around filter_one() for exact field matches.
 
     Parameters
     ----------
-    table_ops
-        Table operations instance (e.g., from rail_svc.tables)
+    the_class
+        The SQLAlchemy model class to query
+    session
+        DB session manager
     **kwargs
         Field names and values to filter by (all must match)
 
     Returns
     -------
-    ResponseT
-        Pydantic representation of the single matching row
+    T
+        The single matching row
 
     Raises
     ------
+    TypeError
+        If the_class does not inherit from Base
     AttributeError
         If any field doesn't exist on the model
     KeyError
         If no rows match or multiple rows match
 
-    Notes
-    -----
-    - All kwargs are combined with AND logic (all must match)
-    - Only supports equality (==) comparisons
-    - For other operators, use filter_one() with Filter objects
-
-    See Also
+    Examples
     --------
-    filter_one : Get one row with full filter support
-    find_by : Get multiple rows by equality conditions
+    >>> # Find user by email (should be unique)
+    >>> user = await find_one_by(User, session, email="alice@example.com")
+    >>>
+    >>> # Find session by token
+    >>> session_obj = await find_one_by(Session, session, token="abc123")
     """
-    async with get_session() as session:
-        row = await table_ops.find_one_by(session, **kwargs)
-        return table_ops.to_pydantic(row)
+    ensure_base_inheritance(the_class)
+
+    filters = [Filter(field, FilterOp.EQ, value) for field, value in kwargs.items()]
+
+    return await filter_one(the_class, session, filters=filters)
+
+
+# Helper function to build complex filter combinations
+def and_filters(*filters: Filter) -> list[Filter]:
+    """Combine filters with AND logic.
+
+    This is just a helper to make it explicit that filters will be ANDed.
+
+    Examples
+    --------
+    >>> filters = and_filters(
+    ...     Filter("status", FilterOp.EQ, "active"),
+    ...     Filter("age", FilterOp.GT, 18),
+    ... )
+    >>> users = await filter_rows(User, session, filters=filters)
+    """
+    return list(filters)
+
+
+def or_filters(*filters: Filter) -> list[Filter]:
+    """Combine filters with OR logic.
+
+    Helper to make it explicit that filters will be ORed.
+    Use with logical_op="or" parameter.
+
+    Examples
+    --------
+    >>> filters = or_filters(
+    ...     Filter("status", FilterOp.EQ, "active"),
+    ...     Filter("status", FilterOp.EQ, "pending"),
+    ... )
+    >>> users = await filter_rows(User, session, filters=filters, logical_op="or")
+    """
+    return list(filters)

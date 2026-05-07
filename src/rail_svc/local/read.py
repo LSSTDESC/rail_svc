@@ -9,20 +9,16 @@ TableOperations methods directly with explicit session management.
 """
 
 from collections.abc import AsyncIterator
-from typing import TypeVar, Any
 
 from pydantic import BaseModel
 
 from ..db.base import Base
-from ..db_oper.base import TableOperations
 from ..db.session import get_session
-
-T = TypeVar("T", bound=Base)
-ResponseT = TypeVar("ResponseT", bound=BaseModel)
+from ..db_oper.base import TableOperations
 
 
-async def get_row[T: Base, ResponseT: BaseModel](
-    table_ops: TableOperations[T, ResponseT, Any],
+async def get_row[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
+    table_ops: TableOperations[T, ResponseT, CreateT],
     row_id: int,
 ) -> ResponseT:
     """Get a single row by ID with automatic session management.
@@ -57,8 +53,8 @@ async def get_row[T: Base, ResponseT: BaseModel](
         return table_ops.to_pydantic(row)
 
 
-async def get_row_by_name[T: Base, ResponseT: BaseModel](
-    table_ops: TableOperations[T, ResponseT, Any],
+async def get_row_by_name[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
+    table_ops: TableOperations[T, ResponseT, CreateT],
     name: str,
 ) -> ResponseT:
     """Get a single row by name with automatic session management.
@@ -92,8 +88,8 @@ async def get_row_by_name[T: Base, ResponseT: BaseModel](
         return table_ops.to_pydantic(row)
 
 
-async def get_rows[T: Base, ResponseT: BaseModel](
-    table_ops: TableOperations[T, ResponseT, Any],
+async def get_rows[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
+    table_ops: TableOperations[T, ResponseT, CreateT],
     skip: int = 0,
     limit: int | None = None,
 ) -> list[ResponseT]:
@@ -130,11 +126,11 @@ async def get_rows[T: Base, ResponseT: BaseModel](
     """
     async with get_session() as session:
         rows = await table_ops.get_rows(session, skip=skip, limit=limit)
-        return table_ops.to_pydantic_list(rows)
+        return table_ops.to_pydantic_list(list(rows))
 
 
-async def get_rows_streaming[T: Base, ResponseT: BaseModel](
-    table_ops: TableOperations[T, ResponseT, Any],
+async def get_rows_streaming[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
+    table_ops: TableOperations[T, ResponseT, CreateT],
     skip: int = 0,
     limit: int | None = None,
 ) -> AsyncIterator[ResponseT]:
@@ -175,12 +171,12 @@ async def get_rows_streaming[T: Base, ResponseT: BaseModel](
     get_rows : Load all rows into memory at once (simpler for small sets)
     """
     async with get_session() as session:
-        async for row in table_ops.get_rows_streaming(session, skip=skip, limit=limit):
+        async for row in await table_ops.get_rows_streaming(session, skip=skip, limit=limit):
             yield table_ops.to_pydantic(row)
 
 
-async def get_row_or_none[T: Base, ResponseT: BaseModel](
-    table_ops: TableOperations[T, ResponseT, Any],
+async def get_row_or_none[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
+    table_ops: TableOperations[T, ResponseT, CreateT],
     row_id: int,
 ) -> ResponseT | None:
     """Get a single row by ID, returning None if not found.
@@ -209,8 +205,8 @@ async def get_row_or_none[T: Base, ResponseT: BaseModel](
         return table_ops.to_pydantic(row) if row is not None else None
 
 
-async def count_rows[T: Base, ResponseT: BaseModel](
-    table_ops: TableOperations[T, ResponseT, Any],
+async def count_rows[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
+    table_ops: TableOperations[T, ResponseT, CreateT],
 ) -> int:
     """Count total rows in a table with automatic session management.
 
@@ -235,8 +231,8 @@ async def count_rows[T: Base, ResponseT: BaseModel](
         return await table_ops.count_rows(session)
 
 
-async def lookup_by_id_or_name[T: Base, ResponseT: BaseModel](
-    table_ops: TableOperations[T, ResponseT, Any],
+async def lookup_by_id_or_name[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
+    table_ops: TableOperations[T, ResponseT, CreateT],
     row_id: int | None = None,
     name: str | None = None,
 ) -> ResponseT:
@@ -272,5 +268,6 @@ async def lookup_by_id_or_name[T: Base, ResponseT: BaseModel](
     get_row_by_name : Look up by name only
     """
     async with get_session() as session:
-        row_id_resolved, row = await table_ops.lookup_by_id_or_name(session, row_id, name, need_object=True)
+        _row_id_resolved, row = await table_ops.lookup_by_id_or_name(session, row_id, name, need_object=True)
+        assert row
         return table_ops.to_pydantic(row)

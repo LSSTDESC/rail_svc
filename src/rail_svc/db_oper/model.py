@@ -11,8 +11,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from rail.core.model import Model as RailModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from rail.core.model import RailModel
 
 from .. import db, db_funcs, models
 from .base import TableContext, TableOperations
@@ -190,7 +190,8 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
         # Check file exists (fast check, can be sync)
         if not path.exists():
             logger.error(
-                f"Model file not found: {path}",
+                "Model file not found:",
+                path=path,
             )
             raise FileNotFoundError(f"Model file {path} not found")
 
@@ -201,7 +202,8 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
             the_model = await loop.run_in_executor(None, RailModel.read, str(path))
         except Exception as exc:
             logger.error(
-                f"Failed to read model file {path}",
+                "Failed to read model file",
+                path=path,
             )
             raise ValueError(f"Could not read model from {path}: {exc}") from exc
 
@@ -222,7 +224,9 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
 
             if algo.class_name != expected_estimator_class:
                 logger.error(
-                    f"Algorithm class mismatch {expected_estimator_class} {algo.class_name}",
+                    "Algorithm class mismatch",
+                    expect_class=expected_estimator_class,
+                    actual_class=algo.class_name,
                 )
                 raise ValueError(
                     f"Algorithm mismatch: model expects '{expected_estimator_class}' "

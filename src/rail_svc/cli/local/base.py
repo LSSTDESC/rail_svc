@@ -2,18 +2,20 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, TypeVar
 from collections.abc import Callable
+from typing import Any, TypeVar, cast
 
-import click
 import aiofiles
+import click
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from ...db.base import Base
+from ...db.session import init_db
+from ...db_funcs.filter import Filter, FilterOp, OrderBy
 from ...local.base import LocalOperations, SyncLocalOperations
-from ...models.utils import output_pydantic
+from ...models.utils import OutputEnum, output_pydantic
 from .. import common_options
 
 logger = logging.getLogger(__name__)
@@ -124,9 +126,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         elif isinstance(exc, IntegrityError):
             logger.error(
                 "Integrity constraint violation",
-                db_class=self.ctx.db_class.__name__,
-                error=str(exc),
-                context=context,
+                table=self.ctx.db_class.__name__,
             )
             click.echo(
                 f"Error: Integrity constraint violation{context_msg} "
@@ -137,10 +137,8 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             click.echo(f"Error{context_msg}: {exc}", err=True)
         else:
             logger.error(
-                f"Unexpected error{context_msg}",
-                db_class=self.ctx.db_class.__name__,
-                error=str(exc),
-                exc_info=True,
+                "Unexpected error{context_msg}",
+                table=self.ctx.db_class.__name__,
             )
             click.echo(f"Error{context_msg}: {exc}", err=True)
 
@@ -157,18 +155,16 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         """
 
         @self.group.command(name="get-row", help=f"Get a single {self.ctx.class_string} by ID")
-        @common_options.db_engine()
         @common_options.output()
         @click.argument("row_id", type=int)
         def command(
-            db_engine: Callable[[], AsyncEngine],
-            output: common_options.OutputEnum | None,
+            output: OutputEnum,
             row_id: int,
         ) -> None:
             """Get a single row by ID."""
 
             # Ensure database engine is initialized
-            _ = db_engine()
+            init_db()
 
             try:
                 row = self.sync_oper.get_row(row_id=row_id)
@@ -184,18 +180,16 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         """
 
         @self.group.command(name="get-by-name", help=f"Get a single {self.ctx.class_string} by name")
-        @common_options.db_engine()
         @common_options.output()
         @click.argument("name", type=str)
         def command(
-            db_engine: Callable[[], AsyncEngine],
-            output: common_options.OutputEnum | None,
+            output: OutputEnum,
             name: str,
         ) -> None:
             """Get a single row by name."""
 
             # Ensure database engine is initialized
-            _ = db_engine()
+            init_db()
 
             try:
                 row = self.sync_oper.get_row_by_name(name=name)
@@ -212,14 +206,12 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         """
 
         @self.group.command(name="get-rows", help=f"List {self.ctx.class_string} rows")
-        @common_options.db_engine()
         @common_options.output()
         @common_options.skip()
         @common_options.limit()
         @common_options.page_size()
         def command(
-            db_engine: Callable[[], AsyncEngine],
-            output: common_options.OutputEnum | None,
+            output: OutputEnum,
             skip: int,
             limit: int | None,
             page_size: int,
@@ -227,7 +219,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             """List rows from the table with pagination."""
 
             # Ensure database engine is initialized
-            _ = db_engine()
+            init_db()
 
             # Validate pagination parameters
             try:
@@ -248,57 +240,6 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             except Exception as exc:
                 self._handle_database_error(exc, f"listing {self.ctx.class_string} rows")
 
-    def register_get_rows_streaming(self) -> None:
-        """Register the get-rows-streaming command to the group.
-
-        Adds a Click command that streams rows one at a time for memory efficiency.
-
-        Note: Due to sync wrapper limitations, rows are collected before output.
-        """
-
-        @self.group.command(
-            name="stream-rows", help=f"Stream {self.ctx.class_string} rows (memory efficient)"
-        )
-        @common_options.db_engine()
-        @common_options.output()
-        @common_options.skip()
-        @common_options.limit()
-        @common_options.page_size()
-        def command(
-            db_engine: Callable[[], AsyncEngine],
-            output: common_options.OutputEnum | None,
-            skip: int,
-            limit: int | None,
-            page_size: int,
-        ) -> None:
-            """Stream rows one at a time."""
-
-            # Ensure database engine is initialized
-            _ = db_engine()
-
-            # Validate pagination parameters
-            try:
-                params = common_options.PaginationParams(skip=skip, limit=limit, page_size=page_size)
-                params.validate()
-            except ValueError as exc:
-                click.echo(f"Error: {exc}", err=True)
-                raise click.Abort()
-
-            try:
-                # Note: Collect rows from streaming iterator
-                # True streaming output would require async CLI
-                rows = []
-                for row in self.sync_oper.get_rows_streaming(
-                    skip=skip,
-                    limit=limit or page_size,
-                ):
-                    rows.append(row)
-
-                output_pydantic(rows, output)
-
-            except Exception as exc:
-                self._handle_database_error(exc, f"streaming {self.ctx.class_string} rows")
-
     def register_get_row_or_none(self) -> None:
         """Register the get-row-or-none command to the group.
 
@@ -310,18 +251,16 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             name="get-row-if-exists",
             help=f"Get a {self.ctx.class_string} by ID (returns nothing if not found)",
         )
-        @common_options.db_engine()
         @common_options.output()
         @click.argument("row_id", type=int)
         def command(
-            db_engine: Callable[[], AsyncEngine],
-            output: common_options.OutputEnum | None,
+            output: OutputEnum,
             row_id: int,
         ) -> None:
             """Get a single row by ID, or nothing if not found."""
 
             # Ensure database engine is initialized
-            _ = db_engine()
+            init_db()
 
             try:
                 row = self.sync_oper.get_row_or_none(row_id=row_id)
@@ -341,14 +280,12 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         """
 
         @self.group.command(name="count", help=f"Count total {self.ctx.class_string} rows")
-        @common_options.db_engine()
         def command(
-            db_engine: Callable[[], AsyncEngine],
         ) -> None:
             """Count total rows in the table."""
 
             # Ensure database engine is initialized
-            _ = db_engine()
+            init_db()
 
             try:
                 count = self.sync_oper.count_rows()
@@ -364,20 +301,18 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         """
 
         @self.group.command(name="lookup", help=f"Look up a {self.ctx.class_string} by ID or name")
-        @common_options.db_engine()
         @common_options.output()
         @click.option("--id", "row_id", type=int, help="Row ID to look up")
         @click.option("--name", type=str, help="Row name to look up")
         def command(
-            db_engine: Callable[[], AsyncEngine],
-            output: common_options.OutputEnum | None,
+            output: OutputEnum,
             row_id: int | None,
             name: str | None,
         ) -> None:
             """Look up a row by either ID or name."""
 
             # Ensure database engine is initialized
-            _ = db_engine()
+            init_db()
 
             # Validate that exactly one is provided
             if (row_id is None) == (name is None):
@@ -386,7 +321,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
 
             try:
                 row = self.sync_oper.lookup_by_id_or_name(row_id=row_id, name=name)
-                output_pydantic([row], output)
+                output_pydantic([cast(ResponseT, row)], output)
 
             except Exception as exc:
                 identifier = f"ID {row_id}" if row_id else f"name '{name}'"
@@ -401,7 +336,6 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         self.register_get_row()
         self.register_get_row_by_name()
         self.register_get_rows()
-        self.register_get_rows_streaming()
         self.register_get_row_or_none()
         self.register_count_rows()
         self.register_lookup_by_id_or_name()
@@ -418,7 +352,6 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         """
 
         @self.group.command(name="create", help=f"Create a new {self.ctx.class_string}")
-        @common_options.db_engine()
         @common_options.output()
         @click.option(
             "--from-json", type=click.Path(exists=True), help="Path to JSON file containing row data"
@@ -426,8 +359,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         @click.option("--no-validate", is_flag=True, help="Skip Pydantic validation")
         @click.argument("fields", nargs=-1)
         def command(
-            db_engine: Callable[[], AsyncEngine],
-            output: common_options.OutputEnum | None,
+            output: OutputEnum,
             from_json: str | None,
             *,
             no_validate: bool,
@@ -442,12 +374,12 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             """
 
             # Ensure database engine is initialized
-            _ = db_engine()
+            init_db()
 
             # Parse input
             if from_json:
                 try:
-                    with open(from_json) as f:
+                    with open(from_json, encoding="utf-8") as f:
                         row_data = json.load(f)
                 except json.JSONDecodeError as exc:
                     click.echo(f"Error: Invalid JSON: {exc}", err=True)
@@ -495,13 +427,11 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         @self.group.command(
             name="create-many", help=f"Create multiple {self.ctx.class_string} rows from JSON file"
         )
-        @common_options.db_engine()
         @common_options.output()
         @click.option("--no-validate", is_flag=True, help="Skip Pydantic validation")
         @click.argument("json_file", type=click.Path(exists=True))
         def command(
-            db_engine: Callable[[], AsyncEngine],
-            output: common_options.OutputEnum | None,
+            output: OutputEnum,
             *,
             no_validate: bool,
             json_file: str,
@@ -513,11 +443,11 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             """
 
             # Ensure database engine is initialized
-            _ = db_engine()
+            init_db()
 
             # Load JSON file
             try:
-                with open(json_file) as f:
+                with open(json_file, encoding="utf-8") as f:
                     rows_data = json.load(f)
             except json.JSONDecodeError as exc:
                 click.echo(f"Error: Invalid JSON: {exc}", err=True)
@@ -552,14 +482,12 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         @self.group.command(
             name="create-batched", help=f"Create multiple {self.ctx.class_string} rows in batches"
         )
-        @common_options.db_engine()
         @common_options.output()
         @click.option("--batch-size", type=int, default=1000, help="Number of rows per batch (default: 1000)")
         @click.option("--no-validate", is_flag=True, help="Skip Pydantic validation")
         @click.argument("json_file", type=click.Path(exists=True))
         def command(
-            db_engine: Callable[[], AsyncEngine],
-            output: common_options.OutputEnum | None,
+            output: OutputEnum,
             batch_size: int,
             *,
             no_validate: bool,
@@ -573,7 +501,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             """
 
             # Ensure database engine is initialized
-            _ = db_engine()
+            init_db()
 
             # Validate batch size
             if batch_size < 1:
@@ -582,7 +510,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
 
             # Load JSON file
             try:
-                with open(json_file) as f:
+                with open(json_file, encoding="utf-8") as f:
                     rows_data = json.load(f)
             except json.JSONDecodeError as exc:
                 click.echo(f"Error: Invalid JSON: {exc}", err=True)
@@ -622,11 +550,9 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         @self.group.command(
             name="bulk-insert", help=f"Bulk insert {self.ctx.class_string} rows (fast, no objects returned)"
         )
-        @common_options.db_engine()
         @click.option("--no-validate", is_flag=True, help="Skip Pydantic validation")
         @click.argument("json_file", type=click.Path(exists=True))
         def command(
-            db_engine: Callable[[], AsyncEngine],
             *,
             no_validate: bool,
             json_file: str,
@@ -639,11 +565,11 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             """
 
             # Ensure database engine is initialized
-            _ = db_engine()
+            init_db()
 
             # Load JSON file
             try:
-                with open(json_file) as f:
+                with open(json_file, encoding="utf-8") as f:
                     rows_data = json.load(f)
             except json.JSONDecodeError as exc:
                 click.echo(f"Error: Invalid JSON: {exc}", err=True)
@@ -689,7 +615,6 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         """
 
         @self.group.command(name="update", help=f"Update a {self.ctx.class_string} by ID")
-        @common_options.db_engine()
         @common_options.output()
         @click.option(
             "--from-json", type=click.Path(exists=True), help="Path to JSON file containing update data"
@@ -697,8 +622,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         @click.argument("row_id", type=int)
         @click.argument("fields", nargs=-1)
         def command(
-            db_engine: Callable[[], AsyncEngine],
-            output: common_options.OutputEnum | None,
+            output: OutputEnum,
             from_json: str | None,
             row_id: int,
             fields: tuple[str, ...],
@@ -712,12 +636,12 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             """
 
             # Ensure database engine is initialized
-            _ = db_engine()
+            init_db()
 
             # Parse input
             if from_json:
                 try:
-                    with open(from_json) as f:
+                    with open(from_json, encoding="utf-8") as f:
                         update_data = json.load(f)
                 except json.JSONDecodeError as exc:
                     click.echo(f"Error: Invalid JSON: {exc}", err=True)
@@ -770,12 +694,10 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         @self.group.command(
             name="update-many", help=f"Update multiple {self.ctx.class_string} rows from JSON file"
         )
-        @common_options.db_engine()
         @common_options.output()
         @click.argument("json_file", type=click.Path(exists=True))
         def command(
-            db_engine: Callable[[], AsyncEngine],
-            output: common_options.OutputEnum | None,
+            output: OutputEnum,
             json_file: str,
         ) -> None:
             """Update multiple rows from JSON file.
@@ -793,11 +715,11 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             """
 
             # Ensure database engine is initialized
-            _ = db_engine()
+            init_db()
 
             # Load JSON file
             try:
-                with open(json_file) as f:
+                with open(json_file, encoding="utf-8") as f:
                     updates = json.load(f)
             except json.JSONDecodeError as exc:
                 click.echo(f"Error: Invalid JSON: {exc}", err=True)
@@ -851,14 +773,12 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         """
 
         @self.group.command(name="delete", help=f"Delete a {self.ctx.class_string} by ID")
-        @common_options.db_engine()
         @common_options.output()
         @click.option("--no-capture", is_flag=True, help="Do not capture deleted row data (faster)")
         @click.option("--confirm", is_flag=True, help="Skip confirmation prompt")
         @click.argument("row_id", type=int)
         def command(
-            db_engine: Callable[[], AsyncEngine],
-            output: common_options.OutputEnum | None,
+            output: OutputEnum,
             *,
             no_capture: bool,
             confirm: bool,
@@ -871,7 +791,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             """
 
             # Ensure database engine is initialized
-            _ = db_engine()
+            init_db()
 
             # Confirmation prompt unless --confirm flag
             if not confirm:
@@ -889,7 +809,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 if deleted_data and not no_capture:
                     click.echo("\nDeleted data:")
                     # Convert dict to list for output_pydantic compatibility
-                    output_pydantic([deleted_data], output)
+                    output_pydantic([cast(ResponseT, deleted_data)], output)
 
             except Exception as exc:
                 self._handle_database_error(exc, f"deleting {self.ctx.class_string} with ID {row_id}")
@@ -902,7 +822,6 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         """
 
         @self.group.command(name="delete-many", help=f"Delete multiple {self.ctx.class_string} rows by IDs")
-        @common_options.db_engine()
         @common_options.output()
         @click.option("--capture-data", is_flag=True, help="Capture deleted row data (slower)")
         @click.option("--confirm", is_flag=True, help="Skip confirmation prompt")
@@ -913,8 +832,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         )
         @click.argument("row_ids", nargs=-1, type=int)
         def command(
-            db_engine: Callable[[], AsyncEngine],
-            output: common_options.OutputEnum | None,
+            output: OutputEnum,
             *,
             capture_data: bool,
             confirm: bool,
@@ -936,12 +854,12 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             """
 
             # Ensure database engine is initialized
-            _ = db_engine()
+            init_db()
 
             # Parse input
             if from_file:
                 try:
-                    with open(from_file) as f:
+                    with open(from_file, encoding="utf-8") as f:
                         content = f.read().strip()
 
                     # Try JSON first
@@ -978,7 +896,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
 
                 if deleted_data and capture_data:
                     click.echo("\nDeleted data:")
-                    output_pydantic(deleted_data, output)
+                    output_pydantic(cast(list[ResponseT], deleted_data), output)
 
             except Exception as exc:
                 self._handle_database_error(exc, f"deleting {len(ids_list)} {self.ctx.class_string} rows")
@@ -993,7 +911,6 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         @self.group.command(
             name="bulk-delete", help=f"Bulk delete {self.ctx.class_string} rows (fast, no hooks)"
         )
-        @common_options.db_engine()
         @click.option("--confirm", is_flag=True, help="Skip confirmation prompt")
         @click.option(
             "--from-file",
@@ -1002,7 +919,6 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         )
         @click.argument("row_ids", nargs=-1, type=int)
         def command(
-            db_engine: Callable[[], AsyncEngine],
             *,
             confirm: bool,
             from_file: str | None,
@@ -1024,12 +940,12 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             """
 
             # Ensure database engine is initialized
-            _ = db_engine()
+            init_db()
 
             # Parse input
             if from_file:
                 try:
-                    with open(from_file) as f:
+                    with open(from_file, encoding="utf-8") as f:
                         content = f.read().strip()
 
                     # Try JSON first
@@ -1092,7 +1008,6 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         """
 
         @self.group.command(name="filter", help=f"Filter {self.ctx.class_string} rows by conditions")
-        @common_options.db_engine()
         @common_options.output()
         @common_options.skip()
         @common_options.limit()
@@ -1108,8 +1023,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             "--order-by", multiple=True, help="Sort by field: FIELD[:desc] (e.g., name, created_at:desc)"
         )
         def command(
-            db_engine: Callable[[], AsyncEngine],
-            output: common_options.OutputEnum | None,
+            output: OutputEnum,
             skip: int,
             limit: int | None,
             page_size: int,
@@ -1140,7 +1054,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             """
 
             # Ensure database engine is initialized
-            _ = db_engine()
+            init_db()
 
             # Validate pagination
             try:
@@ -1151,8 +1065,6 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 raise click.Abort()
 
             # Parse filters
-            from ...db_funcs.filter import Filter, FilterOp
-
             filters = []
             for filter_spec in field:
                 parts = filter_spec.split(":", 2)
@@ -1197,13 +1109,11 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                     try:
                         value = json.loads(value_str)
                     except json.JSONDecodeError:
-                        value = value_str
+                        value = [value_str]
 
                 filters.append(Filter(field_name, op, value))
 
             # Parse order_by
-            from ...db_funcs.filter import OrderBy
-
             order_by_list = []
             for order_spec in order_by:
                 parts = order_spec.split(":", 1)
@@ -1235,11 +1145,9 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         @self.group.command(
             name="count-filtered", help=f"Count {self.ctx.class_string} rows matching conditions"
         )
-        @common_options.db_engine()
         @click.option("--field", "-f", multiple=True, help="Filter condition: FIELD:OPERATOR:VALUE")
         @click.option("--or", "use_or", is_flag=True, help="Use OR logic for multiple filters (default: AND)")
         def command(
-            db_engine: Callable[[], AsyncEngine],
             field: tuple[str, ...],
             *,
             use_or: bool,
@@ -1250,11 +1158,9 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             """
 
             # Ensure database engine is initialized
-            _ = db_engine()
+            init_db()
 
             # Parse filters (same logic as filter_rows)
-            from ...db_funcs.filter import Filter, FilterOp
-
             filters = []
             for filter_spec in field:
                 parts = filter_spec.split(":", 2)
@@ -1289,7 +1195,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                     try:
                         value = json.loads(value_str)
                     except json.JSONDecodeError:
-                        value = value_str
+                        value = [value_str]
 
                 filters.append(Filter(field_name, op, value))
 
@@ -1312,7 +1218,6 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         """
 
         @self.group.command(name="find-by", help=f"Find {self.ctx.class_string} rows by field values")
-        @common_options.db_engine()
         @common_options.output()
         @common_options.skip()
         @common_options.limit()
@@ -1320,8 +1225,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         @click.option("--order-by", multiple=True, help="Sort by field: FIELD[:desc]")
         @click.argument("conditions", nargs=-1)
         def command(
-            db_engine: Callable[[], AsyncEngine],
-            output: common_options.OutputEnum | None,
+            output: OutputEnum,
             skip: int,
             limit: int | None,
             page_size: int,
@@ -1337,7 +1241,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             """
 
             # Ensure database engine is initialized
-            _ = db_engine()
+            init_db()
 
             # Validate pagination
             try:
@@ -1365,8 +1269,6 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 raise click.Abort()
 
             # Parse order_by
-            from ...db_funcs.filter import OrderBy
-
             order_by_list = []
             for order_spec in order_by:
                 parts = order_spec.split(":", 1)
@@ -1397,12 +1299,10 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         @self.group.command(
             name="find-one-by", help=f"Find exactly one {self.ctx.class_string} by field values"
         )
-        @common_options.db_engine()
         @common_options.output()
         @click.argument("conditions", nargs=-1)
         def command(
-            db_engine: Callable[[], AsyncEngine],
-            output: common_options.OutputEnum | None,
+            output: OutputEnum,
             conditions: tuple[str, ...],
         ) -> None:
             """Find exactly one row by equality conditions.
@@ -1414,7 +1314,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             """
 
             # Ensure database engine is initialized
-            _ = db_engine()
+            init_db()
 
             # Parse conditions
             kwargs = {}

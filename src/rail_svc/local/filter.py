@@ -9,18 +9,14 @@ use the TableOperations methods directly with explicit session management.
 """
 
 from collections.abc import AsyncIterator
-from typing import TypeVar, Any
+from typing import Any
 
 from pydantic import BaseModel
 
 from ..db.base import Base
-from ..db_oper.base import TableOperations
 from ..db.session import get_session
 from ..db_funcs.filter import Filter, OrderBy
-
-T = TypeVar("T", bound=Base)
-ResponseT = TypeVar("ResponseT", bound=BaseModel)
-CreateT = TypeVar("CreateT", bound=BaseModel)
+from ..db_oper.base import TableOperations
 
 
 async def filter_rows[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
@@ -89,7 +85,7 @@ async def filter_rows[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
             skip=skip,
             limit=limit,
         )
-        return table_ops.to_pydantic_list(rows)
+        return table_ops.to_pydantic_list(list(rows))
 
 
 async def filter_rows_streaming[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
@@ -149,7 +145,7 @@ async def filter_rows_streaming[T: Base, ResponseT: BaseModel, CreateT: BaseMode
     filter_rows : Load all results into memory at once
     """
     async with get_session() as session:
-        async for row in table_ops.filter_rows_streaming(
+        async for row in await table_ops.filter_rows_streaming(
             session,
             filters=filters,
             logical_op=logical_op,
@@ -351,7 +347,7 @@ async def find_by[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
             limit=limit,
             **kwargs,
         )
-        return table_ops.to_pydantic_list(rows)
+        return table_ops.to_pydantic_list(list(rows))
 
 
 async def find_one_by[T: Base, ResponseT: BaseModel, CreateT: BaseModel](

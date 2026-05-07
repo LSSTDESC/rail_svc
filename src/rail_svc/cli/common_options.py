@@ -2,16 +2,16 @@
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from enum import Enum, auto
+from enum import Enum
 from functools import partial, wraps
 from typing import Any, cast
 
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
-
 import click
 from click.decorators import FC
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from ..config import config as global_config
+from ..models.utils import OutputEnum
 from ..operations.client import RailClient
 
 # Configuration defaults
@@ -93,13 +93,6 @@ class EnumChoice(click.Choice):
         return self._enum.__members__[converted_str]
 
 
-class OutputEnum(Enum):
-    """Options for output format"""
-
-    yaml = auto()  # pylint: disable=invalid-name
-    json = auto()  # pylint: disable=invalid-name
-
-
 class PartialArgument:
     """Wraps click.argument with partial arguments for convenient reuse"""
 
@@ -130,6 +123,7 @@ output = PartialOption(
     "--output",
     "-o",
     type=EnumChoice(OutputEnum),
+    default="table",
     help="Output format.  Summary table if not specified.",
 )
 
@@ -242,37 +236,3 @@ confirm = PartialOption(
     help="Skip confirmation prompt",
 )
 
-
-def pz_client() -> Callable[[FC], FC]:
-    """Pass a freshly constructed PZRailClient to a decorated click Command without
-    adding/requiring a corresponding click Option"""
-
-    def decorator(f: FC) -> FC:
-        @wraps(f)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            kwargs["pz_client"] = RailClient()
-            return f(*args, **kwargs)
-
-        return cast(FC, wrapper)
-
-    return decorator
-
-
-def _make_engine() -> AsyncEngine:
-    engine = create_async_engine(global_config.db.url)
-    return engine
-
-
-def db_engine() -> Callable[[FC], FC]:
-    """Pass a freshly constructed DB session to a decorated click Command without
-    adding/requiring a corresponding click Option"""
-
-    def decorator(f: FC) -> FC:
-        @wraps(f)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            kwargs["db_engine"] = _make_engine
-            return f(*args, **kwargs)
-
-        return cast(FC, wrapper)
-
-    return decorator

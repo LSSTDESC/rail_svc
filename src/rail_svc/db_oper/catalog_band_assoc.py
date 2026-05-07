@@ -132,7 +132,8 @@ class CatalogBandAssocOperations(
         # Validate band_alias
         if not band_alias or not isinstance(band_alias, str):
             logger.warning(
-                f"Invalid band_alias for CatalogBandAssoc: {band_alias}",
+                "Invalid band_alias for CatalogBandAssoc.",
+                band_alias=band_alias,
             )
             raise ValueError("band_alias must be a non-empty string")
 

@@ -405,6 +405,7 @@ class Base(DeclarativeBase):
         - Any exceptions raised will prevent row creation and rollback the transaction
         - Runs within the parent transaction - do not start new transactions
         """
+        assert session
         return data
 
     @classmethod
@@ -467,6 +468,8 @@ class Base(DeclarativeBase):
         - Hook implementations should be idempotent where possible
         - Runs within the parent transaction - do not start new transactions
         """
+        assert session
+        assert row
         return None
 
     # ============================================================================
@@ -531,6 +534,8 @@ class Base(DeclarativeBase):
         - Any exceptions raised will prevent the update and rollback the transaction
         - Runs within the parent transaction - do not start new transactions
         """
+        assert session
+        assert row
         return data
 
     @classmethod
@@ -538,7 +543,7 @@ class Base(DeclarativeBase):
         cls: type[T],
         session: AsyncSession,
         row: T,
-        updated_fields: set[str],
+        updated_fields: set[str],  # pylint: disable=unused-argument
     ) -> None:
         """Hook called during update_row, AFTER successful update.
 
@@ -599,6 +604,8 @@ class Base(DeclarativeBase):
         - Hook implementations should be idempotent where possible
         - Runs within the parent transaction - do not start new transactions
         """
+        assert session
+        assert row
         return None
 
     # ============================================================================
@@ -655,6 +662,8 @@ class Base(DeclarativeBase):
         - Any exceptions raised will prevent deletion and rollback the transaction
         - Runs within the parent transaction - do not start new transactions
         """
+        assert session
+        assert row
         return None
 
     @classmethod
@@ -738,6 +747,8 @@ class Base(DeclarativeBase):
         - Runs within the parent transaction - do not start new transactions
         - Do NOT attempt to modify or re-add the row object
         """
+        assert session
+        assert row
         return None
 
 

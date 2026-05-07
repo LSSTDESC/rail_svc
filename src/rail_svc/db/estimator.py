@@ -1,6 +1,6 @@
 """Database model for Estimator table"""
 
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 from sqlalchemy import JSON, String
@@ -11,9 +11,9 @@ from .. import models
 from .base import Base
 
 if TYPE_CHECKING:
-    from .model import Model
     from .algorithm import Algorithm
     from .catalog_tag import CatalogTag
+    from .model import Model
 
 
 class Estimator(Base):

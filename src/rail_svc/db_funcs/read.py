@@ -13,12 +13,12 @@ different access patterns and performance characteristics:
 
 from collections.abc import AsyncIterator, Sequence
 
-from sqlalchemy import select, func
+import structlog
+from sqlalchemy import func, select
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
-import structlog
 
-from rail_svc.db.base import ensure_base_inheritance, T
+from rail_svc.db.base import T, ensure_base_inheritance
 
 logger = structlog.get_logger(__name__)
 
@@ -310,7 +310,7 @@ async def count_rows(
 async def lookup_by_id_or_name(
     the_class: type[T],
     session: AsyncSession,
-    id_: int | None,
+    row_id: int | None,
     name: str | None,
     *,
     need_object: bool = False,
@@ -326,7 +326,7 @@ async def lookup_by_id_or_name(
         The SQLAlchemy model class to look up
     session
         Database session
-    id_
+    row_id
         Primary key ID if known (provide this OR name)
     name
         Record name to look up (provide this OR id_)
@@ -355,7 +355,7 @@ async def lookup_by_id_or_name(
     >>> algo_id, algo_obj = await lookup_by_id_or_name(
     ...     Algorithm,
     ...     session,
-    ...     id_=123,
+    ...     row_id=123,
     ...     name=None,
     ...     need_object=False
     ... )
@@ -367,7 +367,7 @@ async def lookup_by_id_or_name(
     >>> algo_id, algo_obj = await lookup_by_id_or_name(
     ...     Algorithm,
     ...     session,
-    ...     id_=123,
+    ...     row_id=123,
     ...     name=None,
     ...     need_object=True
     ... )
@@ -379,7 +379,7 @@ async def lookup_by_id_or_name(
     >>> algo_id, algo_obj = await lookup_by_id_or_name(
     ...     Algorithm,
     ...     session,
-    ...     id_=None,
+    ...     row_id=None,
     ...     name="RandomForest",
     ...     need_object=False  # Ignored - must fetch to get ID
     ... )
@@ -392,7 +392,7 @@ async def lookup_by_id_or_name(
     need_object) because we need to get the ID. When looking up by ID and
     need_object=False, no database query is made.
     """
-    if id_ is None:
+    if row_id is None:
         if name is None:
             logger.error(
                 "Missing identifier for lookup",
@@ -421,25 +421,25 @@ async def lookup_by_id_or_name(
         # Have ID - fetch object only if needed
         if need_object:
             try:
-                the_object = await get_row(the_class, session, id_)
+                the_object = await get_row(the_class, session, row_id)
                 logger.debug(
                     "Record found by ID",
                     table=the_class.__name__,
-                    id=id_,
+                    id=row_id,
                 )
-                return id_, the_object
+                return row_id, the_object
             except NoResultFound:
                 logger.error(
                     "Record not found by ID",
                     table=the_class.__name__,
-                    id=id_,
+                    id=row_id,
                 )
-                raise ValueError(f"{the_class.__name__} with ID {id_} not found") from None
+                raise ValueError(f"{the_class.__name__} with ID {row_id} not found") from None
         else:
             # Have ID and don't need object - return immediately
             logger.debug(
                 "Using provided ID without fetching",
                 table=the_class.__name__,
-                id=id_,
+                id=row_id,
             )
-            return id_, None
+            return row_id, None

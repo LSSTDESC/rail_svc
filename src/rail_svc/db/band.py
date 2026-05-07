@@ -1,7 +1,7 @@
 """Database model for CatalogTag table"""
 
 from pydantic import BaseModel
-from sqlalchemy import String
+from sqlalchemy import String, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .. import models
@@ -36,10 +36,10 @@ class Band(Base):
     name: Mapped[str] = mapped_column(String(255), index=True, unique=True)
 
     # Wavelength grid
-    band_wavelengths: Mapped[list[float]] = mapped_column()
+    band_wavelengths: Mapped[list[float]] = mapped_column(JSON)
 
     #: Transmission at given wavelengths
-    band_transmission: Mapped[list[float]] = mapped_column()
+    band_transmission: Mapped[list[float]] = mapped_column(JSON)
 
     # Pydantic integration
     @classmethod

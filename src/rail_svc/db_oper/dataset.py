@@ -16,11 +16,11 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy.ext.asyncio import AsyncSession
 import tables_io
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import db, db_funcs, models
-from .base import TableContext, FileValidatedOperations
+from .base import FileValidatedOperations, TableContext
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +119,9 @@ class DatasetOperations(FileValidatedOperations[db.Dataset, models.Dataset, mode
         )
 
         # 2. Process path and determine n_objects
-        n_objects = await self._process_path(path, catalog_tag_obj, validate_file=validate_file, extra_kwargs=extra_kwargs)
+        n_objects = await self._process_path(
+            path, catalog_tag_obj, validate_file=validate_file, extra_kwargs=extra_kwargs
+        )
 
         # 3. Build final kwargs
         result = {

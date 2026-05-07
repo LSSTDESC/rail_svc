@@ -3,24 +3,23 @@ from __future__ import annotations
 import asyncio
 import functools
 from abc import abstractmethod
-from collections.abc import Sequence
+from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import BaseModel, ValidationError
+from sqlalchemy import insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from structlog import get_logger
 
 from .. import db_funcs
-from ..db.base import ensure_base_inheritance, Base
+from ..config import Configuration as global_config
+from ..db.base import Base, ensure_base_inheritance
+from ..db_funcs.filter import Filter, OrderBy
 
 logger = get_logger(__name__)
-
-# Type variables
-T = TypeVar("T", bound=Base)
-ResponseT = TypeVar("ResponseT", bound=BaseModel)
-CreateT = TypeVar("CreateT", bound=BaseModel)
 
 
 @dataclass
@@ -174,9 +173,147 @@ class TableOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
     ...         # pydantic_user is type UserResponse (ResponseT)
     """
 
+    if TYPE_CHECKING:
+        # pylint: disable=unused-argument
+
+        async def get_row(
+            self,
+            session: AsyncSession,
+            row_id: int,
+        ) -> T: ...
+
+        async def get_row_by_name(
+            self,
+            session: AsyncSession,
+            name: str,
+        ) -> T: ...
+
+        async def get_rows(
+            self,
+            session: AsyncSession,
+            skip: int = 0,
+            limit: int | None = None,
+        ) -> Sequence[T]: ...
+
+        async def get_rows_streaming(
+            self,
+            session: AsyncSession,
+            skip: int = 0,
+            limit: int | None = None,
+        ) -> AsyncIterator[T]: ...
+
+        async def get_row_or_none(
+            self,
+            session: AsyncSession,
+            row_id: int,
+        ) -> T | None: ...
+
+        async def count_rows(
+            self,
+            session: AsyncSession,
+        ) -> int: ...
+
+        async def lookup_by_id_or_name(
+            self,
+            session: AsyncSession,
+            row_id: int | None,
+            name: str | None,
+            *,
+            need_object: bool = False,
+        ) -> tuple[int, T | None]: ...
+
+        async def update_row(
+            self,
+            session: AsyncSession,
+            row_id: int,
+            **kwargs: Any,
+        ) -> T: ...
+
+        async def update_rows(
+            self,
+            session: AsyncSession,
+            updates: Sequence[dict[str, Any]],
+        ) -> list[T]: ...
+
+        async def delete_row(
+            self,
+            session: AsyncSession,
+            row_id: int,
+            *,
+            capture_data: bool = True,
+        ) -> dict[str, Any] | None: ...
+
+        async def delete_rows(
+            self,
+            session: AsyncSession,
+            row_ids: list[int],
+            *,
+            capture_data: bool = False,
+        ) -> list[dict[str, Any]] | None: ...
+
+        async def bulk_delete_rows(
+            self,
+            session: AsyncSession,
+            row_ids: list[int],
+        ) -> int: ...
+
+        async def filter_rows(
+            self,
+            session: AsyncSession,
+            filters: list[Filter] | None = None,
+            logical_op: str = "and",
+            order_by: OrderBy | list[OrderBy] | None = None,
+            skip: int = 0,
+            limit: int | None = None,
+        ) -> Sequence[T]: ...
+
+        async def filter_rows_streaming(
+            self,
+            session: AsyncSession,
+            filters: list[Filter] | None = None,
+            logical_op: str = "and",
+            order_by: OrderBy | list[OrderBy] | None = None,
+            skip: int = 0,
+            limit: int | None = None,
+        ) -> AsyncIterator[T]: ...
+
+        async def count_filtered_rows(
+            self,
+            session: AsyncSession,
+            filters: list[Filter] | None = None,
+            logical_op: str = "and",
+        ) -> int: ...
+
+        async def filter_one(
+            self,
+            session: AsyncSession,
+            filters: list[Filter],
+            logical_op: str = "and",
+        ) -> T: ...
+
+        async def filter_one_or_none(
+            self,
+            session: AsyncSession,
+            filters: list[Filter],
+            logical_op: str = "and",
+        ) -> T | None: ...
+
+        async def find_by(
+            self,
+            session: AsyncSession,
+            order_by: OrderBy | list[OrderBy] | None = None,
+            skip: int = 0,
+            limit: int | None = None,
+            **kwargs: Any,
+        ) -> Sequence[T]: ...
+
+        async def find_one_by(
+            self,
+            session: AsyncSession,
+            **kwargs: Any,
+        ) -> T: ...
+
     _DELEGATED_METHODS = {
-        # CREATE operations
-        "create": ["create_rows_batched", "bulk_insert_rows"],
         # READ operations
         "read": [
             "get_row",
@@ -194,6 +331,15 @@ class TableOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         ],
         # DELETE operations
         "delete": ["delete_row", "delete_rows", "bulk_delete_rows"],
+        "filter": [
+            "filter_rows",
+            "filter_rows_streaming",
+            "count_filtered_rows",
+            "filter_one",
+            "filter_one_or_none",
+            "find_by",
+            "find_one_by",
+        ],
     }
 
     def __init__(self, context: TableContext[T, ResponseT, CreateT]) -> None:
@@ -209,16 +355,6 @@ class TableOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         self.ctx = context
         self._bind_delegated_methods()
 
-    @overload
-    def __getattr__(self, name: str) -> Callable[..., Any]: ...
-
-    @overload
-    def __getattr__(self, name: str) -> int: ...
-        
-    def __getattr__(self, name: str) -> Any:
-        # This will be called for dynamically added methods
-        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
-        
     def _bind_delegated_methods(self) -> None:
         """
         Bind all delegated methods to this instance.
@@ -246,6 +382,7 @@ class TableOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         **kwargs: Any,
     ) -> dict[str, Any]:
         """Prepare kwargs for creating an instance."""
+        assert session
         return kwargs
 
     async def create_row(
@@ -461,6 +598,181 @@ class TableOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
 
         return rows
 
+    async def create_rows_batched(
+        self,
+        session: AsyncSession,
+        rows_data: Sequence[dict[str, Any]],
+        *,
+        validate: bool = True,
+        batch_size: int = 1000,
+    ) -> list[T]:
+        """Create multiple rows in batches.
+
+        Unlike create_rows(), this commits after each batch, so partial
+        success is possible if a later batch fails.
+
+        Parameters
+        ----------
+        session
+            DB session manager
+        rows_data
+            Sequence of dictionaries for new rows
+        validate
+            Whether to validate each row against Pydantic model
+        batch_size
+            Number of rows to insert per batch (default: 1000)
+
+        Returns
+        -------
+        list[T]
+            List of all newly created rows
+
+        Raises
+        ------
+        TypeError
+            If the_class does not inherit from rail_svc.db.base.Base
+        IntegrityError
+            Integrity constraint violation in any batch
+        ValidationError
+            Pydantic validation failed on any row
+        ValueError
+            If rows_data is empty or batch_size < 1
+
+        Notes
+        -----
+        This function commits after each batch. If a batch fails, previously
+        committed batches will remain in the database. Use create_rows() if
+        you need atomic all-or-nothing behavior.
+
+        Examples
+        --------
+        >>> # Create 10,000 users in batches of 500
+        >>> users_data = [
+        ...     {"username": f"user_{i}", "email": f"user_{i}@example.com"}
+        ...     for i in range(10000)
+        ... ]
+        >>> users = await create_rows_batched(
+        ...     User, session, users_data, batch_size=500
+        ... )
+        """
+        if not rows_data:
+            raise ValueError("rows_data cannot be empty")
+
+        if batch_size < 1:
+            raise ValueError("batch_size must be at least 1")
+
+        logger.info(
+            f"Creating rows in batches: {len(rows_data)} {batch_size}",
+        )
+
+        all_rows = []
+
+        # Process in batches
+        for batch_start in range(0, len(rows_data), batch_size):
+            batch_end = min(batch_start + batch_size, len(rows_data))
+            batch_data = rows_data[batch_start:batch_end]
+
+            logger.debug(
+                f"Processing batch {batch_start} {batch_end}",
+            )
+
+            try:
+                batch_rows: list = await self.create_rows(session, batch_data, validate=validate)
+                all_rows.extend(batch_rows)
+
+            except Exception:
+                logger.error(
+                    f"Batch failed {batch_start} {batch_end}",
+                )
+                raise
+
+        logger.info("All batches completed")
+        return all_rows
+
+    async def bulk_insert_rows(
+        self,
+        session: AsyncSession,
+        rows_data: Sequence[dict[str, Any]],
+        *,
+        validate: bool = True,
+    ) -> int:
+        """Bulk insert rows using SQLAlchemy's bulk operations.
+
+        This is much faster than create_rows() but doesn't return the
+        created objects or handle get_create_kwargs() preprocessing.
+
+        Parameters
+        ----------
+        session
+            DB session manager
+        rows_data
+            Sequence of dictionaries for new rows
+        validate
+            Whether to validate each row against Pydantic model
+
+        Returns
+        -------
+        int
+            Number of rows inserted
+
+        Raises
+        ------
+        TypeError
+            If the_class does not inherit from rail_svc.db.base.Base
+        IntegrityError
+            Integrity constraint violation
+        ValidationError
+            Pydantic validation failed on any row
+        ValueError
+            If rows_data is empty
+
+        Notes
+        -----
+        - Much faster than create_rows() for large datasets
+        - Does NOT call get_create_kwargs() - use for simple inserts only
+        - Does NOT return created objects with DB-generated values
+        - Does NOT trigger SQLAlchemy events (e.g., before_insert)
+
+        Examples
+        --------
+        >>> # Fast insert of 100,000 simple records
+        >>> count = await bulk_insert_rows(
+        ...     User,
+        ...     session,
+        ...     [{"username": f"user_{i}"} for i in range(100000)]
+        ... )
+        >>> print(f"Inserted {count} users")
+        """
+        if not rows_data:
+            raise ValueError("rows_data cannot be empty")
+
+        logger.debug(f"Bulk inserting rows {len(rows_data)}")
+
+        # Validate all rows
+        if validate:
+            for idx, row_kwargs in enumerate(rows_data):
+                try:
+                    self.ctx.create_class.model_validate(row_kwargs)
+                except ValidationError:
+                    logger.warning(
+                        f"Validation failed in bulk_insert_rows {idx}",
+                    )
+                    raise
+
+        try:
+            # Use insert statement for maximum performance
+            stmt = insert(self.ctx.db_class).values(rows_data)
+            await session.execute(stmt)
+            await session.commit()
+
+            logger.info(f"Bulk insert completed {len(rows_data)}")
+            return len(rows_data)
+
+        except IntegrityError:
+            await session.rollback()
+            logger.error(f"Integrity error during bulk insert {len(rows_data)}")
+            raise
+
     def _validate_path_security(self, path: str) -> Path:
         """Validate path doesn't escape archive directory.
 
@@ -495,8 +807,6 @@ class TableOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         >>> # This will raise ValueError
         >>> ops._validate_path_security("../../../etc/passwd")
         """
-        # Import here to avoid circular imports
-        from ...config import global_config
 
         # Check for obvious traversal attempts
         if ".." in path or path.startswith("/") or path.startswith("\\"):
@@ -812,7 +1122,9 @@ class TableOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         return self.ctx.db_class.to_pydantic_dict_list(rows)
 
 
-class FileValidatedOperations(TableOperations[T, ResponseT, CreateT]):
+class FileValidatedOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
+    TableOperations[T, ResponseT, CreateT]
+):
     """Base class for table operations with file-backed data validation.
 
     Provides common functionality for tables that store references to
@@ -860,7 +1172,6 @@ class FileValidatedOperations(TableOperations[T, ResponseT, CreateT]):
     @abstractmethod
     def get_file_length(self, path: Path) -> int:
         """Get number of objects in file. Implement in subclass."""
-        pass
 
     async def _process_path(
         self,

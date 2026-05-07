@@ -161,9 +161,9 @@ class DatabaseConfiguration(BaseModel):
     @classmethod
     def validate_url(cls, v: str) -> str:
         """Validate database URL scheme"""
-        if v and not v.startswith(("postgresql://", "sqlite://", "mysql://", "postgresql+psycopg2://")):
+        if v and not v.startswith(("postgresql://", "sqlite+aiosqlite://", "mysql://", "postgresql+psycopg2://")):
             raise ValueError(
-                "Database URL must start with a valid scheme (postgresql://, sqlite://, mysql://)"
+                "Database URL must start with a valid scheme (postgresql://, sqlite+aiosqlite://, mysql://)"
             )
         return v
 

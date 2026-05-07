@@ -6,12 +6,12 @@ pre and post-deletion hook support.
 
 from typing import Any
 
+import structlog
 from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-import structlog
 
-from rail_svc.db.base import ensure_base_inheritance, T
+from rail_svc.db.base import T, ensure_base_inheritance
 
 logger = structlog.get_logger(__name__)
 
