@@ -32,7 +32,7 @@ def init_db(database_url: str | None = None, **engine_kwargs: Any) -> None:
     if database_url is None:
         database_url = global_config.db.url
 
-    _engine = create_async_engine(database_url, echo=engine_kwargs.get("echo", False), **engine_kwargs)
+    _engine = create_async_engine(database_url, echo=engine_kwargs.pop("echo", False), **engine_kwargs)
 
     _async_session_factory = async_sessionmaker(
         _engine,

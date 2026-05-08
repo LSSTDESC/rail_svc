@@ -9,7 +9,7 @@ class EstimatesBase(BaseModel):
     """Estimates parameters that are in DB tables and also used to create new rows"""
 
     #: path to the output file
-    qp_file_path: str | None = Field(None, description="Path to the output qp ensemble file")
+    path: str | None = Field(None, description="Path to the output qp ensemble file")
 
 
 class EstimatesCreate(EstimatesBase):

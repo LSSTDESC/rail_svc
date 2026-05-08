@@ -37,7 +37,7 @@ class Estimates(Base):
     n_objects: Mapped[int] = mapped_column()
 
     #: Path to the relevant file
-    qp_file_path: Mapped[str] = mapped_column(unique=True)
+    path: Mapped[str] = mapped_column(unique=True)
 
     #: foreign key into dataset table
     dataset_id: Mapped[int] = mapped_column(
@@ -107,7 +107,7 @@ class Estimates(Base):
             f"Estimates(name={self.name!r}, id_={self.id_}, "
             f"n_objects={self.n_objects}, dataset_id={self.dataset_id}, "
             f"estimator_id={self.estimator_id}, "
-            f"path={self.qp_file_path!r})"
+            f"path={self.path!r})"
         )
 
     def __str__(self) -> str:

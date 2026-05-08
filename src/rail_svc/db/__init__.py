@@ -7,6 +7,7 @@ from .dataset import Dataset
 from .estimates import Estimates
 from .estimator import Estimator
 from .model import Model
+from .session import init_db, get_session, close_db
 
 __all__ = [
     "Algorithm",
@@ -18,4 +19,7 @@ __all__ = [
     "Estimates",
     "Estimator",
     "Model",
+    "init_db",
+    "get_session",
+    "close_db",
 ]

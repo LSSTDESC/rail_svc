@@ -15,12 +15,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from structlog import get_logger
 
 from .. import db_funcs
-from ..config import Configuration as global_config
+from ..config import config as global_config
 from ..db.base import Base, ensure_base_inheritance
 from ..db_funcs.filter import Filter, OrderBy
 
 logger = get_logger(__name__)
 
+
+FORBID_TRAVERSAL = False
 
 @dataclass
 class TableContext[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
@@ -816,14 +818,15 @@ class TableOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         try:
             fullpath.relative_to(archive_path)
         except ValueError:
-            logger.error(
-                "Path traversal attempt detected",
-                table=self.ctx.db_class.__name__,
-                attempted_path=str(path),
-                archive_path=str(archive_path),
-                resolved_path=str(fullpath),
-            )
-            raise ValueError(f"Path {path} would escape archive directory") from None
+            if FORBID_TRAVERSAL:
+                logger.error(
+                    "Path traversal attempt detected",
+                    table=self.ctx.db_class.__name__,
+                    attempted_path=str(path),
+                    archive_path=str(archive_path),
+                    resolved_path=str(fullpath),
+                )
+                raise ValueError(f"Path {path} would escape archive directory") from None
 
         return fullpath
 

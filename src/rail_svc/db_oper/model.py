@@ -26,7 +26,7 @@ __all__ = ["ModelOperations", "model"]
 # Mapping from Informer class names to Estimator class names
 # This is only needed for cases that don't follow the
 # XxxInformer -> XxxEstimator pattern
-INFORMER_TO_ESTIMATOR_MAP: dict[str, str] = {}
+INFORMER_TO_ESTIMATOR_MAP: dict[str, str] = {"dummy":"dummy"}
 
 
 class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate]):
