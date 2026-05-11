@@ -8,8 +8,11 @@ from pydantic import BaseModel, ConfigDict, Field
 class CatalogBandAssocBase(BaseModel):
     """CatalogBandAssoc parameters that are in DB tables and also used to create new rows"""
 
-    #: What the band is called in the catalog tag
-    band_alias: str = Field(..., description="Name given to Band in the Catalog")
+    #: What the band magntitude is called in the catalog
+    mag_column_name: str = Field(..., description="Name given to magnitude column in catalog")
+
+    #: What the band magntitude error is called in the catalog tag
+    mag_err_column_name: str = Field(..., description="Name given to magnitude error column in catalog")
 
 
 class CatalogBandAssocCreate(CatalogBandAssocBase):
@@ -36,7 +39,7 @@ class CatalogBandAssoc(CatalogBandAssocBase):
         "id_",
         "catalog_tag_id",
         "band_id",
-        "band_alias",
+        "mag_column_name",
     ]
 
     #: primary key

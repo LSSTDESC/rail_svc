@@ -28,13 +28,20 @@ class CatalogBandAssoc(Base):
 
     __tablename__ = "catalog_band_assoc"
 
-    __table_args__ = (UniqueConstraint("catalog_tag_id", "band_alias", name="uq_catalog_band_alias"),)
+    __table_args__ = (
+        UniqueConstraint("catalog_tag_id", "band_id", name="uq_catalog_band"),
+        UniqueConstraint("catalog_tag_id", "mag_column_name", name="uq_catalog_mag_column_name"),
+        UniqueConstraint("catalog_tag_id", "mag_err_column_name", name="uq_catalog_mag_err_column_name"),
+    )
 
     # Primary key
     id_: Mapped[int] = mapped_column(primary_key=True)
 
     # What the band is called in the catalog tag
-    band_alias: Mapped[str] = mapped_column(String(255))
+    mag_column_name: Mapped[str] = mapped_column(String(255))
+
+    #: What the band magntitude error is called in the catalog tag
+    mag_err_column_name: Mapped[str] = mapped_column(String(255))
 
     #: foreign key into catalog_tag table
     catalog_tag_id: Mapped[int] = mapped_column(

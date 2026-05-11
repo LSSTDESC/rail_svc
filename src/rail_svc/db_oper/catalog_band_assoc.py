@@ -10,7 +10,8 @@ Create by IDs:
 >>> async with session.begin():
 ...     assoc = await catalog_band_assoc_creator.create_row(
 ...         session,
-...         band_alias="g_prime",
+...         mag_column_name="g_prime",
+...         mag_err_column_name="g_prime_err",
 ...         catalog_tag_id=123,
 ...         band_id=456
 ...     )
@@ -20,7 +21,8 @@ Create by names:
 >>> async with session.begin():
 ...     assoc = await catalog_band_assoc_creator.create_row(
 ...         session,
-...         band_alias="r_prime",
+...         mag_column_name="g_prime",
+...         mag_err_column_name="g_prime_err",
 ...         catalog_tag_name="SDSS_DR16",
 ...         band_name="r"
 ...     )
@@ -30,7 +32,8 @@ Mix IDs and names:
 >>> async with session.begin():
 ...     assoc = await catalog_band_assoc_creator.create_row(
 ...         session,
-...         band_alias="i_prime",
+...         mag_column_name="g_prime",
+...         mag_err_column_name="g_prime_err",
 ...         catalog_tag_id=123,
 ...         band_name="i"
 ...     )
@@ -60,7 +63,8 @@ class CatalogBandAssocOperations(
     async def get_create_kwargs(
         self,
         session: AsyncSession,
-        band_alias: str | None = None,
+        mag_column_name: str,
+        mag_err_column_name: str,
         catalog_tag_id: int | None = None,
         catalog_tag_name: str | None = None,
         band_id: int | None = None,
@@ -76,8 +80,10 @@ class CatalogBandAssocOperations(
         ----------
         session
             Database session
-        band_alias
-            Alias for the band in this catalog (required)
+        mag_column_name
+            Name for the magntidue column for band in this catalog (required)
+        mag_err_column_name
+            Name for the magntidue error column for band in this catalog (required)
         catalog_tag_id
             ID of the catalog tag (provide this OR catalog_tag_name)
         catalog_tag_name
@@ -108,7 +114,8 @@ class CatalogBandAssocOperations(
         >>> # By IDs
         >>> kwargs = await creator.get_create_kwargs(
         ...     session,
-        ...     band_alias="g_prime",
+        ...     mag_column_name="g_prime",
+        ...     mag_err_column_name="g_prime_err",
         ...     catalog_tag_id=123,
         ...     band_id=456
         ... )
@@ -116,7 +123,8 @@ class CatalogBandAssocOperations(
         >>> # By names
         >>> kwargs = await creator.get_create_kwargs(
         ...     session,
-        ...     band_alias="r_prime",
+        ...     mag_column_name="r_prime",
+        ...     mag_err_column_name="r_prime_err",
         ...     catalog_tag_name="SDSS_DR16",
         ...     band_name="r"
         ... )
@@ -124,17 +132,24 @@ class CatalogBandAssocOperations(
         >>> # Mixed
         >>> kwargs = await creator.get_create_kwargs(
         ...     session,
-        ...     band_alias="i_prime",
+        ...     mag_column_name="i_prime",
+        ...     mag_err_column_name="i_prime_err",
         ...     catalog_tag_id=123,
         ...     band_name="i"
         ... )
         """
         # Validate band_alias
-        if not band_alias or not isinstance(band_alias, str):
+        if not mag_column_name or not isinstance(mag_column_name, str):
             logger.warning(
-                "Invalid band_alias for CatalogBandAssoc.",
+                "Invalid mag_column_name for CatalogBandAssoc.",
             )
-            raise ValueError("band_alias must be a non-empty string")
+            raise ValueError("mag_column_name must be a non-empty string")
+
+        if not mag_err_column_name or not isinstance(mag_err_column_name, str):
+            logger.warning(
+                "Invalid mag_err_column_name for CatalogBandAssoc.",
+            )
+            raise ValueError("mag_err_column_name must be a non-empty string")
 
         catalog_tag_id, _ = await db_funcs.read.lookup_by_id_or_name(
             db.CatalogTag,
@@ -152,7 +167,8 @@ class CatalogBandAssocOperations(
 
         # Build final kwargs
         return {
-            "band_alias": band_alias,
+            "mag_column_name": mag_column_name,
+            "mag_err_column_name": mag_err_column_name,
             "catalog_tag_id": catalog_tag_id,
             "band_id": band_id,
             **extra_kwargs,

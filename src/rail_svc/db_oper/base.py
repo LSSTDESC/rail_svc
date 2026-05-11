@@ -24,6 +24,7 @@ logger = get_logger(__name__)
 
 FORBID_TRAVERSAL = False
 
+
 @dataclass
 class TableContext[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
     """
@@ -528,16 +529,10 @@ class TableOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         processed_rows_data = []
         for idx, row_kwargs in enumerate(rows_data):
             try:
-                # update kwargs
-                modified_kwargs = await self.get_create_kwargs(
-                    session,
-                    **row_kwargs.copy(),  # Copy to avoid modifying original
-                )
-
                 # Validate if requested
                 if validate:
                     try:
-                        self.ctx.create_class.model_validate(modified_kwargs)
+                        self.ctx.create_class.model_validate(row_kwargs)
                     except ValidationError as e:
                         logger.warning(
                             "Validation failed in create_rows",
@@ -546,6 +541,12 @@ class TableOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                             errors=e.errors(),
                         )
                         raise
+
+                # update kwargs
+                modified_kwargs = await self.get_create_kwargs(
+                    session,
+                    **row_kwargs.copy(),  # Copy to avoid modifying original
+                )
 
                 # Pre-create hook
                 modified_kwargs = await self.ctx.db_class.pre_create_hook(
