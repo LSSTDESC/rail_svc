@@ -1,4 +1,5 @@
 from .. import local_async
+from . import funcs
 from .base import (AlgorithmSyncOperations, BandSyncOperations,
                    CatalogBandAssocOperations, CatalogTagSyncOperations,
                    DatasetSyncOperations, EstimatesSyncOperations,
@@ -21,5 +22,6 @@ __all__ = [
     "dataset",
     "estimates",
     "estimator",
+    "funcs",
     "model",
 ]

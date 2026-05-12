@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 import numpy as np
@@ -7,29 +8,206 @@ from rail.utils import catalog_utils
 
 from ..models import BandCreate, CatalogBandAssocCreate, CatalogTagCreate
 
+logger = logging.getLogger(__name__)
 
-def extract_padded_non_zeros(the_array: np.ndarray) -> np.ndarray:
-    vals = the_array[:, 1]
+
+def extract_padded_non_zeros(array: np.ndarray) -> np.ndarray:
+    """
+    Extract non-zero elements from a 2D array with one-element padding.
+
+    This function identifies the range of rows where the second column contains
+    non-zero values, then extracts that range with one additional row on each
+    side for padding (if available).
+
+    Parameters
+    ----------
+    array : np.ndarray
+        A 2D numpy array with shape (n, 2). The second column (array[:, 1])
+        is used to identify non-zero values.
+
+    Returns
+    -------
+    np.ndarray
+        A slice of the input array containing non-zero values with padding.
+        Returns an empty (0, 2) array if input is invalid or all zeros.
+
+    Notes
+    -----
+    The padding helps preserve context around the non-zero data range.
+    If the non-zero range starts at index 0, no padding is added at the start.
+    Similarly, no padding is added at the end if the range extends to the last element.
+
+    Examples
+    --------
+    >>> arr = np.array([[1, 0], [2, 0], [3, 5], [4, 10], [5, 0], [6, 0]])
+    >>> result = extract_padded_non_zeros(arr)
+    >>> # Returns rows from index 1 to 5 (includes one zero row on each side)
+    """
+    # Input validation
+    if not isinstance(array, np.ndarray):
+        logger.error(f"Expected numpy array, got {type(array)}")
+        return np.empty((0, 2))
+
+    if array.ndim != 2:
+        logger.error(f"Expected 2D array, got {array.ndim}D array")
+        return np.empty((0, 2))
+
+    if array.shape[1] != 2:
+        logger.error(f"Expected array with 2 columns, got {array.shape[1]} columns")
+        return np.empty((0, 2))
+
+    if len(array) == 0:
+        logger.warning("Received empty array")
+        return np.empty((0, 2))
+
+    # Extract values and identify non-zero entries
+    vals = array[:, 1]
     non_zero = vals != 0
-    padded_start = max(int(np.argmax(non_zero)) - 1, 0)
-    padded_end = min(int(len(the_array) - np.argmax(non_zero[::-1]) + 1), len(the_array))
+
+    # Handle case where all values are zero
+    if not np.any(non_zero):
+        logger.warning("All values in second column are zero")
+        return np.empty((0, 2))
+
+    # Find first and last non-zero indices
+    first_nonzero = np.argmax(non_zero)
+    last_nonzero = len(array) - np.argmax(non_zero[::-1]) - 1
+
+    # Add padding (one element on each side, if available)
+    padded_start = max(first_nonzero - 1, 0)
+    padded_end = min(last_nonzero + 2, len(array))  # +2 because slice end is exclusive
+
     the_slice = slice(padded_start, padded_end)
-    return the_array[the_slice]
+    result = array[the_slice]
+
+    logger.debug(
+        f"Extracted {len(result)} rows from original {len(array)} rows "
+        f"(non-zero range: {first_nonzero} to {last_nonzero})"
+    )
+
+    return result
 
 
 def read_band_res_file(band_name: str, filter_dir: Path | None = None) -> np.ndarray:
-    if filter_dir is None:
-        filter_dir = Path(catalog_utils.find_rail_file("examples_data/estimation_data/data/FILTER"))
+    """
+    Read a band response file and extract non-zero data with padding.
 
-    full_array = np.loadtxt(filter_dir / f"{band_name}.res")
+    Parameters
+    ----------
+    band_name : str
+        Name of the band (e.g., 'u', 'g', 'r', 'i', 'z'). Used to construct
+        the filename as '{band_name}.res'.
+    filter_dir : Path or None, optional
+        Directory containing filter response files. If None, uses the default
+        RAIL examples data directory.
+
+    Returns
+    -------
+    np.ndarray
+        A 2D array with shape (n, 2) containing wavelengths and transmission values.
+        Empty (0, 2) array if the file cannot be read or contains no valid data.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the band response file does not exist.
+    ValueError
+        If the file contains invalid data format.
+
+    Notes
+    -----
+    The .res files are expected to contain two columns: wavelength and transmission.
+    Leading and trailing rows with zero transmission are removed, with one-row padding.
+    """
+    # Input validation
+    if not isinstance(band_name, str) or not band_name.strip():
+        logger.error(f"Invalid band_name: {band_name}")
+        raise ValueError("band_name must be a non-empty string")
+
+    # Determine filter directory
+    if filter_dir is None:
+        try:
+            filter_dir = Path(catalog_utils.find_rail_file("examples_data/estimation_data/data/FILTER"))
+        except Exception as e:
+            logger.error(f"Failed to find default filter directory: {e}")
+            raise
+
+    if not isinstance(filter_dir, Path):
+        filter_dir = Path(filter_dir)
+
+    if not filter_dir.exists():
+        logger.error(f"Filter directory does not exist: {filter_dir}")
+        raise FileNotFoundError(f"Filter directory not found: {filter_dir}")
+
+    # Construct file path
+    file_path = filter_dir / f"{band_name}.res"
+
+    if not file_path.exists():
+        logger.error(f"Band response file not found: {file_path}")
+        raise FileNotFoundError(f"Band file not found: {file_path}")
+
+    logger.info(f"Reading band response file: {file_path}")
+
+    try:
+        full_array = np.loadtxt(file_path)
+    except Exception as e:
+        logger.error(f"Failed to load band file {file_path}: {e}")
+        raise ValueError(f"Invalid data format in {file_path}") from e
+
+    # Validate loaded data
+    if full_array.ndim != 2 or full_array.shape[1] != 2:
+        logger.error(f"Expected 2-column data in {file_path}, got shape {full_array.shape}")
+        raise ValueError(f"Invalid data shape in {file_path}")
+
     return extract_padded_non_zeros(full_array)
 
 
 def make_band_create_model(band_name: str, filter_dir: Path | None) -> BandCreate:
+    """
+    Create a BandCreate model from a band response file.
+
+    Parameters
+    ----------
+    band_name : str
+        Name of the photometric band.
+    filter_dir : Path or None
+        Directory containing filter response files. If None, uses default location.
+
+    Returns
+    -------
+    BandCreate
+        A model containing the band name, wavelengths, and transmission values.
+        If the file cannot be read, returns a model with empty wavelength and
+        transmission lists.
+
+    Notes
+    -----
+    This function handles errors gracefully by logging warnings and returning
+    empty data rather than raising exceptions, allowing the system to continue
+    operation even when some band files are missing.
+    """
+    # Input validation
+    if not isinstance(band_name, str) or not band_name.strip():
+        logger.error(f"Invalid band_name: {band_name}")
+        raise ValueError("band_name must be a non-empty string")
+
     try:
         band_data = read_band_res_file(band_name, filter_dir)
-    except:
-        band_data = np.zeros(shape=(2, 2))
+    except FileNotFoundError:
+        logger.warning(
+            f"Filter response file not found for band '{band_name}'. " f"Creating band with empty data."
+        )
+        band_data = np.empty((0, 2))
+    except ValueError as e:
+        logger.warning(
+            f"Invalid data format in filter file for band '{band_name}': {e}. "
+            f"Creating band with empty data."
+        )
+        band_data = np.empty((0, 2))
+    except Exception as e:
+        logger.error(f"Unexpected error reading band '{band_name}': {e}")
+        raise
+
     return BandCreate(
         name=band_name,
         band_wavelengths=band_data[:, 0].tolist(),
@@ -38,63 +216,525 @@ def make_band_create_model(band_name: str, filter_dir: Path | None) -> BandCreat
 
 
 def make_band_create_models(filter_dir: Path | None = None) -> list[BandCreate]:
-    the_bands: list[BandCreate] = []
-    for k in catalog_utils.BandFactory.get_bands():
-        the_bands.append(make_band_create_model(k, filter_dir))
-    return the_bands
+    """
+    Create BandCreate models for all registered photometric bands.
+
+    Parameters
+    ----------
+    filter_dir : Path or None, optional
+        Directory containing filter response files. If None, uses default location.
+
+    Returns
+    -------
+    list of BandCreate
+        A list of BandCreate models for all bands registered in the BandFactory.
+
+    Notes
+    -----
+    This function queries the BandFactory to get all registered band names,
+    then creates a model for each one. Missing or invalid band files are
+    handled gracefully with logging.
+    """
+    bands: list[BandCreate] = []
+
+    try:
+        band_names = catalog_utils.BandFactory.get_bands()
+    except Exception as e:
+        logger.error(f"Failed to retrieve band names from BandFactory: {e}")
+        raise
+
+    if not band_names:
+        logger.warning("BandFactory returned no bands")
+        return bands
+
+    logger.info(f"Creating models for {len(band_names)} bands")
+
+    for band_name in band_names:
+        try:
+            band = make_band_create_model(band_name, filter_dir)
+            bands.append(band)
+        except Exception as e:
+            logger.error(f"Failed to create model for band '{band_name}': {e}")
+            # Continue processing other bands
+            continue
+
+    logger.info(f"Successfully created {len(bands)} band models")
+    return bands
 
 
 def make_catalog_tag_create_model(catalog_tag_name: str) -> CatalogTagCreate:
+    """
+    Create a CatalogTagCreate model from a catalog tag name.
+
+    Parameters
+    ----------
+    catalog_tag_name : str
+        Name of the catalog tag (e.g., 'lsst_dp0', 'des_y6').
+
+    Returns
+    -------
+    CatalogTagCreate
+        A model containing the catalog tag name.
+
+    Raises
+    ------
+    ValueError
+        If catalog_tag_name is not a valid non-empty string.
+    """
+    if not isinstance(catalog_tag_name, str) or not catalog_tag_name.strip():
+        logger.error(f"Invalid catalog_tag_name: {catalog_tag_name}")
+        raise ValueError("catalog_tag_name must be a non-empty string")
+
     return CatalogTagCreate(name=catalog_tag_name)
 
 
 def make_catalog_tag_create_models() -> list[CatalogTagCreate]:
-    the_catalog_tags: list[CatalogTagCreate] = []
-    for k in catalog_utils.CatalogTagFactory.get_catalog_tags():
-        the_catalog_tags.append(make_catalog_tag_create_model(k))
-    return the_catalog_tags
+    """
+    Create CatalogTagCreate models for all registered catalog tags.
+
+    Returns
+    -------
+    list of CatalogTagCreate
+        A list of CatalogTagCreate models for all tags registered in the
+        CatalogTagFactory.
+
+    Notes
+    -----
+    This function queries the CatalogTagFactory to get all registered catalog
+    tag names, then creates a model for each one.
+    """
+    catalog_tags: list[CatalogTagCreate] = []
+
+    try:
+        tag_dict = catalog_utils.CatalogTagFactory.get_catalog_tags()
+    except Exception as e:
+        logger.error(f"Failed to retrieve catalog tags from CatalogTagFactory: {e}")
+        raise
+
+    if not tag_dict:
+        logger.warning("CatalogTagFactory returned no catalog tags")
+        return catalog_tags
+
+    logger.info(f"Creating models for {len(tag_dict)} catalog tags")
+
+    for tag_name in tag_dict:
+        try:
+            catalog_tag = make_catalog_tag_create_model(tag_name)
+            catalog_tags.append(catalog_tag)
+        except Exception as e:
+            logger.error(f"Failed to create model for catalog tag '{tag_name}': {e}")
+            continue
+
+    logger.info(f"Successfully created {len(catalog_tags)} catalog tag models")
+    return catalog_tags
 
 
-def make_catalog_band_assoc_create_models(ct: catalog_utils.CatalogTag) -> list[CatalogBandAssocCreate]:
-    ret_list: list[CatalogTagCreate] = []
-    for k in ct.config.band_list:
-        band_name = ct.config.bands[k].get("filter", ct.config.filter_template.format(band=k))
-        mag_column_name = ct.config.bands[k].get("mag_column", ct.config.mag_column_template.format(band=k))
-        mag_err_column_name = ct.config.bands[k].get(
-            "mag_err_column", ct.config.mag_err_column_template.format(band=k)
-        )
-        ret_list.append(
-            CatalogBandAssocCreate(
-                mag_column_name=mag_column_name,
-                mag_err_column_name=mag_err_column_name,
-                band_name=band_name,
-                catalog_tag_name=ct.config.name,
+def make_catalog_band_assoc_create_models(
+    ct: catalog_utils.CatalogTag,
+) -> list[CatalogBandAssocCreate]:
+    """
+    Create CatalogBandAssocCreate models for a catalog tag's bands.
+
+    This function maps photometric bands to their corresponding magnitude
+    and error column names in the catalog, creating association models.
+
+    Parameters
+    ----------
+    ct : catalog_utils.CatalogTag
+        A CatalogTag object containing band configuration information.
+
+    Returns
+    -------
+    list of CatalogBandAssocCreate
+        A list of association models linking catalog tags to bands with
+        their corresponding column names.
+
+    Raises
+    ------
+    ValueError
+        If ct is not a valid CatalogTag object.
+    AttributeError
+        If ct is missing required configuration attributes.
+
+    Notes
+    -----
+    Column names are determined using templates from the catalog configuration.
+    Individual band configurations can override the templates.
+    """
+    # Input validation
+    if not isinstance(ct, catalog_utils.CatalogTag):
+        logger.error(f"Expected CatalogTag object, got {type(ct)}")
+        raise ValueError("ct must be a CatalogTag object")
+
+    if not hasattr(ct, "config"):
+        logger.error("CatalogTag object missing 'config' attribute")
+        raise AttributeError("CatalogTag must have a 'config' attribute")
+
+    associations: list[CatalogBandAssocCreate] = []
+
+    try:
+        band_list = ct.config.band_list
+        bands = ct.config.bands
+        catalog_name = ct.config.name
+    except AttributeError as e:
+        logger.error(f"CatalogTag config missing required attributes: {e}")
+        raise
+
+    if not band_list:
+        logger.warning(f"Catalog tag '{catalog_name}' has no bands in band_list")
+        return associations
+
+    logger.info(f"Creating band associations for catalog '{catalog_name}' ({len(band_list)} bands)")
+
+    for band_key in band_list:
+        try:
+            # Get band-specific config or use defaults
+            band_config = bands.get(band_key, {})
+
+            # Determine filter name
+            band_name = band_config.get("filter", ct.config.filter_template.format(band=band_key))
+
+            # Determine magnitude column name
+            mag_column_name = band_config.get(
+                "mag_column", ct.config.mag_column_template.format(band=band_key)
             )
-        )
-    return ret_list
+
+            # Determine magnitude error column name
+            mag_err_column_name = band_config.get(
+                "mag_err_column", ct.config.mag_err_column_template.format(band=band_key)
+            )
+
+            associations.append(
+                CatalogBandAssocCreate(
+                    mag_column_name=mag_column_name,
+                    mag_err_column_name=mag_err_column_name,
+                    band_name=band_name,
+                    catalog_tag_name=catalog_name,
+                )
+            )
+
+            logger.debug(
+                f"Created association: {catalog_name}.{band_key} -> "
+                f"band={band_name}, mag={mag_column_name}, err={mag_err_column_name}"
+            )
+
+        except Exception as e:
+            logger.error(
+                f"Failed to create association for band '{band_key}' " f"in catalog '{catalog_name}': {e}"
+            )
+            continue
+        logger.info(f"Successfully created {len(associations)} band associations for '{catalog_name}'")
+    return associations
 
 
 def make_all_catalog_band_assoc_create_models() -> list[CatalogBandAssocCreate]:
-    ret_list: list[CatalogBandAssocCreate] = []
-    for _k, v in catalog_utils.CatalogTagFactory.get_catalog_tags().items():
-        ret_list += make_catalog_band_assoc_create_models(v)
-    return ret_list
+    """
+    Create CatalogBandAssocCreate models for all registered catalog tags.
+
+    This function iterates through all catalog tags registered in the
+    CatalogTagFactory and creates band associations for each one.
+
+    Returns
+    -------
+    list of CatalogBandAssocCreate
+        A list of all band association models across all catalog tags.
+
+    Notes
+    -----
+    This function aggregates associations from all catalogs. If a catalog
+    has issues, it logs the error and continues with other catalogs.
+    """
+    all_associations: list[CatalogBandAssocCreate] = []
+
+    try:
+        catalog_tags = catalog_utils.CatalogTagFactory.get_catalog_tags()
+    except Exception as e:
+        logger.error(f"Failed to retrieve catalog tags from CatalogTagFactory: {e}")
+        raise
+
+    if not catalog_tags:
+        logger.warning("CatalogTagFactory returned no catalog tags")
+        return all_associations
+
+    logger.info(f"Creating band associations for {len(catalog_tags)} catalog tags")
+
+    for tag_name, catalog_tag in catalog_tags.items():
+        try:
+            associations = make_catalog_band_assoc_create_models(catalog_tag)
+            all_associations.extend(associations)
+        except Exception as e:
+            logger.error(f"Failed to create band associations for catalog tag '{tag_name}': {e}")
+            continue
+
+    logger.info(f"Successfully created {len(all_associations)} total band associations")
+    return all_associations
 
 
 def load_catalog_yaml(
     catalog_yaml: Path, filter_dir: Path | None = None
 ) -> tuple[list[BandCreate], list[CatalogTagCreate], list[CatalogBandAssocCreate]]:
-    catalog_utils.load_yaml(catalog_yaml)
-    bands = make_band_create_models(filter_dir)
-    catalog_tags = make_catalog_tag_create_models()
-    catalog_band_assocs = make_all_catalog_band_assoc_create_models()
+    """
+    Load catalog configuration from a YAML file and create all necessary models.
+
+    This function is the main entry point for loading catalog metadata. It reads
+    a YAML configuration file, registers the catalogs and bands, and creates
+    model objects for bands, catalog tags, and their associations.
+
+    Parameters
+    ----------
+    catalog_yaml : Path
+        Path to the YAML file containing catalog configuration.
+    filter_dir : Path or None, optional
+        Directory containing filter response files. If None, uses default location.
+
+    Returns
+    -------
+    bands : list of BandCreate
+        Models for all photometric bands.
+    catalog_tags : list of CatalogTagCreate
+        Models for all catalog tags.
+    catalog_band_assocs : list of CatalogBandAssocCreate
+        Association models linking catalog tags to bands.
+
+    Raises
+    ------
+    FileNotFoundError
+        If catalog_yaml does not exist.
+    ValueError
+        If catalog_yaml is not a valid YAML file or has invalid content.
+
+    Notes
+    -----
+    This function has side effects: it registers catalogs and bands in the
+    CatalogTagFactory and BandFactory, respectively. These registrations
+    persist for the lifetime of the Python session.
+
+    Examples
+    --------
+    >>> bands, tags, assocs = load_catalog_yaml(Path("config/catalogs.yaml"))
+    >>> print(f"Loaded {len(bands)} bands, {len(tags)} catalogs")
+    """
+    # Input validation
+    if not isinstance(catalog_yaml, Path):
+        try:
+            catalog_yaml = Path(catalog_yaml)
+        except Exception as e:
+            logger.error(f"Failed to convert catalog_yaml to Path: {e}")
+            raise ValueError(f"Invalid catalog_yaml path: {catalog_yaml}") from e
+
+    if not catalog_yaml.exists():
+        logger.error(f"Catalog YAML file does not exist: {catalog_yaml}")
+        raise FileNotFoundError(f"Catalog YAML file not found: {catalog_yaml}")
+
+    if not catalog_yaml.is_file():
+        logger.error(f"Catalog YAML path is not a file: {catalog_yaml}")
+        raise ValueError(f"catalog_yaml must be a file, not a directory: {catalog_yaml}")
+
+    if catalog_yaml.suffix.lower() not in [".yaml", ".yml"]:
+        logger.warning(f"Catalog file '{catalog_yaml}' does not have .yaml or .yml extension")
+
+    logger.info(f"Loading catalog configuration from: {catalog_yaml}")
+
+    # Load and register catalogs
+    try:
+        catalog_utils.load_yaml(catalog_yaml)
+        logger.info("Successfully loaded and registered catalog configuration")
+    except Exception as e:
+        logger.error(f"Failed to load catalog YAML file: {e}")
+        raise ValueError(f"Invalid catalog YAML file: {catalog_yaml}") from e
+
+    # Create band models
+    try:
+        bands = make_band_create_models(filter_dir)
+        logger.info(f"Created {len(bands)} band models")
+    except Exception as e:
+        logger.error(f"Failed to create band models: {e}")
+        raise
+
+    # Create catalog tag models
+    try:
+        catalog_tags = make_catalog_tag_create_models()
+        logger.info(f"Created {len(catalog_tags)} catalog tag models")
+    except Exception as e:
+        logger.error(f"Failed to create catalog tag models: {e}")
+        raise
+
+    # Create catalog-band association models
+    try:
+        catalog_band_assocs = make_all_catalog_band_assoc_create_models()
+        logger.info(f"Created {len(catalog_band_assocs)} catalog-band association models")
+    except Exception as e:
+        logger.error(f"Failed to create catalog-band association models: {e}")
+        raise
+
+    logger.info(
+        f"Successfully loaded catalog configuration: "
+        f"{len(bands)} bands, {len(catalog_tags)} catalogs, "
+        f"{len(catalog_band_assocs)} associations"
+    )
 
     return (bands, catalog_tags, catalog_band_assocs)
 
 
 def get_catalog_row(catalog_path: Path, row: int) -> dict[str, np.ndarray]:
-    return tables_io.read(str(catalog_path), slice_dict=row)
+    """
+    Read a single row from a catalog file.
+
+    Parameters
+    ----------
+    catalog_path : Path
+        Path to the catalog file (typically HDF5 or FITS format).
+    row : int
+        Zero-based index of the row to read.
+
+    Returns
+    -------
+    dict of str to np.ndarray
+        Dictionary mapping column names to their values for the requested row.
+        Each value is typically a single-element array.
+
+    Raises
+    ------
+    FileNotFoundError
+        If catalog_path does not exist.
+    ValueError
+        If row is negative or out of bounds.
+    IOError
+        If the file cannot be read or has an invalid format.
+
+    Notes
+    -----
+    This function uses the tables_io library to read catalog files, which
+    supports multiple astronomical file formats.
+
+    Examples
+    --------
+    >>> row_data = get_catalog_row(Path("catalog.hdf5"), 42)
+    >>> print(row_data['mag_g'])
+    """
+    # Input validation
+    if not isinstance(catalog_path, Path):
+        try:
+            catalog_path = Path(catalog_path)
+        except Exception as e:
+            logger.error(f"Failed to convert catalog_path to Path: {e}")
+            raise ValueError(f"Invalid catalog_path: {catalog_path}") from e
+
+    if not catalog_path.exists():
+        logger.error(f"Catalog file does not exist: {catalog_path}")
+        raise FileNotFoundError(f"Catalog file not found: {catalog_path}")
+
+    if not catalog_path.is_file():
+        logger.error(f"Catalog path is not a file: {catalog_path}")
+        raise ValueError(f"catalog_path must be a file: {catalog_path}")
+
+    if not isinstance(row, int):
+        logger.error(f"Row index must be an integer, got {type(row)}")
+        raise ValueError(f"row must be an integer, got {type(row)}")
+
+    if row < 0:
+        logger.error(f"Row index must be non-negative, got {row}")
+        raise ValueError(f"row must be non-negative, got {row}")
+
+    logger.debug(f"Reading row {row} from catalog: {catalog_path}")
+
+    try:
+        row_data = tables_io.read(str(catalog_path), slice_dict=row)
+    except IndexError as e:
+        logger.error(f"Row {row} is out of bounds in catalog {catalog_path}: {e}")
+        raise ValueError(f"Row index {row} out of bounds") from e
+    except Exception as e:
+        logger.error(f"Failed to read row {row} from catalog {catalog_path}: {e}")
+        raise IOError(f"Cannot read catalog file: {catalog_path}") from e
+
+    if not isinstance(row_data, dict):
+        logger.error(f"Unexpected return type from tables_io.read: {type(row_data)}")
+        raise IOError(f"Invalid data format in catalog: {catalog_path}")
+
+    logger.debug(f"Successfully read row {row} with {len(row_data)} columns")
+    return row_data
 
 
 def get_estimates_row(estimates_path: Path, row: int) -> dict[str, np.ndarray]:
-    return qp.read(str(estimates_path), read_slice=slice(row, row + 1))
+    """
+    Read a single row from a photo-z estimates file.
+
+    This function reads probability distribution estimates (typically posterior
+    redshift distributions) stored in qp format.
+
+    Parameters
+    ----------
+    estimates_path : Path
+        Path to the estimates file (qp format, typically HDF5).
+    row : int
+        Zero-based index of the row to read.
+
+    Returns
+    -------
+    dict of str to np.ndarray
+        Dictionary containing the probability distribution data for the
+        requested row. The exact contents depend on the qp parameterization.
+
+    Raises
+    ------
+    FileNotFoundError
+        If estimates_path does not exist.
+    ValueError
+        If row is negative or out of bounds.
+    IOError
+        If the file cannot be read or has an invalid format.
+
+    Notes
+    -----
+    This function uses the qp library to read quantile-parameterized
+    probability distributions. The returned data structure depends on
+    the specific parameterization used in the file.
+
+    Examples
+    --------
+    >>> estimates = get_estimates_row(Path("photo_z_pdfs.hdf5"), 42)
+    >>> # Access the distribution data
+    """
+    # Input validation
+    if not isinstance(estimates_path, Path):
+        try:
+            estimates_path = Path(estimates_path)
+        except Exception as e:
+            logger.error(f"Failed to convert estimates_path to Path: {e}")
+            raise ValueError(f"Invalid estimates_path: {estimates_path}") from e
+
+    if not estimates_path.exists():
+        logger.error(f"Estimates file does not exist: {estimates_path}")
+        raise FileNotFoundError(f"Estimates file not found: {estimates_path}")
+
+    if not estimates_path.is_file():
+        logger.error(f"Estimates path is not a file: {estimates_path}")
+        raise ValueError(f"estimates_path must be a file: {estimates_path}")
+
+    if not isinstance(row, int):
+        logger.error(f"Row index must be an integer, got {type(row)}")
+        raise ValueError(f"row must be an integer, got {type(row)}")
+
+    if row < 0:
+        logger.error(f"Row index must be non-negative, got {row}")
+        raise ValueError(f"row must be non-negative, got {row}")
+
+    logger.debug(f"Reading row {row} from estimates file: {estimates_path}")
+
+    try:
+        # Read single row as a slice
+        row_slice = slice(row, row + 1)
+        estimate_data = qp.read(str(estimates_path), read_slice=row_slice)
+    except IndexError as e:
+        logger.error(f"Row {row} is out of bounds in estimates file {estimates_path}: {e}")
+        raise ValueError(f"Row index {row} out of bounds") from e
+    except Exception as e:
+        logger.error(f"Failed to read row {row} from estimates file {estimates_path}: {e}")
+        raise IOError(f"Cannot read estimates file: {estimates_path}") from e
+
+    if estimate_data is None:
+        logger.error(f"qp.read returned None for row {row} in {estimates_path}")
+        raise IOError(f"Invalid or empty data at row {row} in estimates file")
+
+    logger.debug(f"Successfully read estimate for row {row}")
+    return estimate_data

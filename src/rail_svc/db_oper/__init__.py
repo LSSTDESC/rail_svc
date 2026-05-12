@@ -1,3 +1,4 @@
+from . import catalog_funcs, estimation_funcs
 from .algorithm import algorithm
 from .band import band
 from .catalog_band_assoc import catalog_band_assoc
@@ -11,9 +12,11 @@ __all__ = [
     "algorithm",
     "band",
     "catalog_band_assoc",
+    "cctalog_funcs",
     "catalog_tag",
     "dataset",
     "estimates",
+    "estimation_funcs",
     "estimator",
     "model",
 ]

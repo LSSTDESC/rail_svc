@@ -25,6 +25,7 @@ Examples
 """
 
 from .. import db_oper
+from . import funcs
 from .base import (AlgorithmLocalOperations, BandLocalOperations,
                    CatalogBandAssocOperations, CatalogTagLocalOperations,
                    DatasetLocalOperations, EstimatesLocalOperations,
@@ -48,5 +49,6 @@ __all__ = [
     "dataset",
     "estimates",
     "estimator",
+    "funcs",
     "model",
 ]
