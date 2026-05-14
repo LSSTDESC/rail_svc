@@ -28,8 +28,9 @@ from .. import db_oper
 from . import funcs
 from .base import (AlgorithmLocalOperations, BandLocalOperations,
                    CatalogBandAssocOperations, CatalogTagLocalOperations,
-                   DatasetLocalOperations, EstimatesLocalOperations,
-                   EstimatorLocalOperations, ModelLocalOperations)
+                   DatasetAssocLocalOperations, DatasetLocalOperations,
+                   EstimatesLocalOperations, EstimatorLocalOperations,
+                   ModelLocalOperations)
 
 # Create local operations - each has all methods via dynamic binding
 algorithm = AlgorithmLocalOperations(db_oper.algorithm)
@@ -37,6 +38,7 @@ band = BandLocalOperations(db_oper.band)
 catalog_band_assoc = CatalogBandAssocOperations(db_oper.catalog_band_assoc)
 catalog_tag = CatalogTagLocalOperations(db_oper.catalog_tag)
 dataset = DatasetLocalOperations(db_oper.dataset)
+dataset_assoc = DatasetAssocLocalOperations(db_oper.dataset_assoc)
 estimates = EstimatesLocalOperations(db_oper.estimates)
 estimator = EstimatorLocalOperations(db_oper.estimator)
 model = ModelLocalOperations(db_oper.model)
@@ -47,6 +49,7 @@ __all__ = [
     "catalog_band_assoc",
     "catalog_tag",
     "dataset",
+    "dataset_assoc",
     "estimates",
     "estimator",
     "funcs",

@@ -34,7 +34,7 @@ def estimate_ensemble(
     dataset_id: int,
     output_file_path: str | Path,
 ) -> Path:
-    return asyncio.run(local_async.funcs.estimate_pdf(estimator_id, dataset_id, output_file_path))
+    return asyncio.run(local_async.funcs.estimate_ensemble(estimator_id, dataset_id, output_file_path))
 
 
 def load_catalog_yaml(
@@ -63,8 +63,24 @@ def get_dataset_and_estimates(
     return asyncio.run(local_async.funcs.get_dataset_and_estimates(dataset_id))
 
 
-def get_data_and_estimates_data(
-    dataset_id: int,
-    row: int,
-) -> tuple[dict[str, np.ndarray], dict[str, qp.Ensemble]]:
-    return asyncio.run(local_async.funcs.get_data_and_estimates_data(dataset_id, row))
+# def get_data_and_estimates_data(
+#    dataset_id: int,
+#    row: int,
+# ) -> tuple[dict[str, np.ndarray], dict[str, qp.Ensemble]]:
+#   return asyncio.run(local_async.funcs.get_data_and_estimates_data(dataset_id, row))
+
+
+def create_matched_dataset(
+    matched_dataset_name: str,
+    component_dataset_names: list[str],
+    path: str | None,
+    n_objects: int,
+) -> tuple[models.Dataset, list[models.DatasetAssoc]]:
+    return asyncio.run(
+        local_async.funcs.create_matched_dataset(
+            matched_dataset_name,
+            component_dataset_names,
+            path,
+            n_objects,
+        )
+    )

@@ -319,6 +319,12 @@ class DatasetLocalOperations(LocalOperations[db.Dataset, models.Dataset, models.
     """Operations on local DB for Dataset table."""
 
 
+class DatasetAssocLocalOperations(
+    LocalOperations[db.DatasetAssoc, models.DatasetAssoc, models.DatasetAssocCreate]
+):
+    """Operations on local DB for DatasetAssoc table."""
+
+
 class EstimatesLocalOperations(LocalOperations[db.Estimates, models.Estimates, models.EstimatesCreate]):
     """Operations on local DB for Estimates table."""
 

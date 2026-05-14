@@ -116,8 +116,8 @@ class CatalogBandAssoc(Base):
         return (
             f"CatalogBandAssoc(id_={self.id_}, "
             f"catalog_tag_id={self.catalog_tag_id}, "
-            f"band_id={self.band_id}, "
-            f"band_alias={self.band_alias!r})"
+            f"mag_column_name={self.mag_column_name}, "
+            f"mag_err_column_name={self.mag_err_column_name})"
         )
 
     def __str__(self) -> str:
@@ -128,4 +128,4 @@ class CatalogBandAssoc(Base):
         str
             The band alias for this association
         """
-        return self.band_alias
+        return self.mag_column_name

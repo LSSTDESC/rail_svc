@@ -3,6 +3,7 @@ from .band import Band, BandCreate
 from .catalog_band_assoc import CatalogBandAssoc, CatalogBandAssocCreate
 from .catalog_tag import CatalogTag, CatalogTagCreate
 from .dataset import Dataset, DatasetCreate
+from .dataset_assoc import DatasetAssoc, DatasetAssocCreate
 from .estimates import Estimates, EstimatesCreate
 from .estimator import Estimator, EstimatorCreate
 from .model import Model, ModelCreate
@@ -18,6 +19,8 @@ __all__ = [
     "CatalogTagCreate",
     "Dataset",
     "DatasetCreate",
+    "DatasetAssoc",
+    "DatasetAssocCreate",
     "Estimates",
     "EstimatesCreate",
     "Estimator",

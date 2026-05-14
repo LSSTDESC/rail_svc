@@ -44,10 +44,6 @@ def extract_padded_non_zeros(array: np.ndarray) -> np.ndarray:
     >>> # Returns rows from index 1 to 5 (includes one zero row on each side)
     """
     # Input validation
-    if not isinstance(array, np.ndarray):
-        logger.error(f"Expected numpy array, got {type(array)}")
-        return np.empty((0, 2))
-
     if array.ndim != 2:
         logger.error(f"Expected 2D array, got {array.ndim}D array")
         return np.empty((0, 2))
@@ -88,7 +84,7 @@ def extract_padded_non_zeros(array: np.ndarray) -> np.ndarray:
     return result
 
 
-def read_band_res_file(band_name: str, filter_dir: Path | None = None) -> np.ndarray:
+def read_band_res_file(band_name: str, filter_dir: Path | str | None = None) -> np.ndarray:
     """
     Read a band response file and extract non-zero data with padding.
 
@@ -162,7 +158,7 @@ def read_band_res_file(band_name: str, filter_dir: Path | None = None) -> np.nda
     return extract_padded_non_zeros(full_array)
 
 
-def make_band_create_model(band_name: str, filter_dir: Path | None) -> BandCreate:
+def make_band_create_model(band_name: str, filter_dir: Path | str | None) -> BandCreate:
     """
     Create a BandCreate model from a band response file.
 
@@ -215,13 +211,13 @@ def make_band_create_model(band_name: str, filter_dir: Path | None) -> BandCreat
     )
 
 
-def make_band_create_models(filter_dir: Path | None = None) -> list[BandCreate]:
+def make_band_create_models(filter_dir: Path | str | None = None) -> list[BandCreate]:
     """
     Create BandCreate models for all registered photometric bands.
 
     Parameters
     ----------
-    filter_dir : Path or None, optional
+    filter_dir :
         Directory containing filter response files. If None, uses default location.
 
     Returns
@@ -471,7 +467,7 @@ def make_all_catalog_band_assoc_create_models() -> list[CatalogBandAssocCreate]:
 
 
 def load_catalog_yaml(
-    catalog_yaml: Path, filter_dir: Path | None = None
+    catalog_yaml: Path | str, filter_dir: Path | str | None = None
 ) -> tuple[list[BandCreate], list[CatalogTagCreate], list[CatalogBandAssocCreate]]:
     """
     Load catalog configuration from a YAML file and create all necessary models.
@@ -482,9 +478,9 @@ def load_catalog_yaml(
 
     Parameters
     ----------
-    catalog_yaml : Path
+    catalog_yaml :
         Path to the YAML file containing catalog configuration.
-    filter_dir : Path or None, optional
+    filter_dir :
         Directory containing filter response files. If None, uses default location.
 
     Returns
@@ -576,13 +572,13 @@ def load_catalog_yaml(
     return (bands, catalog_tags, catalog_band_assocs)
 
 
-def get_catalog_row(catalog_path: Path, row: int) -> dict[str, np.ndarray]:
+def get_catalog_row(catalog_path: Path | str, row: int) -> dict[str, np.ndarray]:
     """
     Read a single row from a catalog file.
 
     Parameters
     ----------
-    catalog_path : Path
+    catalog_path :
         Path to the catalog file (typically HDF5 or FITS format).
     row : int
         Zero-based index of the row to read.
@@ -628,10 +624,6 @@ def get_catalog_row(catalog_path: Path, row: int) -> dict[str, np.ndarray]:
         logger.error(f"Catalog path is not a file: {catalog_path}")
         raise ValueError(f"catalog_path must be a file: {catalog_path}")
 
-    if not isinstance(row, int):
-        logger.error(f"Row index must be an integer, got {type(row)}")
-        raise ValueError(f"row must be an integer, got {type(row)}")
-
     if row < 0:
         logger.error(f"Row index must be non-negative, got {row}")
         raise ValueError(f"row must be non-negative, got {row}")
@@ -645,17 +637,17 @@ def get_catalog_row(catalog_path: Path, row: int) -> dict[str, np.ndarray]:
         raise ValueError(f"Row index {row} out of bounds") from e
     except Exception as e:
         logger.error(f"Failed to read row {row} from catalog {catalog_path}: {e}")
-        raise IOError(f"Cannot read catalog file: {catalog_path}") from e
+        raise OSError(f"Cannot read catalog file: {catalog_path}") from e
 
     if not isinstance(row_data, dict):
         logger.error(f"Unexpected return type from tables_io.read: {type(row_data)}")
-        raise IOError(f"Invalid data format in catalog: {catalog_path}")
+        raise OSError(f"Invalid data format in catalog: {catalog_path}")
 
     logger.debug(f"Successfully read row {row} with {len(row_data)} columns")
     return row_data
 
 
-def get_estimates_row(estimates_path: Path, row: int) -> dict[str, np.ndarray]:
+def get_estimates_row(estimates_path: Path | str, row: int) -> dict[str, np.ndarray]:
     """
     Read a single row from a photo-z estimates file.
 
@@ -711,10 +703,6 @@ def get_estimates_row(estimates_path: Path, row: int) -> dict[str, np.ndarray]:
         logger.error(f"Estimates path is not a file: {estimates_path}")
         raise ValueError(f"estimates_path must be a file: {estimates_path}")
 
-    if not isinstance(row, int):
-        logger.error(f"Row index must be an integer, got {type(row)}")
-        raise ValueError(f"row must be an integer, got {type(row)}")
-
     if row < 0:
         logger.error(f"Row index must be non-negative, got {row}")
         raise ValueError(f"row must be non-negative, got {row}")
@@ -730,11 +718,11 @@ def get_estimates_row(estimates_path: Path, row: int) -> dict[str, np.ndarray]:
         raise ValueError(f"Row index {row} out of bounds") from e
     except Exception as e:
         logger.error(f"Failed to read row {row} from estimates file {estimates_path}: {e}")
-        raise IOError(f"Cannot read estimates file: {estimates_path}") from e
+        raise OSError(f"Cannot read estimates file: {estimates_path}") from e
 
     if estimate_data is None:
         logger.error(f"qp.read returned None for row {row} in {estimates_path}")
-        raise IOError(f"Invalid or empty data at row {row} in estimates file")
+        raise OSError(f"Invalid or empty data at row {row} in estimates file")
 
     logger.debug(f"Successfully read estimate for row {row}")
     return estimate_data

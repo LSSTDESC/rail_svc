@@ -79,6 +79,7 @@ TABLES = [
     ("catalog-band-assoc", local_sync.catalog_band_assoc, "Manage CatalogBandAssoc table"),
     ("catalog-tag", local_sync.catalog_tag, "Manage CatalogTag table"),
     ("dataset", local_sync.dataset, "Manage Dataset table"),
+    ("dataset-assoc", local_sync.dataset_assoc, "Manage DatasetAssoc table"),
     ("estimates", local_sync.estimates, "Manage Estimates table"),
     ("estimator", local_sync.estimator, "Manage Estimator table"),
     ("model", local_sync.model, "Manage Model table"),

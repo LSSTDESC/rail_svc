@@ -11,7 +11,7 @@ import logging
 import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Type, TypeVar
+from typing import Any, TypeVar
 
 import numpy as np
 import qp
@@ -36,8 +36,8 @@ class CatEstimatorWrapperBase(ABC):
     @classmethod
     @abstractmethod
     def _build_wrapper(
-        cls: Type[T],
-        estim_class: Type[CatEstimator],
+        cls: type[T],
+        estim_class: type[CatEstimator],
         **kwargs: Any,
     ) -> T:
         """
@@ -82,7 +82,7 @@ class CatEstimatorWrapperBase(ABC):
 
     @classmethod
     def build_wrapper(
-        cls: Type[T],
+        cls: type[T],
         estim_name: str,
         estim_class_name: str,
         model_path: Path,
@@ -137,7 +137,7 @@ class CatEstimatorWrapperBase(ABC):
         # Dynamically import the module if not already loaded
         try:
             if module_name not in sys.modules:
-                logger.info(f"Importing module: {module_name}")
+                logger.info(f"Importing module: {module_name} for {estim_name}")
                 __import__(module_name)
         except ImportError as e:
             raise ImportError(f"Cannot import module '{module_name}' for class '{class_name}': {e}") from e
@@ -290,7 +290,7 @@ class CatEstimatorPdfWrapper(CatEstimatorWrapperBase):
     @classmethod
     def _build_wrapper(
         cls,
-        estim_class: Type[CatEstimator],
+        estim_class: type[CatEstimator],
         **kwargs: Any,
     ) -> CatEstimatorPdfWrapper:
         """
@@ -413,7 +413,7 @@ class CatEstimatorEnsembleWrapper(CatEstimatorWrapperBase):
     @classmethod
     def _build_wrapper(
         cls,
-        estim_class: Type[CatEstimator],
+        estim_class: type[CatEstimator],
         **kwargs: Any,
     ) -> CatEstimatorEnsembleWrapper:
         """

@@ -39,6 +39,9 @@ class Dataset(Base):
     #: Path to the relevant file
     path: Mapped[str] = mapped_column(unique=True)
 
+    #: True if this is actually a collections of datasets
+    is_collection: Mapped[bool] = mapped_column()
+
     #: foreign key into catalog_tag table
     catalog_tag_id: Mapped[int] = mapped_column(
         ForeignKey("catalog_tag.id_", ondelete="CASCADE"),

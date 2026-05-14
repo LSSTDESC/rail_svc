@@ -1,24 +1,20 @@
 import logging
-import os
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Union
+from typing import cast
+import anyio
 
-import numpy as np
 import qp
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .. import models, rail_funcs
+from .. import db
 from ..config import config as global_config
 from ..rail_funcs.estimation_funcs import (CatEstimatorEnsembleWrapper,
                                            CatEstimatorPdfWrapper)
 from . import catalog_funcs
 from .algorithm import algorithm
-from .band import band
-from .catalog_band_assoc import catalog_band_assoc
 from .catalog_tag import catalog_tag
 from .dataset import dataset
-from .estimates import estimates
 from .estimator import estimator
 from .model import model
 
@@ -35,7 +31,7 @@ class WrapperType(Enum):
 async def _get_estimator_components(
     session: AsyncSession,
     estimator_id: int,
-) -> tuple[models.Estimator, models.Model, models.Algorithm, models.CatalogTag]:
+) -> tuple[db.Estimator, db.Model, db.Algorithm, db.CatalogTag]:
     """
     Fetch an estimator and all its related components.
 
@@ -50,13 +46,13 @@ async def _get_estimator_components(
 
     Returns
     -------
-    estimator_obj : models.Estimator
+    estimator_obj :
         The estimator record.
-    model_obj : models.Model
+    model_obj :
         The associated model record.
-    algo_obj : models.Algorithm
+    algo_obj :
         The algorithm used by the model.
-    catalog_tag_obj : models.CatalogTag
+    catalog_tag_obj :
         The catalog tag for the model.
 
     Raises
@@ -95,7 +91,7 @@ async def _build_estimation_wrapper(
     session: AsyncSession,
     estimator_id: int,
     wrapper_type: WrapperType,
-) -> Union[CatEstimatorPdfWrapper, CatEstimatorEnsembleWrapper]:
+) -> CatEstimatorPdfWrapper | CatEstimatorEnsembleWrapper:
     """
     Build an estimation wrapper (PDF or Ensemble) for a given estimator.
 
@@ -132,7 +128,7 @@ async def _build_estimation_wrapper(
         )
 
         # Get archive directory
-        archive_dir = Path(os.path.abspath(global_config.storage.archive))
+        archive_dir = Path(await anyio.path.abspath(global_config.storage.archive))
 
         # Construct model path
         model_path = archive_dir / model_obj.path
@@ -151,6 +147,8 @@ async def _build_estimation_wrapper(
             f"class={algo_obj.class_name}, model={model_path}, "
             f"catalog={catalog_tag_obj.name}"
         )
+
+        wrapper: CatEstimatorPdfWrapper | CatEstimatorEnsembleWrapper | None = None
 
         # Build the appropriate wrapper type
         if wrapper_type == WrapperType.PDF:
@@ -171,6 +169,7 @@ async def _build_estimation_wrapper(
             )
         else:
             raise ValueError(f"Unknown wrapper type: {wrapper_type}")
+        assert wrapper is not None
 
         logger.info(f"Successfully built {wrapper_type.value} wrapper for estimator {estimator_id}")
         return wrapper
@@ -216,7 +215,9 @@ async def build_pdf_estimation_wrapper(
     >>> wrapper = await build_pdf_estimation_wrapper(session, estimator_id=1)
     >>> pdf = wrapper(catalog_data)
     """
-    return await _build_estimation_wrapper(session, estimator_id, WrapperType.PDF)
+    return cast(
+        CatEstimatorPdfWrapper, await _build_estimation_wrapper(session, estimator_id, WrapperType.PDF)
+    )
 
 
 async def build_ensemble_estimation_wrapper(
@@ -253,7 +254,10 @@ async def build_ensemble_estimation_wrapper(
     >>> wrapper = await build_ensemble_estimation_wrapper(session, estimator_id=1)
     >>> results = wrapper(input_catalog_path, output_path)
     """
-    return await _build_estimation_wrapper(session, estimator_id, WrapperType.ENSEMBLE)
+    return cast(
+        CatEstimatorEnsembleWrapper,
+        await _build_estimation_wrapper(session, estimator_id, WrapperType.ENSEMBLE),
+    )
 
 
 async def estimate_pdf(
@@ -318,7 +322,7 @@ async def estimate_pdf(
 
         return pdf_result
 
-    except (ValueError, FileNotFoundError, IOError):
+    except (OSError, ValueError, FileNotFoundError):
         raise
     except Exception as e:
         logger.error(f"Failed to estimate PDF: {e}")
@@ -329,7 +333,7 @@ async def estimate_ensemble(
     session: AsyncSession,
     estimator_id: int,
     dataset_id: int,
-    output_file_path: Union[str, Path],
+    output_file_path: str | Path,
 ) -> Path:
     """
     Estimate photo-z PDFs for an entire catalog (batch processing).
@@ -401,7 +405,7 @@ async def estimate_ensemble(
         logger.debug(f"Found dataset: {dataset_obj.path}")
 
         # Get archive directory
-        archive_dir = Path(os.path.abspath(global_config.storage.archive))
+        archive_dir = Path(await anyio.path.abspath(global_config.storage.archive))
 
         # Construct input catalog path
         input_path = archive_dir / dataset_obj.path
@@ -429,12 +433,12 @@ async def estimate_ensemble(
         logger.info(f"Output will be written to: {final_output_path}")
 
         # Run the estimation
-        result = wrapper(input_path, final_output_path)
+        _result = wrapper(input_path, final_output_path)
 
         # Verify output was created
         if not final_output_path.exists():
             logger.error(f"Estimation completed but output file not found: {final_output_path}")
-            raise IOError(f"Output file was not created: {final_output_path}")
+            raise OSError(f"Output file was not created: {final_output_path}")
 
         file_size = final_output_path.stat().st_size
         logger.info(
@@ -443,7 +447,7 @@ async def estimate_ensemble(
 
         return final_output_path
 
-    except (ValueError, FileNotFoundError, IOError):
+    except (OSError, ValueError, FileNotFoundError):
         raise
     except Exception as e:
         logger.error(f"Failed to estimate ensemble: {e}")

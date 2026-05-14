@@ -222,6 +222,12 @@ class DatasetSyncOperations(SyncOperations[db.Dataset, models.Dataset, models.Da
     """Operations on local DB for Dataset table."""
 
 
+class DatasetAssocSyncOperations(
+    SyncOperations[db.DatasetAssoc, models.DatasetAssoc, models.DatasetAssocCreate]
+):
+    """Operations on local DB for DatasetAssoc table."""
+
+
 class EstimatesSyncOperations(SyncOperations[db.Estimates, models.Estimates, models.EstimatesCreate]):
     """Operations on local DB for Estimates table."""
 

@@ -63,8 +63,8 @@ class CatalogBandAssocOperations(
     async def get_create_kwargs(
         self,
         session: AsyncSession,
-        mag_column_name: str,
-        mag_err_column_name: str,
+        mag_column_name: str | None = None,
+        mag_err_column_name: str | None = None,
         catalog_tag_id: int | None = None,
         catalog_tag_name: str | None = None,
         band_id: int | None = None,
@@ -138,7 +138,7 @@ class CatalogBandAssocOperations(
         ...     band_name="i"
         ... )
         """
-        # Validate band_alias
+        # Validate mag_column_name and mag_err_column_name
         if not mag_column_name or not isinstance(mag_column_name, str):
             logger.warning(
                 "Invalid mag_column_name for CatalogBandAssoc.",

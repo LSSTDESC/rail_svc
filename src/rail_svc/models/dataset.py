@@ -12,10 +12,13 @@ class DatasetBase(BaseModel):
     name: str = Field(..., description="Unique name for this dataset")
 
     #: Path to the relevant file (could be None)
-    path: str = Field(..., description="File path to the stored dataset")
+    path: str | None = Field(None, description="File path to the stored dataset")
 
     #: Number of objects in the dataset
     n_objects: int = Field(..., description="Number of objects in the dataset")
+
+    #: Is this dataset actually a collection of datasets
+    is_collection: bool = Field(default=False, description="True if this dataset is a collection of datasets")
 
 
 class DatasetCreate(DatasetBase):
