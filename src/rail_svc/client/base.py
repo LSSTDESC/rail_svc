@@ -1,0 +1,1087 @@
+from typing import Any, AsyncGenerator, TypeVar, Generic
+import logging
+from contextlib import asynccontextmanager
+
+import httpx
+from pydantic import BaseModel, ValidationError
+
+from ..db_funcs.filter import Filter, OrderBy
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+# Type variables for generic operations
+T = TypeVar("T")  # Database model type
+ResponseT = TypeVar("ResponseT", bound=BaseModel)  # Response schema type
+CreateT = TypeVar("CreateT", bound=BaseModel)  # Create schema type
+
+
+class RemoteAPIError(Exception):
+    """Custom exception for remote API errors."""
+
+    pass
+
+
+class CountResponse(BaseModel):
+    """Response model for count operations."""
+
+    count: int
+
+
+class LookupResponse(BaseModel, Generic[ResponseT]):
+    """Response model for lookup operations."""
+
+    id: int
+    data: ResponseT
+
+
+class DeleteResponse(BaseModel):
+    """Response model for delete operations."""
+
+    deleted: bool = True
+
+
+class FilterRequest(BaseModel):
+    """Request model for filter operations."""
+
+    filters: list[Filter] = []
+    logical_op: str = "and"
+    order_by: OrderBy | list[OrderBy] | None = None
+    skip: int = 0
+    limit: int | None = None
+
+
+class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
+    """Remote client for table operations via HTTP API.
+
+    This class provides the same interface as LocalOperations but executes
+    operations against a remote FastAPI server via HTTP requests.
+
+    Parameters
+    ----------
+    client : httpx.AsyncClient
+        Shared HTTP client instance
+    endpoint : str
+        Full endpoint URL for this table
+    response_model : type[ResponseT]
+        Pydantic model class for response data
+    create_model : type[CreateT]
+        Pydantic model class for create data
+
+    Note
+    ----
+    This class expects to receive an already initialized httpx.AsyncClient.
+    Use RemoteAPI context manager to manage the client lifecycle.
+    """
+
+    def __init__(
+        self,
+        client: httpx.AsyncClient,
+        endpoint: str,
+        response_model: type[ResponseT],
+        create_model: type[CreateT],
+    ):
+        """Initialize the remote table operations client."""
+        self.client = client
+        self.endpoint = endpoint
+        self.response_model = response_model
+        self.create_model = create_model
+
+    def _handle_response(self, response: httpx.Response, expected_status: int = 200) -> dict[str, Any]:
+        """Handle HTTP response and raise appropriate errors.
+
+        Parameters
+        ----------
+        response : httpx.Response
+            The HTTP response object
+        expected_status : int
+            Expected status code (default: 200)
+
+        Returns
+        -------
+        dict[str, Any]
+            Parsed JSON response
+
+        Raises
+        ------
+        RemoteAPIError
+            If the response indicates an error
+        """
+        if response.status_code == expected_status:
+            return response.json()
+
+        # Try to parse error details
+        try:
+            error_data = response.json()
+            error_msg = error_data.get("error", "Unknown error")
+            details = error_data.get("details", "")
+            if details:
+                error_msg = f"{error_msg}: {details}"
+        except Exception:
+            error_msg = response.text or f"HTTP {response.status_code}"
+
+        raise RemoteAPIError(f"API request failed with status {response.status_code}: {error_msg}")
+
+    # CREATE operations
+
+    async def create_row(self, validate: bool = True, **data) -> ResponseT:
+        """Create a single row.
+
+        Parameters
+        ----------
+        validate : bool
+            Whether to validate data on the server (default: True)
+        **data
+            Row data as keyword arguments
+
+        Returns
+        -------
+        ResponseT
+            Created row
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+        ValidationError
+            If the response data is invalid
+        """
+        response = await self.client.post(
+            f"{self.endpoint}/create_row",
+            json=data,
+            params={"validate": validate},
+        )
+
+        result = self._handle_response(response, expected_status=201)
+        return self.response_model(**result)
+
+    async def create_rows(self, data: list[dict], validate: bool = True) -> list[ResponseT]:
+        """Create multiple rows.
+
+        Parameters
+        ----------
+        data : list[dict]
+            List of row data dictionaries
+        validate : bool
+            Whether to validate data on the server (default: True)
+
+        Returns
+        -------
+        list[ResponseT]
+            List of created rows
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+        ValidationError
+            If the response data is invalid
+        """
+        response = await self.client.post(
+            f"{self.endpoint}/create_rows",
+            json=data,
+            params={"validate": validate},
+        )
+
+        result = self._handle_response(response, expected_status=201)
+        return [self.response_model(**item) for item in result]
+
+    async def create_rows_batched(
+        self,
+        data: list[dict],
+        validate: bool = True,
+        batch_size: int = 1000,
+    ) -> list[ResponseT]:
+        """Create multiple rows in batches.
+
+        Parameters
+        ----------
+        data : list[dict]
+            List of row data dictionaries
+        validate : bool
+            Whether to validate data on the server (default: True)
+        batch_size : int
+            Size of each batch (default: 1000)
+
+        Returns
+        -------
+        list[ResponseT]
+            List of created rows
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+        ValidationError
+            If the response data is invalid
+        """
+        response = await self.client.post(
+            f"{self.endpoint}/create_rows_batched",
+            json=data,
+            params={"validate": validate, "batch_size": batch_size},
+        )
+
+        result = self._handle_response(response, expected_status=201)
+        return [self.response_model(**item) for item in result]
+
+    async def bulk_insert_rows(self, data: list[dict], validate: bool = True) -> int:
+        """Bulk insert rows (returns count only).
+
+        Parameters
+        ----------
+        data : list[dict]
+            List of row data dictionaries
+        validate : bool
+            Whether to validate data on the server (default: True)
+
+        Returns
+        -------
+        int
+            Number of rows inserted
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+        """
+        response = await self.client.post(
+            f"{self.endpoint}/bulk_insert_rows",
+            json=data,
+            params={"validate": validate},
+        )
+
+        result = self._handle_response(response, expected_status=201)
+        return CountResponse(**result).count
+
+    # READ operations
+
+    async def get_row(self, row_id: int) -> ResponseT:
+        """Get a single row by ID.
+
+        Parameters
+        ----------
+        row_id : int
+            Row ID
+
+        Returns
+        -------
+        ResponseT
+            Row data
+
+        Raises
+        ------
+        RemoteAPIError
+            If the row is not found or the API request fails
+        """
+        response = await self.client.get(f"{self.endpoint}/get_row/{row_id}")
+
+        result = self._handle_response(response)
+        return self.response_model(**result)
+
+    async def get_row_or_none(self, row_id: int) -> ResponseT | None:
+        """Get a single row by ID or None if not found.
+
+        Parameters
+        ----------
+        row_id : int
+            Row ID
+
+        Returns
+        -------
+        ResponseT | None
+            Row data or None if not found
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+        """
+        response = await self.client.get(f"{self.endpoint}/get_row_or_none/{row_id}")
+
+        result = self._handle_response(response)
+        if result is None:
+            return None
+        return self.response_model(**result)
+
+    async def get_row_by_name(self, name: str) -> ResponseT:
+        """Get a single row by name.
+
+        Parameters
+        ----------
+        name : str
+            Row name
+
+        Returns
+        -------
+        ResponseT
+            Row data
+
+        Raises
+        ------
+        RemoteAPIError
+            If the row is not found or the API request fails
+        """
+        response = await self.client.get(f"{self.endpoint}/get_row_by_name/{name}")
+
+        result = self._handle_response(response)
+        return self.response_model(**result)
+
+    async def get_rows(self, skip: int = 0, limit: int | None = None) -> list[ResponseT]:
+        """Get multiple rows with pagination.
+
+        Parameters
+        ----------
+        skip : int
+            Number of rows to skip (default: 0)
+        limit : int | None
+            Maximum rows to return (default: None for all)
+
+        Returns
+        -------
+        list[ResponseT]
+            List of rows
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+        """
+        params = {"skip": skip}
+        if limit is not None:
+            params["limit"] = limit
+
+        response = await self.client.get(
+            f"{self.endpoint}/get_rows",
+            params=params,
+        )
+
+        result = self._handle_response(response)
+        return [self.response_model(**item) for item in result]
+
+    async def get_rows_streaming(
+        self,
+        skip: int = 0,
+        limit: int | None = None,
+    ) -> AsyncGenerator[ResponseT, None]:
+        """Get rows as a streaming response (NDJSON format).
+
+        Parameters
+        ----------
+        skip : int
+            Number of rows to skip (default: 0)
+        limit : int | None
+            Maximum rows to return (default: None for all)
+
+        Yields
+        ------
+        ResponseT
+            Row data objects
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+
+        Example
+        -------
+        >>> async for row in client.get_rows_streaming(limit=100):
+        ...     print(row.id, row.name)
+        """
+        params = {"skip": skip}
+        if limit is not None:
+            params["limit"] = limit
+
+        async with self.client.stream(
+            "GET",
+            f"{self.endpoint}/get_rows_streaming",
+            params=params,
+        ) as response:
+            if response.status_code != 200:
+                content = await response.aread()
+                raise RemoteAPIError(
+                    f"API request failed with status {response.status_code}: {content.decode()}"
+                )
+
+            async for line in response.aiter_lines():
+                if line.strip():
+                    try:
+                        data = self.response_model.model_validate_json(line)
+                        yield data
+                    except ValidationError as e:
+                        logger.error(f"Failed to parse streaming response: {e}")
+                        # Check if it's an error message
+                        try:
+                            import json
+
+                            error_data = json.loads(line)
+                            if "error" in error_data:
+                                raise RemoteAPIError(f"Stream error: {error_data['error']}")
+                        except json.JSONDecodeError:
+                            pass
+                        raise
+
+    async def count_rows(self) -> int:
+        """Get total count of rows.
+
+        Returns
+        -------
+        int
+            Total number of rows
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+        """
+        response = await self.client.get(f"{self.endpoint}/count_rows")
+
+        result = self._handle_response(response)
+        return CountResponse(**result).count
+
+    async def lookup_by_id_or_name(
+        self,
+        id: int | None = None,
+        name: str | None = None,
+    ) -> tuple[int, ResponseT]:
+        """Lookup by ID or name.
+
+        Parameters
+        ----------
+        id : int | None
+            Row ID (optional)
+        name : str | None
+            Row name (optional)
+
+        Returns
+        -------
+        tuple[int, ResponseT]
+            Tuple of (resolved_id, row_data)
+
+        Raises
+        ------
+        RemoteAPIError
+            If neither id nor name is provided or the API request fails
+        """
+        params = {}
+        if id is not None:
+            params["id"] = id
+        if name is not None:
+            params["name"] = name
+
+        response = await self.client.get(
+            f"{self.endpoint}/lookup_by_id_or_name",
+            params=params,
+        )
+
+        result = self._handle_response(response)
+        lookup_response = LookupResponse[self.response_model](**result)
+        return lookup_response.id, self.response_model(**lookup_response.data.model_dump())
+
+    # UPDATE operations
+
+    async def update_row(self, row_id: int, **data) -> ResponseT:
+        """Update a single row.
+
+        Parameters
+        ----------
+        row_id : int
+            Row ID
+        **data
+            Fields to update as keyword arguments
+
+        Returns
+        -------
+        ResponseT
+            Updated row
+
+        Raises
+        ------
+        RemoteAPIError
+            If the row is not found or the API request fails
+        """
+        response = await self.client.put(
+            f"{self.endpoint}/update_row/{row_id}",
+            json=data,
+        )
+
+        result = self._handle_response(response)
+        return self.response_model(**result)
+
+    async def update_rows(self, data: list[dict]) -> list[ResponseT]:
+        """Update multiple rows.
+
+        Parameters
+        ----------
+        data : list[dict]
+            List of row data dictionaries, each must contain an 'id' field
+
+        Returns
+        -------
+        list[ResponseT]
+            List of updated rows
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+        ValidationError
+            If any row data is invalid
+        """
+        response = await self.client.put(
+            f"{self.endpoint}/update_rows",
+            json=data,
+        )
+
+        result = self._handle_response(response)
+        return [self.response_model(**item) for item in result]
+
+    # DELETE operations
+
+    async def delete_row(self, row_id: int, capture_data: bool = True) -> ResponseT | None:
+        """Delete a single row.
+
+        Parameters
+        ----------
+        row_id : int
+            Row ID
+        capture_data : bool
+            Whether to return deleted row data (default: True)
+
+        Returns
+        -------
+        ResponseT | None
+            Deleted row data if capture_data=True, otherwise None
+
+        Raises
+        ------
+        RemoteAPIError
+            If the row is not found or the API request fails
+        """
+        response = await self.client.delete(
+            f"{self.endpoint}/delete_row/{row_id}",
+            params={"capture_data": capture_data},
+        )
+
+        result = self._handle_response(response)
+
+        if not capture_data or result.get("deleted"):
+            return None
+
+        return self.response_model(**result)
+
+    async def delete_rows(
+        self,
+        ids: list[int],
+        capture_data: bool = False,
+    ) -> list[ResponseT] | int:
+        """Delete multiple rows.
+
+        Parameters
+        ----------
+        ids : list[int]
+            List of row IDs to delete
+        capture_data : bool
+            Whether to return deleted row data (default: False)
+
+        Returns
+        -------
+        list[ResponseT] | int
+            List of deleted rows if capture_data=True, otherwise count
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+        """
+        response = await self.client.delete(
+            f"{self.endpoint}/delete_rows",
+            json=ids,
+            params={"capture_data": capture_data},
+        )
+
+        result = self._handle_response(response)
+
+        if capture_data:
+            return [self.response_model(**item) for item in result]
+        else:
+            return CountResponse(**result).count
+
+    async def bulk_delete_rows(self, ids: list[int]) -> int:
+        """Bulk delete rows (returns count only).
+
+        Parameters
+        ----------
+        ids : list[int]
+            List of row IDs to delete
+
+        Returns
+        -------
+        int
+            Number of rows deleted
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+        """
+        response = await self.client.delete(
+            f"{self.endpoint}/bulk_delete_rows",
+            json=ids,
+        )
+
+        result = self._handle_response(response)
+        return CountResponse(**result).count
+
+    # FILTER/QUERY operations
+
+    async def filter_rows(
+        self,
+        filters: list[Filter] | None = None,
+        logical_op: str = "and",
+        order_by: OrderBy | list[OrderBy] | None = None,
+        skip: int = 0,
+        limit: int | None = None,
+    ) -> list[ResponseT]:
+        """Filter rows with complex criteria.
+
+        Parameters
+        ----------
+        filters : list[Filter] | None
+            List of filter conditions (default: None)
+        logical_op : str
+            Logical operator for combining filters: "and" or "or" (default: "and")
+        order_by : OrderBy | list[OrderBy] | None
+            Ordering specification (default: None)
+        skip : int
+            Number of rows to skip (default: 0)
+        limit : int | None
+            Maximum rows to return (default: None)
+
+        Returns
+        -------
+        list[ResponseT]
+            List of filtered rows
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+        """
+        request_data = FilterRequest(
+            filters=filters or [],
+            logical_op=logical_op,
+            order_by=order_by,
+            skip=skip,
+            limit=limit,
+        )
+
+        response = await self.client.post(
+            f"{self.endpoint}/filter_rows",
+            json=request_data.model_dump(mode="json"),
+        )
+
+        result = self._handle_response(response)
+        return [self.response_model(**item) for item in result]
+
+    async def filter_rows_streaming(
+        self,
+        filters: list[Filter] | None = None,
+        logical_op: str = "and",
+        order_by: OrderBy | list[OrderBy] | None = None,
+        skip: int = 0,
+        limit: int | None = None,
+    ) -> AsyncGenerator[ResponseT, None]:
+        """Filter rows with streaming response (NDJSON format).
+
+        Parameters
+        ----------
+        filters : list[Filter] | None
+            List of filter conditions (default: None)
+        logical_op : str
+            Logical operator for combining filters: "and" or "or" (default: "and")
+        order_by : OrderBy | list[OrderBy] | None
+            Ordering specification (default: None)
+        skip : int
+            Number of rows to skip (default: 0)
+        limit : int | None
+            Maximum rows to return (default: None)
+
+        Yields
+        ------
+        ResponseT
+            Filtered row data objects
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+        """
+        request_data = FilterRequest(
+            filters=filters or [],
+            logical_op=logical_op,
+            order_by=order_by,
+            skip=skip,
+            limit=limit,
+        )
+
+        async with self.client.stream(
+            "POST",
+            f"{self.endpoint}/filter_rows_streaming",
+            json=request_data.model_dump(mode="json"),
+        ) as response:
+            if response.status_code != 200:
+                content = await response.aread()
+                raise RemoteAPIError(
+                    f"API request failed with status {response.status_code}: {content.decode()}"
+                )
+
+            async for line in response.aiter_lines():
+                if line.strip():
+                    try:
+                        data = self.response_model.model_validate_json(line)
+                        yield data
+                    except ValidationError as e:
+                        logger.error(f"Failed to parse streaming response: {e}")
+                        # Check if it's an error message
+                        try:
+                            import json
+
+                            error_data = json.loads(line)
+                            if "error" in error_data:
+                                raise RemoteAPIError(f"Stream error: {error_data['error']}")
+                        except json.JSONDecodeError:
+                            pass
+                        raise
+
+    async def count_filtered_rows(
+        self,
+        filters: list[Filter] | None = None,
+        logical_op: str = "and",
+    ) -> int:
+        """Count filtered rows.
+
+        Parameters
+        ----------
+        filters : list[Filter] | None
+            List of filter conditions (default: None)
+        logical_op : str
+            Logical operator for combining filters: "and" or "or" (default: "and")
+
+        Returns
+        -------
+        int
+            Number of rows matching the filter
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+        """
+        request_data = FilterRequest(
+            filters=filters or [],
+            logical_op=logical_op,
+        )
+
+        response = await self.client.post(
+            f"{self.endpoint}/count_filtered_rows",
+            json=request_data.model_dump(mode="json"),
+        )
+
+        result = self._handle_response(response)
+        return CountResponse(**result).count
+
+    async def filter_one(
+        self,
+        filters: list[Filter],
+        logical_op: str = "and",
+    ) -> ResponseT:
+        """Filter to get exactly one row.
+
+        Parameters
+        ----------
+        filters : list[Filter]
+            List of filter conditions (required)
+        logical_op : str
+            Logical operator for combining filters: "and" or "or" (default: "and")
+
+        Returns
+        -------
+        ResponseT
+            Single matching row
+
+        Raises
+        ------
+        RemoteAPIError
+            If no rows match or multiple rows match
+        """
+        request_data = FilterRequest(
+            filters=filters,
+            logical_op=logical_op,
+        )
+
+        response = await self.client.post(
+            f"{self.endpoint}/filter_one",
+            json=request_data.model_dump(mode="json"),
+        )
+
+        result = self._handle_response(response)
+        return self.response_model(**result)
+
+    async def filter_one_or_none(
+        self,
+        filters: list[Filter],
+        logical_op: str = "and",
+    ) -> ResponseT | None:
+        """Filter to get one row or None.
+
+        Parameters
+        ----------
+        filters : list[Filter]
+            List of filter conditions (required)
+        logical_op : str
+            Logical operator for combining filters: "and" or "or" (default: "and")
+
+        Returns
+        -------
+        ResponseT | None
+            Single matching row or None if no match
+
+        Raises
+        ------
+        RemoteAPIError
+            If multiple rows match or the API request fails
+        """
+        request_data = FilterRequest(
+            filters=filters,
+            logical_op=logical_op,
+        )
+
+        response = await self.client.post(
+            f"{self.endpoint}/filter_one_or_none",
+            json=request_data.model_dump(mode="json"),
+        )
+
+        result = self._handle_response(response)
+        if result is None:
+            return None
+        return self.response_model(**result)
+
+    async def find_by(
+        self,
+        order_by: OrderBy | list[OrderBy] | None = None,
+        skip: int = 0,
+        limit: int | None = None,
+        **query_params,
+    ) -> list[ResponseT]:
+        """Find rows by field values.
+
+        Parameters
+        ----------
+        order_by : OrderBy | list[OrderBy] | None
+            Ordering specification (default: None)
+        skip : int
+            Number of rows to skip (default: 0)
+        limit : int | None
+            Maximum rows to return (default: None)
+        **query_params
+            Field values to match (equality filters)
+
+        Returns
+        -------
+        list[ResponseT]
+            List of matching rows
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+
+        Example
+        -------
+        >>> results = await client.find_by(
+        ...     name="test",
+        ...     status="active",
+        ...     order_by=OrderBy(field="created_at", direction="desc"),
+        ...     limit=10
+        ... )
+        """
+        request_body = {**query_params}
+        if order_by is not None:
+            if isinstance(order_by, list):
+                request_body["order_by"] = [o.model_dump() for o in order_by]
+            else:
+                request_body["order_by"] = order_by.model_dump()
+        request_body["skip"] = skip
+        if limit is not None:
+            request_body["limit"] = limit
+
+        response = await self.client.post(
+            f"{self.endpoint}/find_by",
+            json=request_body,
+        )
+
+        result = self._handle_response(response)
+        return [self.response_model(**item) for item in result]
+
+    async def find_one_by(self, **query_params) -> ResponseT:
+        """Find exactly one row by field values.
+
+        Parameters
+        ----------
+        **query_params
+            Field values to match (equality filters)
+
+        Returns
+        -------
+        ResponseT
+            Single matching row
+
+        Raises
+        ------
+        RemoteAPIError
+            If no rows match or multiple rows match
+
+        Example
+        -------
+        >>> result = await client.find_one_by(name="unique_name")
+        """
+        response = await self.client.post(
+            f"{self.endpoint}/find_one_by",
+            json=query_params,
+        )
+
+        result = self._handle_response(response)
+        return self.response_model(**result)
+
+
+class RemoteAPI:
+    """High-level client for managing multiple table operations.
+
+    This class provides a convenient way to create and manage multiple
+    RemoteTableOperations instances sharing a single HTTP client.
+
+    Parameters
+    ----------
+    base_url : str
+        Base URL of the API server (e.g., "http://localhost:8000")
+    api_prefix : str
+        API route prefix (default: "/api/v1")
+    timeout : float
+        Request timeout in seconds (default: 30.0)
+    auth_token : str | None
+        Optional Bearer token for authentication
+
+    Example
+    -------
+    >>> from pydantic import BaseModel
+    >>>
+    >>> class AlgorithmResponse(BaseModel):
+    ...     id: int
+    ...     name: str
+    >>>
+    >>> class AlgorithmCreate(BaseModel):
+    ...     name: str
+    >>>
+    >>> class DatasetResponse(BaseModel):
+    ...     id: int
+    ...     name: str
+    >>>
+    >>> class DatasetCreate(BaseModel):
+    ...     name: str
+    >>>
+    >>> async with RemoteAPI("http://localhost:8000", auth_token="token") as api:
+    ...     # Get table clients - no nested async with!
+    ...     algo_client = api.table("algorithms", AlgorithmResponse, AlgorithmCreate)
+    ...     data_client = api.table("datasets", DatasetResponse, DatasetCreate)
+    ...
+    ...     # Use both clients
+    ...     algo = await algo_client.create_row(name="Test")
+    ...     dataset = await data_client.create_row(name="Dataset 1")
+    """
+
+    def __init__(
+        self,
+        base_url: str,
+        api_prefix: str = "/api/v1",
+        timeout: float = 30.0,
+        auth_token: str | None = None,
+    ):
+        """Initialize the remote API client."""
+        self.base_url = base_url.rstrip("/")
+        self.api_prefix = api_prefix.rstrip("/")
+        self.timeout = timeout
+        self.auth_token = auth_token
+
+        # Headers
+        self.headers = {}
+        if auth_token:
+            self.headers["Authorization"] = f"Bearer {auth_token}"
+
+        # Client will be initialized in __aenter__
+        self.client: httpx.AsyncClient | None = None
+
+    async def __aenter__(self):
+        """Async context manager entry."""
+        self.client = httpx.AsyncClient(
+            timeout=self.timeout,
+            headers=self.headers,
+        )
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit."""
+        if self.client:
+            await self.client.aclose()
+
+    def _check_client(self):
+        """Ensure client is initialized."""
+        if self.client is None:
+            raise RemoteAPIError("Client not initialized. Use 'async with RemoteAPI(...)' context manager.")
+
+    def table[T, ResponseT: BaseModel, CreateT: BaseModel](
+        self,
+        table_name: str,
+        response_model: type[ResponseT],
+        create_model: type[CreateT],
+    ) -> RemoteTableOperations[T, ResponseT, CreateT]:
+        """Create a table operations client for a specific table.
+
+        Parameters
+        ----------
+        table_name : str
+            Name of the table endpoint
+        response_model : type[ResponseT]
+            Pydantic model class for response data
+        create_model : type[CreateT]
+            Pydantic model class for create data
+
+        Returns
+        -------
+        RemoteTableOperations[T, ResponseT, CreateT]
+            Table operations client for the specified table
+
+        Note
+        ----
+        The returned client shares the HTTP client from this RemoteAPI instance.
+        No need for nested async with statements!
+
+        Example
+        -------
+        >>> async with RemoteAPI("http://localhost:8000") as api:
+        ...     algo_client = api.table("algorithms", AlgorithmResponse, AlgorithmCreate)
+        ...     data_client = api.table("datasets", DatasetResponse, DatasetCreate)
+        ...
+        ...     # Both clients work independently
+        ...     algos = await algo_client.get_rows()
+        ...     datasets = await data_client.get_rows()
+        """
+        self._check_client()
+
+        endpoint = f"{self.base_url}{self.api_prefix}/{table_name}"
+
+        return RemoteTableOperations[T, ResponseT, CreateT](
+            client=self.client,
+            endpoint=endpoint,
+            response_model=response_model,
+            create_model=create_model,
+        )

@@ -5,8 +5,7 @@ import numpy as np
 import qp
 
 from .. import local_async, models
-from ..rail_funcs.estimation_funcs import (CatEstimatorEnsembleWrapper,
-                                           CatEstimatorPdfWrapper)
+from ..rail_funcs.estimation_funcs import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
 
 
 def build_pdf_estimation_wrapper(
@@ -63,15 +62,16 @@ def get_dataset_and_estimates(
     return asyncio.run(local_async.funcs.get_dataset_and_estimates(dataset_id))
 
 
-# def get_data_and_estimates_data(
-#    dataset_id: int,
-#    row: int,
-# ) -> tuple[dict[str, np.ndarray], dict[str, qp.Ensemble]]:
-#   return asyncio.run(local_async.funcs.get_data_and_estimates_data(dataset_id, row))
+def get_data_and_estimates_data(
+    dataset_id: int,
+    row: int,
+) -> tuple[dict[str, np.ndarray], dict[str, qp.Ensemble]]:
+    return asyncio.run(local_async.funcs.get_data_and_estimates_data(dataset_id, row))
 
 
 def create_matched_dataset(
     matched_dataset_name: str,
+    catalog_tag_name: str,
     component_dataset_names: list[str],
     path: str | None,
     n_objects: int,
@@ -79,6 +79,7 @@ def create_matched_dataset(
     return asyncio.run(
         local_async.funcs.create_matched_dataset(
             matched_dataset_name,
+            catalog_tag_name,
             component_dataset_names,
             path,
             n_objects,

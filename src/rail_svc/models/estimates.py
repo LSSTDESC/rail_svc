@@ -8,9 +8,12 @@ from pydantic import BaseModel, ConfigDict, Field
 class EstimatesBase(BaseModel):
     """Estimates parameters that are in DB tables and also used to create new rows"""
 
+    #: Name for these Estimates, unique
+    name: str = Field(..., description="Unique name for these estimates")
+
     #: path to the output file
     path: str | None = Field(None, description="Path to the output qp ensemble file")
-
+    
 
 class EstimatesCreate(EstimatesBase):
     """Estimates Parameters that are used to create new rows but not in DB tables"""

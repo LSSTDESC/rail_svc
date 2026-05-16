@@ -5,8 +5,7 @@ import qp
 
 from .. import db_oper, models
 from ..db.session import get_session
-from ..rail_funcs.estimation_funcs import (CatEstimatorEnsembleWrapper,
-                                           CatEstimatorPdfWrapper)
+from ..rail_funcs.estimation_funcs import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
 
 
 async def build_pdf_estimation_wrapper(
@@ -94,8 +93,18 @@ async def get_dataset_and_estimates(
             )
 
 
+async def get_data_and_estimates_data(
+    dataset_id: int,
+    row: int,
+) -> tuple[dict[str, np.ndarray], dict[str, qp.Ensemble]]:
+    async with get_session() as session:
+        async with session.begin():
+            return await db_oper.catalog_funcs.get_data_and_estimates_data(session, dataset_id, row)
+
+
 async def create_matched_dataset(
     matched_dataset_name: str,
+    catalog_tag_name: str,
     component_dataset_names: list[str],
     path: str | None,
     n_objects: int,
@@ -105,6 +114,7 @@ async def create_matched_dataset(
             db_matched_dataset, db_dataset_assocs = await db_oper.catalog_funcs.create_matched_dataset(
                 session,
                 matched_dataset_name=matched_dataset_name,
+                catalog_tag_name=catalog_tag_name,
                 component_dataset_names=component_dataset_names,
                 path=path,
                 n_objects=n_objects,

@@ -305,7 +305,7 @@ class BandLocalOperations(LocalOperations[db.Band, models.Band, models.BandCreat
     """Operations on local DB for Band table."""
 
 
-class CatalogBandAssocOperations(
+class CatalogBandAssocLocalOperations(
     LocalOperations[db.CatalogBandAssoc, models.CatalogBandAssoc, models.CatalogBandAssocCreate]
 ):
     """Operations on local DB for CatalogBandAssoc table."""

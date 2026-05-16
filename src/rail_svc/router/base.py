@@ -1,14 +1,15 @@
+from typing import Any, AsyncGenerator, TypeVar, Generic
 import logging
 from functools import wraps
-from typing import Any, AsyncGenerator, TypeVar
 
-from fastapi import (APIRouter, Body, Depends, Header, HTTPException, Query,
-                     status)
+from fastapi import APIRouter, HTTPException, Query, Body, Depends, Header, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ValidationError
 
+from ..local_asnyc import (
+    LocalOperations,
+)
 from ..db_funcs.filter import Filter, OrderBy
-from ..local_asnyc import LocalOperations
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -31,11 +32,11 @@ class CountResponse(BaseModel):
     count: int
 
 
-class LookupResponse(BaseModel):
+class LookupResponse(BaseModel, Generic[ResponseT]):
     """Response model for lookup operations."""
 
     id: int
-    data: dict
+    data: ResponseT
 
 
 class DeleteResponse(BaseModel):
@@ -163,7 +164,7 @@ def validate_batch_size(batch_size: int) -> int:
     return batch_size
 
 
-def create_table_router(
+def create_table_router[T, ResponseT: BaseModel, CreateT: BaseModel](
     name: str,
     operations: LocalOperations[T, ResponseT, CreateT],
     id_param: str = "id",
@@ -187,10 +188,10 @@ def create_table_router(
     router = APIRouter(prefix=f"/{name}", tags=[name])
 
     # CREATE endpoints
-    @router.post("/create_row", status_code=status.HTTP_201_CREATED)
+    @router.post("/create_row", status_code=status.HTTP_201_CREATED, response_model=ResponseT)
     async def create_row(
         data: dict = Body(...), validate: bool = Query(True, description="Whether to validate data")
-    ) -> dict:
+    ) -> ResponseT:
         """Create a single row.
 
         Request Body:
@@ -206,7 +207,7 @@ def create_table_router(
         """
         try:
             result = await operations.create_row(validate=validate, **data)
-            return result.model_dump()
+            return result
         except ValidationError as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -216,10 +217,10 @@ def create_table_router(
             logger.exception("Error creating row")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    @router.post("/create_rows", status_code=status.HTTP_201_CREATED)
+    @router.post("/create_rows", status_code=status.HTTP_201_CREATED, response_model=list[ResponseT])
     async def create_rows(
         data: list[dict] = Body(...), validate: bool = Query(True, description="Whether to validate data")
-    ) -> list[dict]:
+    ) -> list[ResponseT]:
         """Create multiple rows.
 
         Request Body:
@@ -240,7 +241,7 @@ def create_table_router(
 
         try:
             results = await operations.create_rows(data, validate=validate)
-            return [r.model_dump() for r in results]
+            return results
         except ValidationError as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -250,12 +251,12 @@ def create_table_router(
             logger.exception("Error creating rows")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    @router.post("/create_rows_batched", status_code=status.HTTP_201_CREATED)
+    @router.post("/create_rows_batched", status_code=status.HTTP_201_CREATED, response_model=list[ResponseT])
     async def create_rows_batched(
         data: list[dict] = Body(...),
         validate: bool = Query(True, description="Whether to validate data"),
         batch_size: int = Query(1000, ge=1, le=10000, description="Size of each batch"),
-    ) -> list[dict]:
+    ) -> list[ResponseT]:
         """Create multiple rows in batches.
 
         Request Body:
@@ -272,7 +273,7 @@ def create_table_router(
         """
         try:
             results = await operations.create_rows_batched(data, validate=validate, batch_size=batch_size)
-            return [r.model_dump() for r in results]
+            return results
         except ValidationError as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -282,7 +283,7 @@ def create_table_router(
             logger.exception("Error creating rows batched")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    @router.post("/bulk_insert_rows", status_code=status.HTTP_201_CREATED)
+    @router.post("/bulk_insert_rows", status_code=status.HTTP_201_CREATED, response_model=CountResponse)
     async def bulk_insert_rows(
         data: list[dict] = Body(...), validate: bool = Query(True, description="Whether to validate data")
     ) -> CountResponse:
@@ -318,8 +319,8 @@ def create_table_router(
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
     # READ endpoints
-    @router.get(f"/get_row/{{{id_param}}}")
-    async def get_row(**kwargs) -> dict:
+    @router.get(f"/get_row/{{{id_param}}}", response_model=ResponseT)
+    async def get_row(**kwargs) -> ResponseT:
         """Get a single row by ID.
 
         Path Parameters:
@@ -335,15 +336,15 @@ def create_table_router(
             result = await operations.get_row(row_id)
             if result is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
-            return result.model_dump()
+            return result
         except HTTPException:
             raise
         except Exception as e:
             logger.exception("Error getting row")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    @router.get(f"/get_row_or_none/{{{id_param}}}")
-    async def get_row_or_none(**kwargs) -> dict | None:
+    @router.get(f"/get_row_or_none/{{{id_param}}}", response_model=ResponseT | None)
+    async def get_row_or_none(**kwargs) -> ResponseT | None:
         """Get a single row by ID or None if not found.
 
         Path Parameters:
@@ -356,15 +357,13 @@ def create_table_router(
         try:
             row_id = kwargs[id_param]
             result = await operations.get_row_or_none(row_id)
-            if result is None:
-                return None
-            return result.model_dump()
+            return result
         except Exception as e:
             logger.exception("Error getting row or none")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    @router.get("/get_row_by_name/{name}")
-    async def get_row_by_name(name: str) -> dict:
+    @router.get("/get_row_by_name/{name}", response_model=ResponseT)
+    async def get_row_by_name(name: str) -> ResponseT:
         """Get a single row by name.
 
         Path Parameters:
@@ -379,18 +378,18 @@ def create_table_router(
             result = await operations.get_row_by_name(name)
             if result is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
-            return result.model_dump()
+            return result
         except HTTPException:
             raise
         except Exception as e:
             logger.exception("Error getting row by name")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    @router.get("/get_rows")
+    @router.get("/get_rows", response_model=list[ResponseT])
     async def get_rows(
         skip: int = Query(0, ge=0, description="Number of rows to skip"),
         limit: int | None = Query(None, ge=1, le=10000, description="Maximum rows to return"),
-    ) -> list[dict]:
+    ) -> list[ResponseT]:
         """Get multiple rows with pagination.
 
         Query Parameters:
@@ -404,7 +403,7 @@ def create_table_router(
         """
         try:
             results = await operations.get_rows(skip=skip, limit=limit)
-            return [r.model_dump() for r in results]
+            return results
         except Exception as e:
             logger.exception("Error getting rows")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -441,7 +440,7 @@ def create_table_router(
 
         return StreamingResponse(generate(), media_type="application/x-ndjson")
 
-    @router.get("/count_rows")
+    @router.get("/count_rows", response_model=CountResponse)
     async def count_rows() -> CountResponse:
         """Get total count of rows.
 
@@ -456,11 +455,11 @@ def create_table_router(
             logger.exception("Error counting rows")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    @router.get("/lookup_by_id_or_name")
+    @router.get("/lookup_by_id_or_name", response_model=LookupResponse[ResponseT])
     async def lookup_by_id_or_name(
         id: int | None = Query(None, description="Row ID"),
         name: str | None = Query(None, description="Row name"),
-    ) -> LookupResponse:
+    ) -> LookupResponse[ResponseT]:
         """Lookup by ID or name.
 
         Query Parameters:
@@ -487,7 +486,7 @@ def create_table_router(
             if result is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
 
-            return LookupResponse(id=resolved_id, data=result.model_dump())
+            return LookupResponse(id=resolved_id, data=result)
         except HTTPException:
             raise
         except Exception as e:
@@ -495,9 +494,9 @@ def create_table_router(
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
     # UPDATE endpoints
-    @router.put(f"/update_row/{{{id_param}}}")
-    @router.patch(f"/update_row/{{{id_param}}}")
-    async def update_row(data: dict = Body(...), **kwargs) -> dict:
+    @router.put(f"/update_row/{{{id_param}}}", response_model=ResponseT)
+    @router.patch(f"/update_row/{{{id_param}}}", response_model=ResponseT)
+    async def update_row(data: dict = Body(...), **kwargs) -> ResponseT:
         """Update a single row.
 
         Path Parameters:
@@ -517,7 +516,7 @@ def create_table_router(
             result = await operations.update_row(row_id, **data)
             if result is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
-            return result.model_dump()
+            return result
         except HTTPException:
             raise
         except ValidationError as e:
@@ -529,9 +528,9 @@ def create_table_router(
             logger.exception("Error updating row")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    @router.put("/update_rows")
-    @router.patch("/update_rows")
-    async def update_rows(data: list[dict] = Body(...)) -> list[dict]:
+    @router.put("/update_rows", response_model=list[ResponseT])
+    @router.patch("/update_rows", response_model=list[ResponseT])
+    async def update_rows(data: list[dict] = Body(...)) -> list[ResponseT]:
         """Update multiple rows.
 
         Request Body:
@@ -561,7 +560,7 @@ def create_table_router(
 
         try:
             results = await operations.update_rows(data)
-            return [r.model_dump() for r in results]
+            return results
         except ValidationError as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -572,10 +571,10 @@ def create_table_router(
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
     # DELETE endpoints
-    @router.delete(f"/delete_row/{{{id_param}}}")
+    @router.delete(f"/delete_row/{{{id_param}}}", response_model=ResponseT | DeleteResponse)
     async def delete_row(
         capture_data: bool = Query(True, description="Whether to return deleted row data"), **kwargs
-    ) -> dict | DeleteResponse:
+    ) -> ResponseT | DeleteResponse:
         """Delete a single row.
 
         Path Parameters:
@@ -596,18 +595,20 @@ def create_table_router(
             if result is None and capture_data:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
 
-            return result if result else DeleteResponse()
+            if result is None:
+                return DeleteResponse()
+            return result
         except HTTPException:
             raise
         except Exception as e:
             logger.exception("Error deleting row")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    @router.delete("/delete_rows")
+    @router.delete("/delete_rows", response_model=list[ResponseT] | CountResponse)
     async def delete_rows(
         data: list[int] = Body(...),
         capture_data: bool = Query(False, description="Whether to return deleted row data"),
-    ) -> list[dict] | CountResponse:
+    ) -> list[ResponseT] | CountResponse:
         """Delete multiple rows.
 
         Request Body:
@@ -643,7 +644,7 @@ def create_table_router(
             logger.exception("Error deleting rows")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    @router.delete("/bulk_delete_rows")
+    @router.delete("/bulk_delete_rows", response_model=CountResponse)
     async def bulk_delete_rows(data: list[int] = Body(...)) -> CountResponse:
         """Bulk delete rows (returns count only).
 
@@ -676,8 +677,8 @@ def create_table_router(
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
     # FILTER/QUERY endpoints
-    @router.post("/filter_rows")
-    async def filter_rows(request: FilterRequest) -> list[dict]:
+    @router.post("/filter_rows", response_model=list[ResponseT])
+    async def filter_rows(request: FilterRequest) -> list[ResponseT]:
         """Filter rows with complex criteria.
 
         Request Body:
@@ -710,7 +711,7 @@ def create_table_router(
                 skip=request.skip,
                 limit=request.limit,
             )
-            return [r.model_dump() for r in results]
+            return results
         except ValidationError as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -759,7 +760,7 @@ def create_table_router(
 
         return StreamingResponse(generate(), media_type="application/x-ndjson")
 
-    @router.post("/count_filtered_rows")
+    @router.post("/count_filtered_rows", response_model=CountResponse)
     async def count_filtered_rows(request: FilterRequest) -> CountResponse:
         """Count filtered rows.
 
@@ -794,8 +795,8 @@ def create_table_router(
             logger.exception("Error counting filtered rows")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    @router.post("/filter_one")
-    async def filter_one(request: FilterRequest) -> dict:
+    @router.post("/filter_one", response_model=ResponseT)
+    async def filter_one(request: FilterRequest) -> ResponseT:
         """Filter to get exactly one row.
 
         Request Body:
@@ -822,7 +823,7 @@ def create_table_router(
             result = await operations.filter_one(filters=request.filters, logical_op=request.logical_op)
             if result is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
-            return result.model_dump()
+            return result
         except HTTPException:
             raise
         except ValidationError as e:
@@ -834,8 +835,8 @@ def create_table_router(
             logger.exception("Error filtering one row")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    @router.post("/filter_one_or_none")
-    async def filter_one_or_none(request: FilterRequest) -> dict | None:
+    @router.post("/filter_one_or_none", response_model=ResponseT | None)
+    async def filter_one_or_none(request: FilterRequest) -> ResponseT | None:
         """Filter to get one row or None.
 
         Request Body:
@@ -861,9 +862,7 @@ def create_table_router(
             result = await operations.filter_one_or_none(
                 filters=request.filters, logical_op=request.logical_op
             )
-            if result is None:
-                return None
-            return result.model_dump()
+            return result
         except ValidationError as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -873,8 +872,8 @@ def create_table_router(
             logger.exception("Error filtering one or none row")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    @router.post("/find_by")
-    async def find_by(request: dict = Body(...)) -> list[dict]:
+    @router.post("/find_by", response_model=list[ResponseT])
+    async def find_by(request: dict = Body(...)) -> list[ResponseT]:
         """Find rows by field values.
 
         Request Body:
@@ -931,13 +930,13 @@ def create_table_router(
                 limit=limit,
                 **query_params,
             )
-            return [r.model_dump() for r in results]
+            return results
         except Exception as e:
             logger.exception("Error finding rows")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    @router.post("/find_one_by")
-    async def find_one_by(data: dict = Body(...)) -> dict:
+    @router.post("/find_one_by", response_model=ResponseT)
+    async def find_one_by(data: dict = Body(...)) -> ResponseT:
         """Find exactly one row by field values.
 
         Request Body:
@@ -961,7 +960,7 @@ def create_table_router(
             result = await operations.find_one_by(**data)
             if result is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
-            return result.model_dump()
+            return result
         except HTTPException:
             raise
         except Exception as e:

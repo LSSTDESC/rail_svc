@@ -42,7 +42,7 @@ async def get_catalog_row(
 ) -> dict[str, np.ndarray]:
 
     the_dataset = await dataset.get_row(session, dataset_id)
-    archive_dir = Path(await anyio.path.abspath(global_config.storage.archive))
+    archive_dir = Path(await anyio.Path(global_config.storage.archive).absolute())
     return rail_funcs.catalog_funcs.get_catalog_row(archive_dir / the_dataset.path, row)
 
 
@@ -53,7 +53,7 @@ async def get_estimates_row(
 ) -> dict[str, np.ndarray]:
 
     the_estimates = await estimates.get_row(session, estimates_id)
-    archive_dir = Path(await anyio.path(global_config.storage.archive))
+    archive_dir = Path(await anyio.Path(global_config.storage.archive).absolute())
     return rail_funcs.catalog_funcs.get_estimates_row(archive_dir / the_estimates.path, row)
 
 
@@ -74,7 +74,7 @@ async def get_data_and_estimates_data(
 ) -> tuple[dict[str, np.ndarray], dict[str, qp.Ensemble]]:
 
     the_dataset, the_estimates = await get_dataset_and_estimates(session, dataset_id)
-    archive_dir = Path(anyio.path(global_config.storage.archive))
+    archive_dir = Path(await anyio.Path(global_config.storage.archive).absolute())
     data = rail_funcs.catalog_funcs.get_catalog_row(archive_dir / the_dataset.path, row)
     the_estimates_dict: dict[str, qp.Ensemble] = {}
     for the_estimates_ in the_estimates:
@@ -88,6 +88,7 @@ async def get_data_and_estimates_data(
 async def create_matched_dataset(
     session: AsyncSession,
     matched_dataset_name: str,
+    catalog_tag_name: str,
     component_dataset_names: list[str],
     path: str | None,
     n_objects: int,
@@ -96,6 +97,7 @@ async def create_matched_dataset(
     the_matched_dataset = await dataset.create_row(
         session,
         name=matched_dataset_name,
+        catalog_tag_name=catalog_tag_name,
         path=path,
         n_objects=n_objects,
         is_collection=True,

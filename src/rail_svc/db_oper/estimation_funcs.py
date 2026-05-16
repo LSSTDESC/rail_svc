@@ -9,8 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import db
 from ..config import config as global_config
-from ..rail_funcs.estimation_funcs import (CatEstimatorEnsembleWrapper,
-                                           CatEstimatorPdfWrapper)
+from ..rail_funcs.estimation_funcs import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
 from . import catalog_funcs
 from .algorithm import algorithm
 from .catalog_tag import catalog_tag
@@ -128,7 +127,7 @@ async def _build_estimation_wrapper(
         )
 
         # Get archive directory
-        archive_dir = Path(await anyio.path.abspath(global_config.storage.archive))
+        archive_dir = Path(await anyio.Path(global_config.storage.archive).absolute())
 
         # Construct model path
         model_path = archive_dir / model_obj.path
@@ -405,7 +404,7 @@ async def estimate_ensemble(
         logger.debug(f"Found dataset: {dataset_obj.path}")
 
         # Get archive directory
-        archive_dir = Path(await anyio.path.abspath(global_config.storage.archive))
+        archive_dir = Path(await anyio.Path(global_config.storage.archive).absolute())
 
         # Construct input catalog path
         input_path = archive_dir / dataset_obj.path

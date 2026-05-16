@@ -1,6 +1,7 @@
 """Common configuration parameters for pz-rail-service related packages"""
 
 import os
+from typing import Any
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -10,6 +11,57 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 __all__ = ["Configuration", "config"]
 
 load_dotenv()
+
+
+class ClientCookie(BaseModel):
+    """Pydantic model for cookies"""
+
+    name: str
+    value: str
+
+
+class ClientConfiguration(BaseSettings):
+    """Configuration for cm-client."""
+
+    model_config = SettingsConfigDict(env_file="~/.pz-rail-service", env_file_encoding="utf-8")
+
+    service_url: str = Field(
+        default="http://localhost:8080/pz-rail-service/v1",
+        validation_alias="PZ_RAIL_SERVICE",
+    )
+
+    auth_token: str | None = Field(
+        default=None,
+        validation_alias="PZ_RAIL_TOKEN",
+    )
+
+    cookies: list[ClientCookie] | None = Field(
+        description=(
+            "Comma separated list of pipe-separated cookie names and values, e.g., `name|value,name|value`"
+        ),
+        default=None,
+        validation_alias="PZ_RAIL_COOKIES",
+    )
+
+    timeout: float | None = Field(
+        default=None,
+        validation_alias="PZ_RAIL_TIMEOUT",
+    )
+
+    # Field validator to convert empty string, 'null', or 'None' to actual None
+    @field_validator("timeout", mode="before", check_fields=True)
+    @classmethod
+    def validate_timeout(cls, v: Any) -> float | None:
+        if isinstance(v, str) and v in {"", "null", "None"}:  # pragma: no cover
+            return None
+        return v
+
+    @field_validator("cookies", mode="before", check_fields=True)
+    @classmethod
+    def validate_cookies(cls, v: Any) -> list[ClientCookie] | None:
+        if v is None:  # pragma: no cover
+            return v
+        return [ClientCookie(name=n, value=v) for n, v in [a.split("|") for a in v.split(",")]]
 
 
 class WebInterfaceConfiguration(BaseModel):
@@ -219,6 +271,7 @@ class Configuration(BaseSettings):
     web_interface: WebInterfaceConfiguration = WebInterfaceConfiguration()
     asgi: AsgiConfiguration = AsgiConfiguration()
     daemon: DaemonConfiguration = DaemonConfiguration()
+    client: ClientConfiguration = ClientConfiguration()
     db: DatabaseConfiguration = DatabaseConfiguration()
     logging: LoggingConfiguration = LoggingConfiguration()
     storage: StorageConfiguration = StorageConfiguration()
