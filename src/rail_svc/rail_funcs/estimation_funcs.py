@@ -37,6 +37,7 @@ class CatEstimatorWrapperBase(ABC):
     @abstractmethod
     def _build_wrapper(
         cls: type[T],
+        estim_name: str,
         estim_class: type[CatEstimator],
         **kwargs: Any,
     ) -> T:
@@ -48,6 +49,8 @@ class CatEstimatorWrapperBase(ABC):
 
         Parameters
         ----------
+        estim_name
+            Name for this estimator
         estim_class
             The CatEstimator class to wrap.
         **kwargs
@@ -59,6 +62,9 @@ class CatEstimatorWrapperBase(ABC):
             An instance of the wrapper subclass.
         """
 
+    def __init__(self, estim_name: str) -> None:
+        self._estim_name = estim_name
+        
     @abstractmethod
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         """
@@ -157,8 +163,13 @@ class CatEstimatorWrapperBase(ABC):
         all_kwargs = kwargs.copy()
         all_kwargs["model"] = str(model_path)
 
-        return cls._build_wrapper(estim_class, **all_kwargs)
+        return cls._build_wrapper(estim_name, estim_class, **all_kwargs)
 
+    @property
+    def estim_name(self) -> str:
+        """Return name identifier for the estimator"""
+        return self._estim_name
+    
 
 class CatEstimatorPdfWrapper(CatEstimatorWrapperBase):
     """
@@ -178,6 +189,7 @@ class CatEstimatorPdfWrapper(CatEstimatorWrapperBase):
 
     def __init__(
         self,
+        estim_name: str,
         cat_estimator: CatEstimator,
         names: list[str],
     ):
@@ -186,6 +198,8 @@ class CatEstimatorPdfWrapper(CatEstimatorWrapperBase):
 
         Parameters
         ----------
+        estim_name
+            Name identifier for the estimator (for logging/tracking).
         cat_estimator
             CatEstimator instance to wrap.
         names
@@ -197,6 +211,8 @@ class CatEstimatorPdfWrapper(CatEstimatorWrapperBase):
         initialize the estimator's output handle. This ensures the
         estimator is fully configured for subsequent calls.
         """
+        CatEstimatorWrapperBase.__init__(self, estim_name)
+        
         self._estimator = cat_estimator
 
         # Set up the estimator
@@ -290,6 +306,7 @@ class CatEstimatorPdfWrapper(CatEstimatorWrapperBase):
     @classmethod
     def _build_wrapper(
         cls,
+        estim_name: str, 
         estim_class: type[CatEstimator],
         **kwargs: Any,
     ) -> CatEstimatorPdfWrapper:
@@ -301,6 +318,8 @@ class CatEstimatorPdfWrapper(CatEstimatorWrapperBase):
 
         Parameters
         ----------
+        estim_name
+            Name identifier for the estimator (for logging/tracking).
         estim_class
             The CatEstimator class to instantiate.
         **kwargs
@@ -329,7 +348,7 @@ class CatEstimatorPdfWrapper(CatEstimatorWrapperBase):
 
         # Create estimator and wrapper
         estimator = estim_class.make_stage(**all_kwargs)
-        wrapper = cls(estimator, var_names)
+        wrapper = cls(estim_name, estimator, var_names)
         return wrapper
 
 
@@ -349,6 +368,7 @@ class CatEstimatorEnsembleWrapper(CatEstimatorWrapperBase):
 
     def __init__(
         self,
+        estim_name: str, 
         cat_estimator: CatEstimator,
     ):
         """
@@ -356,9 +376,12 @@ class CatEstimatorEnsembleWrapper(CatEstimatorWrapperBase):
 
         Parameters
         ----------
+        estim_name
+            Name identifier for the estimator (for logging/tracking).
         cat_estimator
             CatEstimator instance to wrap.
         """
+        CatEstimatorWrapperBase.__init__(self, estim_name)        
         self._estimator = cat_estimator
 
     def __call__(self, input_file: Path | str, output_file: Path | str) -> Any:
@@ -413,6 +436,7 @@ class CatEstimatorEnsembleWrapper(CatEstimatorWrapperBase):
     @classmethod
     def _build_wrapper(
         cls,
+        estim_name: str,
         estim_class: type[CatEstimator],
         **kwargs: Any,
     ) -> CatEstimatorEnsembleWrapper:
@@ -424,6 +448,8 @@ class CatEstimatorEnsembleWrapper(CatEstimatorWrapperBase):
 
         Parameters
         ----------
+        estim_name
+            Name identifier for the estimator (for logging/tracking).
         estim_class
             The CatEstimator class to instantiate.
         **kwargs
@@ -435,5 +461,5 @@ class CatEstimatorEnsembleWrapper(CatEstimatorWrapperBase):
             Configured wrapper instance.
         """
         estimator = estim_class.make_stage(**kwargs)
-        wrapper = cls(estimator)
+        wrapper = cls(estim_name, estimator)
         return wrapper

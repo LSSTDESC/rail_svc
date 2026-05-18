@@ -85,3 +85,15 @@ def create_matched_dataset(
             n_objects,
         )
     )
+
+
+def build_cat_estimator_pdf_wrappers_for_dataset(
+    dataset_id: int,
+) -> list[CatEstimatorPdfWrapper]:
+    return asyncio.run(local_async.funcs.build_cat_estimator_pdf_wrappers_for_dataset(dataset_id))
+        
+    
+def build_cat_estimator_ensemble_wrappers_for_dataset(
+    dataset_id: int,
+) -> list[CatEstimatorEnsembleWrapper]:
+    return asyncio.run(local_async.funcs.build_cat_estimator_ensemble_wrappers_for_dataset(dataset_id))

@@ -451,3 +451,65 @@ async def estimate_ensemble(
     except Exception as e:
         logger.error(f"Failed to estimate ensemble: {e}")
         raise
+
+
+
+async def get_estimators_for_dataest(
+    session: AsyncSession,
+    dataset_id: int,
+) -> list[db.Estimator]:
+
+    all_estimators: list[db.Estimator] = []
+    
+    try:
+        # Get the associationed dataset
+        the_dataset = await dataset.get_row(session, dataset_id)
+
+        # Get the associated catalog_tag
+        the_catalog_tag = await catalog_tag.get_row(session, the_dataset.catalog_tag_id)
+
+        # Get all models that use that catalog tag
+        the_models = await model.find_by(session, catalog_tag_id=the_catalog_tag.id_)
+
+        # For each model, get all the estimators
+        for a_model in the_models:
+            all_estimators += await estimator.find_by(session, model_id=a_model.id_)
+
+        return all_estimators
+
+    except (ValueError):
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get estimators: {e}")
+        raise
+
+
+async def build_cat_estimator_pdf_wrappers_for_dataset(
+    session: AsyncSession,
+    dataset_id: int,
+) -> list[CatEstimatorPdfWrapper]:
+    the_estimators = await get_estimators_for_dataest(session, dataset_id)
+    ret_list = []
+    for estimator_ in the_estimators:
+        try:
+            ret_list.append(await build_pdf_estimation_wrapper(session, estimator_.id_))
+        except Exception as exc:
+            logger.warn(f"Failed to build estimator {estimator} because {exc}")
+
+    return ret_list
+    
+    
+async def build_cat_estimator_ensemble_wrappers_for_dataset(
+    session: AsyncSession,
+    dataset_id: int,
+) -> list[CatEstimatorEnsembleWrapper]:
+    the_estimators = await get_estimators_for_dataest(session, dataset_id)
+    ret_list = []
+    for estimator_ in the_estimators:
+        try:
+            ret_list.append(await build_ensemble_estimation_wrapper(session, estimator_.id_))
+        except Exception as exc:
+            logger.warn(f"Failed to build estimator {estimator} because {exc}")
+
+    return ret_list
+
