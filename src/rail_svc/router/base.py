@@ -1,8 +1,10 @@
-from typing import Any, AsyncGenerator, TypeVar, Generic
-import logging
-from functools import wraps
+from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query, Body, Depends, Header, status
+from typing import Any, TypeVar
+from collections.abc import AsyncGenerator
+import logging
+
+from fastapi import APIRouter, HTTPException, Query, Body, Header, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ValidationError
 
@@ -32,7 +34,7 @@ class CountResponse(BaseModel):
     count: int
 
 
-class LookupResponse(BaseModel, Generic[ResponseT]):
+class LookupResponse[ResponseT](BaseModel):
     """Response model for lookup operations."""
 
     id: int
@@ -66,7 +68,7 @@ class FindRequest(BaseModel):
         extra = "allow"  # Allow additional fields for query params
 
 
-def require_auth(authorization: str = Header(None)):
+def require_auth(authorization: str = Header(None)) -> str:
     """Dependency to require authentication.
 
     Parameters
@@ -187,10 +189,16 @@ def create_table_router[T, ResponseT: BaseModel, CreateT: BaseModel](
     """
     router = APIRouter(prefix=f"/{name}", tags=[name])
 
+    # Extract the response model type from operations
+    # This gets the actual Pydantic model class at runtime
+    response_model = operations._table_ops.ctx.response_class
+
     # CREATE endpoints
-    @router.post("/create_row", status_code=status.HTTP_201_CREATED, response_model=ResponseT)
+    @router.post("/create_row", status_code=status.HTTP_201_CREATED, response_model=response_model)
     async def create_row(
-        data: dict = Body(...), validate: bool = Query(True, description="Whether to validate data")
+        data: dict = Body(...),
+        *,
+        validate: bool = Query(default=True, description="Whether to validate data")
     ) -> ResponseT:
         """Create a single row.
 
@@ -219,7 +227,9 @@ def create_table_router[T, ResponseT: BaseModel, CreateT: BaseModel](
 
     @router.post("/create_rows", status_code=status.HTTP_201_CREATED, response_model=list[ResponseT])
     async def create_rows(
-        data: list[dict] = Body(...), validate: bool = Query(True, description="Whether to validate data")
+        data: list[dict] = Body(...),
+        *,
+        validate: bool = Query(default=True, description="Whether to validate data")
     ) -> list[ResponseT]:
         """Create multiple rows.
 
@@ -254,7 +264,8 @@ def create_table_router[T, ResponseT: BaseModel, CreateT: BaseModel](
     @router.post("/create_rows_batched", status_code=status.HTTP_201_CREATED, response_model=list[ResponseT])
     async def create_rows_batched(
         data: list[dict] = Body(...),
-        validate: bool = Query(True, description="Whether to validate data"),
+        *,
+        validate: bool = Query(default=True, description="Whether to validate data"),
         batch_size: int = Query(1000, ge=1, le=10000, description="Size of each batch"),
     ) -> list[ResponseT]:
         """Create multiple rows in batches.
@@ -285,7 +296,9 @@ def create_table_router[T, ResponseT: BaseModel, CreateT: BaseModel](
 
     @router.post("/bulk_insert_rows", status_code=status.HTTP_201_CREATED, response_model=CountResponse)
     async def bulk_insert_rows(
-        data: list[dict] = Body(...), validate: bool = Query(True, description="Whether to validate data")
+        data: list[dict] = Body(...),
+        *,
+        validate: bool = Query(default=True, description="Whether to validate data")
     ) -> CountResponse:
         """Bulk insert rows (returns count only).
 
@@ -319,8 +332,8 @@ def create_table_router[T, ResponseT: BaseModel, CreateT: BaseModel](
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
     # READ endpoints
-    @router.get(f"/get_row/{{{id_param}}}", response_model=ResponseT)
-    async def get_row(**kwargs) -> ResponseT:
+    @router.get(f"/get_row/{{{id_param}}}", response_model=response_model)
+    async def get_row(**kwargs: Any) -> ResponseT:
         """Get a single row by ID.
 
         Path Parameters:
@@ -343,8 +356,8 @@ def create_table_router[T, ResponseT: BaseModel, CreateT: BaseModel](
             logger.exception("Error getting row")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    @router.get(f"/get_row_or_none/{{{id_param}}}", response_model=ResponseT | None)
-    async def get_row_or_none(**kwargs) -> ResponseT | None:
+    @router.get(f"/get_row_or_none/{{{id_param}}}", response_model=response_model | None)
+    async def get_row_or_none(**kwargs: Any) -> ResponseT | None:
         """Get a single row by ID or None if not found.
 
         Path Parameters:
@@ -362,7 +375,7 @@ def create_table_router[T, ResponseT: BaseModel, CreateT: BaseModel](
             logger.exception("Error getting row or none")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    @router.get("/get_row_by_name/{name}", response_model=ResponseT)
+    @router.get("/get_row_by_name/{name}", response_model=response_model)
     async def get_row_by_name(name: str) -> ResponseT:
         """Get a single row by name.
 
@@ -429,7 +442,7 @@ def create_table_router[T, ResponseT: BaseModel, CreateT: BaseModel](
             Each line is a complete JSON object representing one row.
         """
 
-        async def generate():
+        async def generate() -> AsyncGenerator:
             try:
                 async for row in operations.get_rows_streaming(skip=skip, limit=limit):
                     yield row.model_dump_json() + "\n"
@@ -494,9 +507,9 @@ def create_table_router[T, ResponseT: BaseModel, CreateT: BaseModel](
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
     # UPDATE endpoints
-    @router.put(f"/update_row/{{{id_param}}}", response_model=ResponseT)
-    @router.patch(f"/update_row/{{{id_param}}}", response_model=ResponseT)
-    async def update_row(data: dict = Body(...), **kwargs) -> ResponseT:
+    @router.put(f"/update_row/{{{id_param}}}", response_model=response_model)
+    @router.patch(f"/update_row/{{{id_param}}}", response_model=response_model)
+    async def update_row(data: dict = Body(...), **kwargs: Any) -> ResponseT:
         """Update a single row.
 
         Path Parameters:
@@ -571,9 +584,11 @@ def create_table_router[T, ResponseT: BaseModel, CreateT: BaseModel](
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
     # DELETE endpoints
-    @router.delete(f"/delete_row/{{{id_param}}}", response_model=ResponseT | DeleteResponse)
+    @router.delete(f"/delete_row/{{{id_param}}}", response_model=response_model | DeleteResponse)
     async def delete_row(
-        capture_data: bool = Query(True, description="Whether to return deleted row data"), **kwargs
+        *,
+        capture_data: bool = Query(default=True, description="Whether to return deleted row data"),
+        **kwargs: Any
     ) -> ResponseT | DeleteResponse:
         """Delete a single row.
 
@@ -607,7 +622,8 @@ def create_table_router[T, ResponseT: BaseModel, CreateT: BaseModel](
     @router.delete("/delete_rows", response_model=list[ResponseT] | CountResponse)
     async def delete_rows(
         data: list[int] = Body(...),
-        capture_data: bool = Query(False, description="Whether to return deleted row data"),
+        *,
+        capture_data: bool = Query(default=False, description="Whether to return deleted row data"),
     ) -> list[ResponseT] | CountResponse:
         """Delete multiple rows.
 
@@ -744,7 +760,7 @@ def create_table_router[T, ResponseT: BaseModel, CreateT: BaseModel](
         # Validate pagination
         validate_pagination_params(request.skip, request.limit)
 
-        async def generate():
+        async def generate() -> AsyncGenerator:
             try:
                 async for row in operations.filter_rows_streaming(
                     filters=request.filters if request.filters else None,
@@ -795,7 +811,7 @@ def create_table_router[T, ResponseT: BaseModel, CreateT: BaseModel](
             logger.exception("Error counting filtered rows")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    @router.post("/filter_one", response_model=ResponseT)
+    @router.post("/filter_one", response_model=response_model)
     async def filter_one(request: FilterRequest) -> ResponseT:
         """Filter to get exactly one row.
 
@@ -835,7 +851,7 @@ def create_table_router[T, ResponseT: BaseModel, CreateT: BaseModel](
             logger.exception("Error filtering one row")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    @router.post("/filter_one_or_none", response_model=ResponseT | None)
+    @router.post("/filter_one_or_none", response_model=response_model | None)
     async def filter_one_or_none(request: FilterRequest) -> ResponseT | None:
         """Filter to get one row or None.
 
@@ -935,7 +951,7 @@ def create_table_router[T, ResponseT: BaseModel, CreateT: BaseModel](
             logger.exception("Error finding rows")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-    @router.post("/find_one_by", response_model=ResponseT)
+    @router.post("/find_one_by", response_model=response_model)
     async def find_one_by(data: dict = Body(...)) -> ResponseT:
         """Find exactly one row by field values.
 

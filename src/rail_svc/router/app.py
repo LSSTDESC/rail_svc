@@ -9,7 +9,6 @@ from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
-from pydantic import BaseModel
 
 from .. import local_async
 from .base import create_table_router
@@ -258,6 +257,7 @@ def add_error_handlers(app: FastAPI) -> None:
 
 def add_cors_middleware(
     app: FastAPI,
+    *,
     allow_origins: list[str] | None = None,
     allow_credentials: bool = True,
     allow_methods: list[str] | None = None,
@@ -356,6 +356,7 @@ def create_fastapi_app(
     title: str = "API",
     description: str = "FastAPI application",
     version: str = "1.0.0",
+    *,
     enable_rate_limiting: bool = False,
     rate_limits: list[str] | None = None,
     rate_limit_storage: str = "memory://",
@@ -441,6 +442,7 @@ def create_fastapi_app(
 
 def setup_fastapi_app(
     app: FastAPI,
+    *,
     enable_rate_limiting: bool = False,
     rate_limits: list[str] | None = None,
     rate_limit_storage: str = "memory://",

@@ -1,6 +1,6 @@
-from typing import Any, AsyncGenerator, TypeVar, Generic
+from typing import Any, TypeVar, cast
+from collections.abc import AsyncGenerator
 import logging
-from contextlib import asynccontextmanager
 
 import httpx
 from pydantic import BaseModel, ValidationError
@@ -28,7 +28,7 @@ class CountResponse(BaseModel):
     count: int
 
 
-class LookupResponse(BaseModel, Generic[ResponseT]):
+class LookupResponse[ResponseT](BaseModel):
     """Response model for lookup operations."""
 
     id: int
@@ -87,7 +87,9 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
         self.response_model = response_model
         self.create_model = create_model
 
-    def _handle_response(self, response: httpx.Response, expected_status: int = 200) -> dict[str, Any]:
+    def _handle_response(
+        self, response: httpx.Response, expected_status: int = 200
+    ) -> dict[str, Any] | list[dict[str, Any]] | None:
         """Handle HTTP response and raise appropriate errors.
 
         Parameters
@@ -124,7 +126,7 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
 
     # CREATE operations
 
-    async def create_row(self, validate: bool = True, **data) -> ResponseT:
+    async def create_row(self, *, validate: bool = True, **data: Any) -> ResponseT:
         """Create a single row.
 
         Parameters
@@ -152,10 +154,10 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
             params={"validate": validate},
         )
 
-        result = self._handle_response(response, expected_status=201)
+        result = cast(dict[str, Any], self._handle_response(response, expected_status=201))
         return self.response_model(**result)
 
-    async def create_rows(self, data: list[dict], validate: bool = True) -> list[ResponseT]:
+    async def create_rows(self, data: list[dict], *, validate: bool = True) -> list[ResponseT]:
         """Create multiple rows.
 
         Parameters
@@ -183,12 +185,13 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
             params={"validate": validate},
         )
 
-        result = self._handle_response(response, expected_status=201)
+        result = cast(list[dict[str, Any]], self._handle_response(response, expected_status=201))
         return [self.response_model(**item) for item in result]
 
     async def create_rows_batched(
         self,
         data: list[dict],
+        *,
         validate: bool = True,
         batch_size: int = 1000,
     ) -> list[ResponseT]:
@@ -221,10 +224,10 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
             params={"validate": validate, "batch_size": batch_size},
         )
 
-        result = self._handle_response(response, expected_status=201)
+        result = cast(list[dict[str, Any]], self._handle_response(response, expected_status=201))
         return [self.response_model(**item) for item in result]
 
-    async def bulk_insert_rows(self, data: list[dict], validate: bool = True) -> int:
+    async def bulk_insert_rows(self, data: list[dict], *, validate: bool = True) -> int:
         """Bulk insert rows (returns count only).
 
         Parameters
@@ -250,7 +253,7 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
             params={"validate": validate},
         )
 
-        result = self._handle_response(response, expected_status=201)
+        result = cast(dict[str, Any], self._handle_response(response, expected_status=201))
         return CountResponse(**result).count
 
     # READ operations
@@ -275,7 +278,7 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
         """
         response = await self.client.get(f"{self.endpoint}/get_row/{row_id}")
 
-        result = self._handle_response(response)
+        result = cast(dict[str, Any], self._handle_response(response))
         return self.response_model(**result)
 
     async def get_row_or_none(self, row_id: int) -> ResponseT | None:
@@ -298,7 +301,7 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
         """
         response = await self.client.get(f"{self.endpoint}/get_row_or_none/{row_id}")
 
-        result = self._handle_response(response)
+        result = cast(dict[str, Any] | None, self._handle_response(response))
         if result is None:
             return None
         return self.response_model(**result)
@@ -323,7 +326,7 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
         """
         response = await self.client.get(f"{self.endpoint}/get_row_by_name/{name}")
 
-        result = self._handle_response(response)
+        result = cast(dict[str, Any], self._handle_response(response))
         return self.response_model(**result)
 
     async def get_rows(self, skip: int = 0, limit: int | None = None) -> list[ResponseT]:
@@ -355,14 +358,14 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
             params=params,
         )
 
-        result = self._handle_response(response)
+        result = cast(list[dict[str, Any]], self._handle_response(response))
         return [self.response_model(**item) for item in result]
 
     async def get_rows_streaming(
         self,
         skip: int = 0,
         limit: int | None = None,
-    ) -> AsyncGenerator[ResponseT, None]:
+    ) -> AsyncGenerator[ResponseT]:
         """Get rows as a streaming response (NDJSON format).
 
         Parameters
@@ -435,7 +438,7 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
         """
         response = await self.client.get(f"{self.endpoint}/count_rows")
 
-        result = self._handle_response(response)
+        result = cast(dict[str, Any], self._handle_response(response))
         return CountResponse(**result).count
 
     async def lookup_by_id_or_name(
@@ -462,7 +465,7 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
         RemoteAPIError
             If neither id nor name is provided or the API request fails
         """
-        params = {}
+        params: dict[str, Any] = {}
         if id is not None:
             params["id"] = id
         if name is not None:
@@ -473,13 +476,13 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
             params=params,
         )
 
-        result = self._handle_response(response)
+        result = cast(dict[str, Any], self._handle_response(response))
         lookup_response = LookupResponse[self.response_model](**result)
         return lookup_response.id, self.response_model(**lookup_response.data.model_dump())
 
     # UPDATE operations
 
-    async def update_row(self, row_id: int, **data) -> ResponseT:
+    async def update_row(self, row_id: int, **data: Any) -> ResponseT:
         """Update a single row.
 
         Parameters
@@ -504,7 +507,7 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
             json=data,
         )
 
-        result = self._handle_response(response)
+        result = cast(dict[str, Any], self._handle_response(response))
         return self.response_model(**result)
 
     async def update_rows(self, data: list[dict]) -> list[ResponseT]:
@@ -532,12 +535,12 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
             json=data,
         )
 
-        result = self._handle_response(response)
+        result = cast(list[dict[str, Any]], self._handle_response(response))
         return [self.response_model(**item) for item in result]
 
     # DELETE operations
 
-    async def delete_row(self, row_id: int, capture_data: bool = True) -> ResponseT | None:
+    async def delete_row(self, row_id: int, *, capture_data: bool = True) -> ResponseT | None:
         """Delete a single row.
 
         Parameters
@@ -562,7 +565,7 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
             params={"capture_data": capture_data},
         )
 
-        result = self._handle_response(response)
+        result = cast(dict[str, Any], self._handle_response(response))
 
         if not capture_data or result.get("deleted"):
             return None
@@ -572,6 +575,7 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
     async def delete_rows(
         self,
         ids: list[int],
+        *,
         capture_data: bool = False,
     ) -> list[ResponseT] | int:
         """Delete multiple rows.
@@ -599,12 +603,12 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
             params={"capture_data": capture_data},
         )
 
-        result = self._handle_response(response)
+        result = cast(list[dict[str, Any]] | dict[str, Any], self._handle_response(response))
 
         if capture_data:
-            return [self.response_model(**item) for item in result]
+            return [self.response_model(**item) for item in cast(list[dict[str, Any]], result)]
         else:
-            return CountResponse(**result).count
+            return CountResponse(**cast(dict[str, Any], result)).count
 
     async def bulk_delete_rows(self, ids: list[int]) -> int:
         """Bulk delete rows (returns count only).
@@ -629,7 +633,7 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
             json=ids,
         )
 
-        result = self._handle_response(response)
+        result = cast(dict[str, Any], self._handle_response(response))
         return CountResponse(**result).count
 
     # FILTER/QUERY operations
@@ -680,7 +684,7 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
             json=request_data.model_dump(mode="json"),
         )
 
-        result = self._handle_response(response)
+        result = cast(list[dict[str, Any]], self._handle_response(response))
         return [self.response_model(**item) for item in result]
 
     async def filter_rows_streaming(
@@ -690,7 +694,7 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
         order_by: OrderBy | list[OrderBy] | None = None,
         skip: int = 0,
         limit: int | None = None,
-    ) -> AsyncGenerator[ResponseT, None]:
+    ) -> AsyncGenerator[ResponseT]:
         """Filter rows with streaming response (NDJSON format).
 
         Parameters
@@ -787,7 +791,7 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
             json=request_data.model_dump(mode="json"),
         )
 
-        result = self._handle_response(response)
+        result = cast(dict[str, Any], self._handle_response(response))
         return CountResponse(**result).count
 
     async def filter_one(
@@ -824,7 +828,7 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
             json=request_data.model_dump(mode="json"),
         )
 
-        result = self._handle_response(response)
+        result = cast(dict[str, Any], self._handle_response(response))
         return self.response_model(**result)
 
     async def filter_one_or_none(
@@ -861,7 +865,7 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
             json=request_data.model_dump(mode="json"),
         )
 
-        result = self._handle_response(response)
+        result = cast(dict[str, Any] | None, self._handle_response(response))
         if result is None:
             return None
         return self.response_model(**result)
@@ -871,7 +875,7 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
         order_by: OrderBy | list[OrderBy] | None = None,
         skip: int = 0,
         limit: int | None = None,
-        **query_params,
+        **query_params: Any,
     ) -> list[ResponseT]:
         """Find rows by field values.
 
@@ -920,10 +924,10 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
             json=request_body,
         )
 
-        result = self._handle_response(response)
+        result = cast(list[dict[str, Any]], self._handle_response(response))
         return [self.response_model(**item) for item in result]
 
-    async def find_one_by(self, **query_params) -> ResponseT:
+    async def find_one_by(self, **query_params: Any) -> ResponseT:
         """Find exactly one row by field values.
 
         Parameters
@@ -950,7 +954,7 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
             json=query_params,
         )
 
-        result = self._handle_response(response)
+        result = cast(dict[str, Any], self._handle_response(response))
         return self.response_model(**result)
 
 
@@ -1020,7 +1024,7 @@ class RemoteAPI:
         # Client will be initialized in __aenter__
         self.client: httpx.AsyncClient | None = None
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> httpx.RemoteAPI:
         """Async context manager entry."""
         self.client = httpx.AsyncClient(
             timeout=self.timeout,
@@ -1028,12 +1032,12 @@ class RemoteAPI:
         )
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         """Async context manager exit."""
         if self.client:
             await self.client.aclose()
 
-    def _check_client(self):
+    def _check_client(self) -> None:
         """Ensure client is initialized."""
         if self.client is None:
             raise RemoteAPIError("Client not initialized. Use 'async with RemoteAPI(...)' context manager.")
@@ -1080,7 +1084,7 @@ class RemoteAPI:
         endpoint = f"{self.base_url}{self.api_prefix}/{table_name}"
 
         return RemoteTableOperations[T, ResponseT, CreateT](
-            client=self.client,
+            client=cast(httpx.AsyncClient, self.client),
             endpoint=endpoint,
             response_model=response_model,
             create_model=create_model,

@@ -1,11 +1,11 @@
-from typing import Any, TypeVar
+from __future__ import annotations
+from typing import TypeVar
 import logging
-from contextlib import asynccontextmanager
 
-import httpx
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
+from typing import Final
+from .base import RemoteTableOperations, RemoteAPI
 
-from ..db_funcs.filter import Filter, OrderBy
 from .. import models
 
 # Configure logging
@@ -17,9 +17,6 @@ ResponseT = TypeVar("ResponseT", bound=BaseModel)  # Response schema type
 CreateT = TypeVar("CreateT", bound=BaseModel)  # Create schema type
 
 
-from typing import Final
-from .base import RemoteTableOperations, RemoteAPI
-
 # Define table configuration
 TABLE_CONFIGS: Final[dict[str, tuple[type[BaseModel], type[BaseModel]]]] = {
     "algorithms": (models.Algorithm, models.AlgorithmCreate),
@@ -27,7 +24,7 @@ TABLE_CONFIGS: Final[dict[str, tuple[type[BaseModel], type[BaseModel]]]] = {
     "catalog_band_assocs": (models.CatalogBandAssoc, models.CatalogBandAssocCreate),
     "catalog_tags": (models.CatalogTag, models.CatalogTagCreate),
     "datasets": (models.Dataset, models.DatasetCreate),
-    "estimates": (models.Estimate, models.EstimateCreate),
+    "estimates": (models.Estimates, models.EstimatesCreate),
     "estimators": (models.Estimator, models.EstimatorCreate),
     "models": (models.Model, models.ModelCreate),
 }
@@ -49,7 +46,7 @@ class RemoteDatabase:
         self.auth_token = auth_token
         self._api: RemoteAPI | None = None
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> RemoteDatabase:
         self._api = RemoteAPI(
             base_url=self.base_url,
             api_prefix=self.api_prefix,
@@ -60,11 +57,11 @@ class RemoteDatabase:
         self._setup_clients()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         if self._api:
             await self._api.__aexit__(exc_type, exc_val, exc_tb)
 
-    def _setup_clients(self):
+    def _setup_clients(self) -> None:
         """Setup all table clients dynamically."""
         assert self._api is not None, "API not initialized"
 
