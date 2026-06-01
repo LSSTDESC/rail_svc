@@ -4,7 +4,7 @@ import json
 import logging
 from collections.abc import AsyncGenerator
 from types import TracebackType
-from typing import Any, TypeVar, cast
+from typing import Any, cast
 
 import httpx
 from pydantic import BaseModel, ValidationError
@@ -15,13 +15,8 @@ from ..models import (CountResponse, Filter, FilterRequest, LookupResponse,
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Type variables for generic operations
-T = TypeVar("T")  # Database model type
-ResponseT = TypeVar("ResponseT", bound=BaseModel)  # Response schema type
-CreateT = TypeVar("CreateT", bound=BaseModel)  # Create schema type
 
-
-class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
+class RemoteTableOperations[ResponseT: BaseModel, CreateT: BaseModel]:
     """Remote client for table operations via HTTP API.
 
     This class provides the same interface as LocalOperations but executes
@@ -445,7 +440,7 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
         )
 
         result = cast(dict[str, Any], self._handle_response(response))
-        lookup_response = LookupResponse[self.response_model](**result)
+        lookup_response = LookupResponse[ResponseT](**result)
         return lookup_response.id, self.response_model(**lookup_response.data.model_dump())
 
     # UPDATE operations
@@ -1014,12 +1009,13 @@ class RemoteAPI:
         if self.client is None:
             raise RemoteAPIError("Client not initialized. Use 'async with RemoteAPI(...)' context manager.")
 
-    def table[T, ResponseT: BaseModel, CreateT: BaseModel](
+    # mypy doesn't fully support PEP 695 method-level generics yet
+    def table[ResponseT, CreateT](
         self,
         table_name: str,
         response_model: type[ResponseT],
         create_model: type[CreateT],
-    ) -> RemoteTableOperations[T, ResponseT, CreateT]:
+    ) -> RemoteTableOperations[ResponseT, CreateT]:  # type: ignore[type-var]
         """Create a table operations client for a specific table.
 
         Parameters
@@ -1055,7 +1051,8 @@ class RemoteAPI:
 
         endpoint = f"{self.base_url}{self.api_prefix}/{table_name}"
 
-        return RemoteTableOperations[T, ResponseT, CreateT](
+        # mypy doesn't fully support PEP 695 method-level generics yet
+        return RemoteTableOperations[ResponseT, CreateT](  # type: ignore[type-var]
             client=cast(httpx.AsyncClient, self.client),
             endpoint=endpoint,
             response_model=response_model,

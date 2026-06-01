@@ -1,5 +1,5 @@
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -94,7 +94,7 @@ def register_all_routers(app: FastAPI, prefix: str = "/api/v1") -> None:
 
 
 def add_rate_limiting(
-    app: FastAPI, default_limits: list[str] | None = None, storage_uri: str = "memory://"
+    app: FastAPI, default_limits: Sequence[str] | None = None, storage_uri: str = "memory://"
 ) -> Limiter | None:
     """Add rate limiting to the FastAPI app.
 
@@ -135,7 +135,7 @@ def add_rate_limiting(
 
         limiter = Limiter(
             key_func=get_remote_address,
-            default_limits=default_limits,
+            default_limits=list(default_limits),
             storage_uri=storage_uri,
         )
 
@@ -143,7 +143,7 @@ def add_rate_limiting(
         app.state.limiter = limiter
 
         # Add exception handler for rate limit exceeded
-        app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+        app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore
 
         logger.info(f"Rate limiting enabled: {default_limits}")
         return limiter
@@ -168,7 +168,7 @@ def add_health_check(app: FastAPI) -> None:
     """
 
     @app.get("/health", tags=["health"])
-    async def health_check() -> dict[str, Any]:
+    async def health_check() -> JSONResponse:
         """Health check endpoint.
 
         Returns
@@ -183,7 +183,10 @@ def add_health_check(app: FastAPI) -> None:
         """
         try:
             # Add any health checks here (database connection, etc.)
-            return {"status": "healthy", "service": "api", "version": "1.0.0"}
+            return JSONResponse(
+                status_code=200,
+                content={"status": "healthy", "service": "api", "version": "1.0.0"}
+            )
         except Exception as e:
             logger.exception("Health check failed")
             return JSONResponse(

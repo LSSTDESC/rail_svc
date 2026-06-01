@@ -2,24 +2,19 @@ from __future__ import annotations
 
 import logging
 from collections.abc import AsyncGenerator
-from typing import Any, TypeVar
+from typing import Any
 
 from fastapi import APIRouter, Body, Header, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ValidationError
 
+from ..db.base import Base
 from ..local_async import LocalOperations
 from ..models import (CountResponse, DeleteResponse, FilterRequest,
                       LookupResponse, OrderBy)
 
 # Configure logging
 logger = logging.getLogger(__name__)
-
-# Type variables for generic operations
-T = TypeVar("T")  # Database model type
-ResponseT = TypeVar("ResponseT", bound=BaseModel)  # Response schema type
-CreateT = TypeVar("CreateT", bound=BaseModel)  # Create schema type
-
 
 
 def require_auth(authorization: str = Header(None)) -> str:
@@ -120,7 +115,7 @@ def validate_batch_size(batch_size: int) -> int:
     return batch_size
 
 
-def create_table_router[T, ResponseT: BaseModel, CreateT: BaseModel](
+def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     name: str,
     operations: LocalOperations[T, ResponseT, CreateT],
     id_param: str = "id",
@@ -567,7 +562,7 @@ def create_table_router[T, ResponseT: BaseModel, CreateT: BaseModel](
 
             if result is None:
                 return DeleteResponse()
-            return result
+            return response_model(**result)
         except HTTPException:
             raise
         except Exception as e:
@@ -608,7 +603,8 @@ def create_table_router[T, ResponseT: BaseModel, CreateT: BaseModel](
         try:
             result = await operations.delete_rows(data, capture_data=capture_data)
             if capture_data:
-                return result
+                assert result is not None
+                return [response_model(**item_) for item_ in result]
             return CountResponse(count=len(data))
         except Exception as e:
             logger.exception("Error deleting rows")
@@ -880,7 +876,7 @@ def create_table_router[T, ResponseT: BaseModel, CreateT: BaseModel](
         validate_pagination_params(skip, limit)
 
         # Parse order_by if provided
-        order_by = None
+        order_by: list[OrderBy] | OrderBy | None = None
         if order_by_data:
             try:
                 if isinstance(order_by_data, list):
