@@ -387,18 +387,20 @@ def make_catalog_band_assoc_create_models(
             # Get band-specific config or use defaults
             band_config = bands.get(band_key, {})
             band_info = ct.config.bands[band_key]
-            
+
             # Determine filter name
             band_name = band_config.get("filter", ct.config.filter_template.format(band=band_key))
 
             # Determine magnitude column name
             mag_column_name = band_info.get(
-                "mag_column_name", ct.config.mag_column_template.format(band=band_key),
+                "mag_column_name",
+                ct.config.mag_column_template.format(band=band_key),
             )
 
             # Determine magnitude error column name
             mag_err_column_name = band_info.get(
-                "mag_err_column_name", ct.config.mag_err_column_template.format(band=band_key),
+                "mag_err_column_name",
+                ct.config.mag_err_column_template.format(band=band_key),
             )
 
             associations.append(

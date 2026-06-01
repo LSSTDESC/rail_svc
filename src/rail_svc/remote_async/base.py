@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import Any, TypeVar
 import types
 import warnings
+from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
-from .remote_client import RemoteTableOperations, RemoteAPI
-from ..db_funcs.filter import Filter, OrderBy
+from ..client.base import RemoteAPI, RemoteTableOperations
+from ..models import Filter, OrderBy
 
 # Type variables
 ResponseT = TypeVar("ResponseT", bound=BaseModel)
@@ -15,6 +15,38 @@ CreateT = TypeVar("CreateT", bound=BaseModel)
 
 
 class AsyncRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
+    """Async wrapper for remote table operations with connection management.
+
+    Provides async methods for CRUD operations on remote database tables via HTTP API.
+    Can be used as an async context manager for efficient connection reuse across
+    multiple operations, or as a regular class for single operations.
+
+    Type Parameters
+    ---------------
+    ResponseT : BaseModel
+        Pydantic model type for API responses
+    CreateT : BaseModel
+        Pydantic model type for create/input operations
+
+    Examples
+    --------
+    Using as async context manager (recommended for multiple operations):
+
+    >>> async with AsyncRemoteOperations(
+    ...     base_url="http://api.example.com",
+    ...     table_name="users",
+    ...     response_model=UserResponse,
+    ...     create_model=UserCreate,
+    ... ) as ops:
+    ...     user = await ops.create_row(name="Alice", email="alice@example.com")
+    ...     users = await ops.get_rows(limit=10)
+    ...     await ops.delete_row(user.id)
+
+    Using for single operations:
+
+    >>> ops = AsyncRemoteOperations(...)
+    >>> user = await ops.get_row(123)
+    """
 
     def __init__(
         self,

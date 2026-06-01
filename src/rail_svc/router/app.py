@@ -1,4 +1,5 @@
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -212,15 +213,25 @@ def add_error_handlers(app: FastAPI) -> None:
     """
 
     @app.exception_handler(404)
-    async def not_found_handler(request: Request, exc: Any) -> JSONResponse:
+    async def not_found_handler(request: Request, _exc: Any) -> JSONResponse:
         """Handle 404 errors."""
-        return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"error": "Endpoint not found"})
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={
+                "error": "Endpoint not found",
+                "request": request,
+            },
+        )
 
     @app.exception_handler(405)
-    async def method_not_allowed_handler(request: Request, exc: Any) -> JSONResponse:
+    async def method_not_allowed_handler(request: Request, _exc: Any) -> JSONResponse:
         """Handle 405 errors."""
         return JSONResponse(
-            status_code=status.HTTP_405_METHOD_NOT_ALLOWED, content={"error": "Method not allowed"}
+            status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+            content={
+                "error": "Method not allowed",
+                "request": request
+            },
         )
 
     @app.exception_handler(RequestValidationError)
@@ -228,7 +239,11 @@ def add_error_handlers(app: FastAPI) -> None:
         """Handle validation errors."""
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={"error": "Validation error", "details": exc.errors()},
+            content={
+                "error": "Validation error",
+                "request": request,
+                "details": exc.errors()
+            },
         )
 
     @app.exception_handler(500)
@@ -237,7 +252,11 @@ def add_error_handlers(app: FastAPI) -> None:
         logger.exception("Internal server error")
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"error": "Internal server error", "details": str(exc) if app.debug else None},
+            content={
+                "error": "Internal server error",
+                "request": request,
+                "details": str(exc) if app.debug else None
+            },
         )
 
     @app.exception_handler(Exception)
@@ -248,6 +267,7 @@ def add_error_handlers(app: FastAPI) -> None:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "error": "Internal server error",
+                "request": request,
                 "details": str(exc) if app.debug else "An unexpected error occurred",
             },
         )
@@ -314,12 +334,12 @@ def add_cors_middleware(
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Lifespan context manager for startup and shutdown events.
 
     Parameters
     ----------
-    app : FastAPI
+    _app : FastAPI
         The FastAPI application instance
 
     Yields

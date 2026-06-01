@@ -14,7 +14,7 @@ Examples
 """
 
 from .. import models
-from ...config import config as global_config
+from ..config import config as global_config
 from .base import AsyncRemoteOperations
 
 BASE_URL = global_config.client.service_url

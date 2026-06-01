@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 
 from ...db.base import Base
 from ...db.session import init_db
-from ...db_funcs.filter import Filter, FilterOp, OrderBy
+from ...models import Filter, FilterOp, OrderBy
 from ...local_sync.base import SyncOperations
 from ...models.utils import OutputEnum, output_pydantic
 from .. import common_options
@@ -1100,7 +1100,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                     except json.JSONDecodeError:
                         value = [value_str]
 
-                filters.append(Filter(field_name, op, value))
+                filters.append(Filter(field=field_name, op=op, value=value))
 
             # Parse order_by
             order_by_list = []
@@ -1108,7 +1108,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 parts = order_spec.split(":", 1)
                 field_name = parts[0]
                 descending = len(parts) > 1 and parts[1].lower() == "desc"
-                order_by_list.append(OrderBy(field_name, descending=descending))
+                order_by_list.append(OrderBy(field=field_name, descending=descending))
 
             try:
                 rows = self.sync_oper.filter_rows(
@@ -1186,7 +1186,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                     except json.JSONDecodeError:
                         value = [value_str]
 
-                filters.append(Filter(field_name, op, value))
+                filters.append(Filter(field=field_name, op=op, value=value))
 
             try:
                 count = self.sync_oper.count_filtered_rows(
@@ -1263,7 +1263,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 parts = order_spec.split(":", 1)
                 field_name = parts[0]
                 descending = len(parts) > 1 and parts[1].lower() == "desc"
-                order_by_list.append(OrderBy(field_name, descending=descending))
+                order_by_list.append(OrderBy(field=field_name, descending=descending))
 
             try:
                 rows = self.sync_oper.find_by(

@@ -17,7 +17,7 @@ from structlog import get_logger
 from .. import db_funcs
 from ..config import config as global_config
 from ..db.base import Base, ensure_base_inheritance
-from ..db_funcs.filter import Filter, OrderBy
+from ..models import Filter, OrderBy
 
 logger = get_logger(__name__)
 

@@ -5,7 +5,8 @@ import qp
 
 from .. import db_oper, models
 from ..db.session import get_session
-from ..rail_funcs.estimation_funcs import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
+from ..rail_funcs.estimation_funcs import (CatEstimatorEnsembleWrapper,
+                                           CatEstimatorPdfWrapper)
 
 
 async def build_pdf_estimation_wrapper(
@@ -124,18 +125,22 @@ async def create_matched_dataset(
                 db_oper.dataset_assoc.to_pydantic_list(db_dataset_assocs),
             )
 
+
 async def build_cat_estimator_pdf_wrappers_for_dataset(
     dataset_id: int,
 ) -> list[CatEstimatorPdfWrapper]:
     async with get_session() as session:
         async with session.begin():
-            return await db_oper.estimation_funcs.build_cat_estimator_pdf_wrappers_for_dataset(session, dataset_id)
-        
-    
+            return await db_oper.estimation_funcs.build_cat_estimator_pdf_wrappers_for_dataset(
+                session, dataset_id
+            )
+
+
 async def build_cat_estimator_ensemble_wrappers_for_dataset(
     dataset_id: int,
 ) -> list[CatEstimatorEnsembleWrapper]:
     async with get_session() as session:
         async with session.begin():
-            return await db_oper.estimation_funcs.build_cat_estimator_ensemble_wrappers_for_dataset(session, dataset_id)
-        
+            return await db_oper.estimation_funcs.build_cat_estimator_ensemble_wrappers_for_dataset(
+                session, dataset_id
+            )

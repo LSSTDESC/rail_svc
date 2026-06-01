@@ -10,8 +10,8 @@ from pydantic import BaseModel
 
 from .. import db, models
 from ..db.base import Base
-from ..db_funcs.filter import Filter, OrderBy
 from ..local_async.base import LocalOperations
+from ..models import Filter, OrderBy
 
 
 class SyncOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:

@@ -5,7 +5,8 @@ import numpy as np
 import qp
 
 from .. import local_async, models
-from ..rail_funcs.estimation_funcs import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
+from ..rail_funcs.estimation_funcs import (CatEstimatorEnsembleWrapper,
+                                           CatEstimatorPdfWrapper)
 
 
 def build_pdf_estimation_wrapper(
@@ -91,8 +92,8 @@ def build_cat_estimator_pdf_wrappers_for_dataset(
     dataset_id: int,
 ) -> list[CatEstimatorPdfWrapper]:
     return asyncio.run(local_async.funcs.build_cat_estimator_pdf_wrappers_for_dataset(dataset_id))
-        
-    
+
+
 def build_cat_estimator_ensemble_wrappers_for_dataset(
     dataset_id: int,
 ) -> list[CatEstimatorEnsembleWrapper]:

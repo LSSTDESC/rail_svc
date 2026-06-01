@@ -6,7 +6,6 @@ efficient streaming for large result sets.
 """
 
 from collections.abc import AsyncIterator, Sequence
-from enum import StrEnum
 from typing import Any
 
 import structlog
@@ -15,87 +14,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rail_svc.db.base import T, ensure_base_inheritance
 
+from ..models.filtering import Filter, FilterOp, OrderBy
+
 logger = structlog.get_logger(__name__)
 
-
-class FilterOp(StrEnum):
-    """Comparison operators for filtering."""
-
-    EQ = "eq"  # Equal (==)
-    NE = "ne"  # Not equal (!=)
-    LT = "lt"  # Less than (<)
-    LE = "le"  # Less than or equal (<=)
-    GT = "gt"  # Greater than (>)
-    GE = "ge"  # Greater than or equal (>=)
-    IN = "in"  # In list
-    NOT_IN = "not_in"  # Not in list
-    LIKE = "like"  # SQL LIKE pattern matching
-    ILIKE = "ilike"  # Case-insensitive LIKE
-    IS_NULL = "is_null"  # IS NULL
-    IS_NOT_NULL = "is_not_null"  # IS NOT NULL
-    BETWEEN = "between"  # BETWEEN two values
-    CONTAINS = "contains"  # Array contains (for PostgreSQL arrays)
-    STARTS_WITH = "starts_with"  # String starts with
-    ENDS_WITH = "ends_with"  # String ends with
-
-
-class Filter:
-    """Represents a single filter condition.
-
-    Parameters
-    ----------
-    field
-        Name of the column to filter on
-    op
-        Comparison operator to use
-    value
-        Value to compare against (not needed for IS_NULL/IS_NOT_NULL)
-
-    Examples
-    --------
-    >>> Filter("age", FilterOp.GT, 18)
-    >>> Filter("status", FilterOp.IN, ["active", "pending"])
-    >>> Filter("deleted_at", FilterOp.IS_NULL)
-    >>> Filter("name", FilterOp.LIKE, "John%")
-    """
-
-    def __init__(
-        self,
-        field: str,
-        op: FilterOp,
-        value: Any = None,
-    ):
-        self.field = field
-        self.op = op
-        self.value = value
-
-    def __repr__(self) -> str:
-        return f"Filter({self.field} {self.op} {self.value})"
-
-
-class OrderBy:
-    """Represents an ordering directive.
-
-    Parameters
-    ----------
-    field
-        Name of the column to order by
-    descending
-        If True, order descending; if False, order ascending
-
-    Examples
-    --------
-    >>> OrderBy("created_at", descending=True)  # Most recent first
-    >>> OrderBy("name", descending=False)       # Alphabetical
-    """
-
-    def __init__(self, field: str, *, descending: bool = False):
-        self.field = field
-        self.descending = descending
-
-    def __repr__(self) -> str:
-        direction = "DESC" if self.descending else "ASC"
-        return f"OrderBy({self.field} {direction})"
 
 
 def _apply_filter(
@@ -781,7 +703,7 @@ async def find_by(
     ensure_base_inheritance(the_class)
 
     # Convert kwargs to Filter objects
-    filters = [Filter(field, FilterOp.EQ, value) for field, value in kwargs.items()]
+    filters = [Filter(field=field, op=FilterOp.EQ, value=value) for field, value in kwargs.items()]
 
     return await filter_rows(
         the_class,
@@ -836,7 +758,7 @@ async def find_one_by(
     """
     ensure_base_inheritance(the_class)
 
-    filters = [Filter(field, FilterOp.EQ, value) for field, value in kwargs.items()]
+    filters = [Filter(field=field, op=FilterOp.EQ, value=value) for field, value in kwargs.items()]
 
     return await filter_one(the_class, session, filters=filters)
 

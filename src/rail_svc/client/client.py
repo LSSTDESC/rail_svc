@@ -1,12 +1,13 @@
 from __future__ import annotations
-from typing import TypeVar
+
 import logging
+from types import TracebackType
+from typing import Final, TypeVar
 
 from pydantic import BaseModel
-from typing import Final
-from .base import RemoteTableOperations, RemoteAPI
 
 from .. import models
+from .base import RemoteAPI, RemoteTableOperations
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -57,7 +58,12 @@ class RemoteDatabase:
         self._setup_clients()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         if self._api:
             await self._api.__aexit__(exc_type, exc_val, exc_tb)
 

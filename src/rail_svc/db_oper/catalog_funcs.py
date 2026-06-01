@@ -1,9 +1,9 @@
 from pathlib import Path
 
+import anyio
 import numpy as np
 import qp
 from sqlalchemy.ext.asyncio import AsyncSession
-import anyio
 
 from .. import db, rail_funcs
 from ..config import config as global_config

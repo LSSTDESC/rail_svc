@@ -64,7 +64,7 @@ class CatEstimatorWrapperBase(ABC):
 
     def __init__(self, estim_name: str) -> None:
         self._estim_name = estim_name
-        
+
     @abstractmethod
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         """
@@ -169,7 +169,7 @@ class CatEstimatorWrapperBase(ABC):
     def estim_name(self) -> str:
         """Return name identifier for the estimator"""
         return self._estim_name
-    
+
 
 class CatEstimatorPdfWrapper(CatEstimatorWrapperBase):
     """
@@ -212,7 +212,7 @@ class CatEstimatorPdfWrapper(CatEstimatorWrapperBase):
         estimator is fully configured for subsequent calls.
         """
         CatEstimatorWrapperBase.__init__(self, estim_name)
-        
+
         self._estimator = cat_estimator
 
         # Set up the estimator
@@ -306,7 +306,7 @@ class CatEstimatorPdfWrapper(CatEstimatorWrapperBase):
     @classmethod
     def _build_wrapper(
         cls,
-        estim_name: str, 
+        estim_name: str,
         estim_class: type[CatEstimator],
         **kwargs: Any,
     ) -> CatEstimatorPdfWrapper:
@@ -368,7 +368,7 @@ class CatEstimatorEnsembleWrapper(CatEstimatorWrapperBase):
 
     def __init__(
         self,
-        estim_name: str, 
+        estim_name: str,
         cat_estimator: CatEstimator,
     ):
         """
@@ -381,7 +381,7 @@ class CatEstimatorEnsembleWrapper(CatEstimatorWrapperBase):
         cat_estimator
             CatEstimator instance to wrap.
         """
-        CatEstimatorWrapperBase.__init__(self, estim_name)        
+        CatEstimatorWrapperBase.__init__(self, estim_name)
         self._estimator = cat_estimator
 
     def __call__(self, input_file: Path | str, output_file: Path | str) -> Any:

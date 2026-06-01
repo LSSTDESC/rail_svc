@@ -10,8 +10,8 @@ from pydantic import BaseModel
 from .. import db, models
 from ..db.base import Base
 from ..db.session import get_session
-from ..db_funcs.filter import Filter, OrderBy
 from ..db_oper.base import TableOperations
+from ..models import Filter, OrderBy
 
 
 class LocalOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:

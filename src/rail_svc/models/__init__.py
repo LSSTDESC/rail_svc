@@ -6,7 +6,10 @@ from .dataset import Dataset, DatasetCreate
 from .dataset_assoc import DatasetAssoc, DatasetAssocCreate
 from .estimates import Estimates, EstimatesCreate
 from .estimator import Estimator, EstimatorCreate
+from .filtering import Filter, FilterOp, OrderBy
 from .model import Model, ModelCreate
+from .web import (AsyncRouteError, CountResponse, DeleteResponse,
+                  FilterRequest, FindRequest, LookupResponse, RemoteAPIError)
 
 __all__ = [
     "Algorithm",
@@ -25,6 +28,16 @@ __all__ = [
     "EstimatesCreate",
     "Estimator",
     "EstimatorCreate",
+    "Filter",
+    "FilterOp",    
     "Model",
     "ModelCreate",
+    "OrderBy",
+    "AsyncRouteError",
+    "RemoteAPIError",    
+    "CountResponse",
+    "LookupResponse",
+    "DeleteResponse",
+    "FilterRequest",
+    "FindRequest",
 ]

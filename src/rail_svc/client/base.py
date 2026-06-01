@@ -1,11 +1,16 @@
-from typing import Any, TypeVar, cast
-from collections.abc import AsyncGenerator
+from __future__ import annotations
+
+import json
 import logging
+from collections.abc import AsyncGenerator
+from types import TracebackType
+from typing import Any, TypeVar, cast
 
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from ..db_funcs.filter import Filter, OrderBy
+from ..models import (CountResponse, Filter, FilterRequest, LookupResponse,
+                      OrderBy, RemoteAPIError)
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -14,41 +19,6 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")  # Database model type
 ResponseT = TypeVar("ResponseT", bound=BaseModel)  # Response schema type
 CreateT = TypeVar("CreateT", bound=BaseModel)  # Create schema type
-
-
-class RemoteAPIError(Exception):
-    """Custom exception for remote API errors."""
-
-    pass
-
-
-class CountResponse(BaseModel):
-    """Response model for count operations."""
-
-    count: int
-
-
-class LookupResponse[ResponseT](BaseModel):
-    """Response model for lookup operations."""
-
-    id: int
-    data: ResponseT
-
-
-class DeleteResponse(BaseModel):
-    """Response model for delete operations."""
-
-    deleted: bool = True
-
-
-class FilterRequest(BaseModel):
-    """Request model for filter operations."""
-
-    filters: list[Filter] = []
-    logical_op: str = "and"
-    order_by: OrderBy | list[OrderBy] | None = None
-    skip: int = 0
-    limit: int | None = None
 
 
 class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
@@ -414,11 +384,9 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
                         logger.error(f"Failed to parse streaming response: {e}")
                         # Check if it's an error message
                         try:
-                            import json
-
                             error_data = json.loads(line)
                             if "error" in error_data:
-                                raise RemoteAPIError(f"Stream error: {error_data['error']}")
+                                raise RemoteAPIError(f"Stream error: {error_data['error']}") from e
                         except json.JSONDecodeError:
                             pass
                         raise
@@ -443,14 +411,14 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
 
     async def lookup_by_id_or_name(
         self,
-        id: int | None = None,
+        id_: int | None = None,
         name: str | None = None,
     ) -> tuple[int, ResponseT]:
         """Lookup by ID or name.
 
         Parameters
         ----------
-        id : int | None
+        id_ : int | None
             Row ID (optional)
         name : str | None
             Row name (optional)
@@ -466,8 +434,8 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
             If neither id nor name is provided or the API request fails
         """
         params: dict[str, Any] = {}
-        if id is not None:
-            params["id"] = id
+        if id_ is not None:
+            params["id"] = id_
         if name is not None:
             params["name"] = name
 
@@ -597,7 +565,8 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
         RemoteAPIError
             If the API request fails
         """
-        response = await self.client.delete(
+        response = await self.client.request(
+            "DELETE",
             f"{self.endpoint}/delete_rows",
             json=ids,
             params={"capture_data": capture_data},
@@ -607,8 +576,7 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
 
         if capture_data:
             return [self.response_model(**item) for item in cast(list[dict[str, Any]], result)]
-        else:
-            return CountResponse(**cast(dict[str, Any], result)).count
+        return CountResponse(**cast(dict[str, Any], result)).count
 
     async def bulk_delete_rows(self, ids: list[int]) -> int:
         """Bulk delete rows (returns count only).
@@ -628,7 +596,8 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
         RemoteAPIError
             If the API request fails
         """
-        response = await self.client.delete(
+        response = await self.client.request(
+            "DELETE",
             f"{self.endpoint}/bulk_delete_rows",
             json=ids,
         )
@@ -748,11 +717,9 @@ class RemoteTableOperations[T, ResponseT: BaseModel, CreateT: BaseModel]:
                         logger.error(f"Failed to parse streaming response: {e}")
                         # Check if it's an error message
                         try:
-                            import json
-
                             error_data = json.loads(line)
                             if "error" in error_data:
-                                raise RemoteAPIError(f"Stream error: {error_data['error']}")
+                                raise RemoteAPIError(f"Stream error: {error_data['error']}") from e
                         except json.JSONDecodeError:
                             pass
                         raise
@@ -1024,7 +991,7 @@ class RemoteAPI:
         # Client will be initialized in __aenter__
         self.client: httpx.AsyncClient | None = None
 
-    async def __aenter__(self) -> httpx.RemoteAPI:
+    async def __aenter__(self) -> RemoteAPI:
         """Async context manager entry."""
         self.client = httpx.AsyncClient(
             timeout=self.timeout,
@@ -1032,7 +999,12 @@ class RemoteAPI:
         )
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Async context manager exit."""
         if self.client:
             await self.client.aclose()

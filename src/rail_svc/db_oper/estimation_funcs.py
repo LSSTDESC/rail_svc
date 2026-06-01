@@ -2,14 +2,15 @@ import logging
 from enum import Enum
 from pathlib import Path
 from typing import cast
-import anyio
 
+import anyio
 import qp
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import db
 from ..config import config as global_config
-from ..rail_funcs.estimation_funcs import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
+from ..rail_funcs.estimation_funcs import (CatEstimatorEnsembleWrapper,
+                                           CatEstimatorPdfWrapper)
 from . import catalog_funcs
 from .algorithm import algorithm
 from .catalog_tag import catalog_tag
@@ -453,14 +454,13 @@ async def estimate_ensemble(
         raise
 
 
-
 async def get_estimators_for_dataest(
     session: AsyncSession,
     dataset_id: int,
 ) -> list[db.Estimator]:
 
     all_estimators: list[db.Estimator] = []
-    
+
     try:
         # Get the associationed dataset
         the_dataset = await dataset.get_row(session, dataset_id)
@@ -477,7 +477,7 @@ async def get_estimators_for_dataest(
 
         return all_estimators
 
-    except (ValueError):
+    except ValueError:
         raise
     except Exception as e:
         logger.error(f"Failed to get estimators: {e}")
@@ -494,11 +494,11 @@ async def build_cat_estimator_pdf_wrappers_for_dataset(
         try:
             ret_list.append(await build_pdf_estimation_wrapper(session, estimator_.id_))
         except Exception as exc:
-            logger.warn(f"Failed to build estimator {estimator} because {exc}")
+            logger.warning(f"Failed to build estimator {estimator} because {exc}")
 
     return ret_list
-    
-    
+
+
 async def build_cat_estimator_ensemble_wrappers_for_dataset(
     session: AsyncSession,
     dataset_id: int,
@@ -509,7 +509,6 @@ async def build_cat_estimator_ensemble_wrappers_for_dataset(
         try:
             ret_list.append(await build_ensemble_estimation_wrapper(session, estimator_.id_))
         except Exception as exc:
-            logger.warn(f"Failed to build estimator {estimator} because {exc}")
+            logger.warning(f"Failed to build estimator {estimator} because {exc}")
 
     return ret_list
-
