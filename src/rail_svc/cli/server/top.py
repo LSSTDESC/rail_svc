@@ -15,19 +15,20 @@ from . import options
 @options.workers()
 @options.log_level()
 @options.api_prefix()
-@options.rate_limiting()
+@options.enable_rate_limiting()
 @options.rate_limit_storage()
-@options.cors()
+@options.enable_cors()
 @options.cors_origins()
 @options.debug()
 def serve(
+    *,
     host: str,
     port: int,
     reload: bool,
     workers: int,
     log_level: str,
     api_prefix: str,
-    rate_limiting: bool,
+    enable_rate_limiting: bool,
     rate_limit_storage: str,
     enable_cors: bool,
     cors_origins: str,
@@ -56,7 +57,7 @@ def serve(
         title="Database API",
         description="RESTful API for database operations with full CRUD support",
         version="1.0.0",
-        enable_rate_limiting=rate_limiting,
+        enable_rate_limiting=enable_rate_limiting,
         rate_limits=["1000 per day", "100 per hour"],
         rate_limit_storage=rate_limit_storage,
         enable_cors=enable_cors,

@@ -47,7 +47,7 @@ api_prefix = PartialOption(
 )
 
 
-rate_limiting = PartialOption(
+enable_rate_limiting = PartialOption(
     "--enable-rate-limiting/--no-rate-limiting",
     default=True,
     help="Enable rate limiting (default: enabled)",
@@ -61,7 +61,7 @@ rate_limit_storage = PartialOption(
 )
 
 
-cors = PartialOption(
+enable_cors = PartialOption(
     "--enable-cors/--no-cors",
     default=True,
     help="Enable CORS (default: enabled)",
