@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import asyncio
 from abc import abstractmethod
-from collections.abc import AsyncIterator, Sequence
+from collections.abc import AsyncIterator, Callable, Sequence
 from dataclasses import dataclass
+from functools import wraps
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 import anyio
 from pydantic import BaseModel, ValidationError
@@ -17,12 +18,79 @@ from structlog import get_logger
 from .. import db_funcs
 from ..config import config as global_config
 from ..db.base import Base, ensure_base_inheritance
-from ..models import Filter, OrderBy
 
 logger = get_logger(__name__)
 
 
 FORBID_TRAVERSAL = False
+
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+def forward_to_db_funcs(module: Any, func_name: str) -> Callable[[F], F]:
+    """Decorator that forwards method calls to db_funcs module functions.
+
+    Extracts db_class from self.ctx and session from args, then calls
+    the corresponding function in the db_funcs module with all arguments.
+
+    Parameters
+    ----------
+    module : Any
+        The db_funcs submodule (e.g., db_funcs.read, db_funcs.filter)
+    func_name : str
+        Name of the function to call in the module
+
+    Returns
+    -------
+    Callable
+        Decorator that forwards the call
+
+    Examples
+    --------
+    >>> @forward_to_db_funcs(db_funcs.read, 'get_row')
+    >>> async def get_row(self, session: AsyncSession, *args, **kwargs):
+    ...     pass  # Implementation replaced by decorator
+    """
+
+    def decorator(func: F) -> F:
+        @wraps(func)
+        async def wrapper(self: Any, session: AsyncSession, *args: Any, **kwargs: Any) -> Any:
+            db_func = getattr(module, func_name)
+            return await db_func(self.ctx.db_class, session, *args, **kwargs)
+
+        return wrapper  # type: ignore
+
+    return decorator
+
+
+def forward_to_db_funcs_streaming(module: Any, func_name: str) -> Callable[[F], F]:
+    """Decorator that forwards async generator calls to db_funcs module functions.
+
+    Similar to forward_to_db_funcs but for async generators (streaming functions).
+
+    Parameters
+    ----------
+    module : Any
+        The db_funcs submodule
+    func_name : str
+        Name of the streaming function to call
+
+    Returns
+    -------
+    Callable
+        Decorator that forwards the streaming call
+    """
+
+    def decorator(func: F) -> F:
+        @wraps(func)
+        async def wrapper(self: Any, session: AsyncSession, *args: Any, **kwargs: Any) -> AsyncIterator[Any]:
+            db_func = getattr(module, func_name)
+            async for row in db_func(self.ctx.db_class, session, *args, **kwargs):
+                yield row
+
+        return wrapper  # type: ignore
+
+    return decorator
 
 
 @dataclass
@@ -188,171 +256,95 @@ class TableOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         """
         self.ctx = context
 
-    async def get_row(
-        self,
-        session: AsyncSession,
-        row_id: int,
-    ) -> T:
-        return await db_funcs.read.get_row(self.ctx.db_class, session, row_id)
+    @forward_to_db_funcs(db_funcs.read, "get_row")
+    async def get_row(self, session: AsyncSession, *args: Any, **kwargs: Any) -> T:  # type: ignore
+        pass
 
-    async def get_row_by_name(
-        self,
-        session: AsyncSession,
-        name: str,
-    ) -> T:
-        return await db_funcs.read.get_row_by_name(self.ctx.db_class, session, name)
+    @forward_to_db_funcs(db_funcs.read, "get_row_by_name")
+    async def get_row_by_name(self, session: AsyncSession, *args: Any, **kwargs: Any) -> T:  # type: ignore
+        pass
 
-    async def get_rows(
-        self,
-        session: AsyncSession,
-        skip: int = 0,
-        limit: int | None = None,
-    ) -> Sequence[T]:
-        return await db_funcs.read.get_rows(self.ctx.db_class, session, skip, limit)
+    @forward_to_db_funcs(db_funcs.read, "get_rows")
+    async def get_rows(self, session: AsyncSession, *args: Any, **kwargs: Any) -> Sequence[T]:  # type: ignore
+        pass
 
-    async def get_rows_streaming(
+    @forward_to_db_funcs_streaming(db_funcs.read, "get_rows_streaming")
+    async def get_rows_streaming(  # pylint: disable=unused-argument
         self,
         session: AsyncSession,
-        skip: int = 0,
-        limit: int | None = None,
+        *args: Any,
+        **kwargs: Any,
     ) -> AsyncIterator[T]:
-        async for row in db_funcs.read.get_rows_streaming(self.ctx.db_class, session, skip, limit):
-            yield row
+        yield  # type: ignore
 
-    async def get_row_or_none(
+    @forward_to_db_funcs(db_funcs.read, "get_row_or_none")
+    async def get_row_or_none(self, session: AsyncSession, *args: Any, **kwargs: Any) -> T | None:
+        pass
+
+    @forward_to_db_funcs(db_funcs.read, "count_rows")
+    async def count_rows(self, session: AsyncSession, *args: Any, **kwargs: Any) -> int:  # type: ignore
+        pass
+
+    @forward_to_db_funcs(db_funcs.read, "lookup_by_id_or_name")
+    async def lookup_by_id_or_name(  # type: ignore
         self,
         session: AsyncSession,
-        row_id: int,
-    ) -> T | None:
-        return await db_funcs.read.get_row_or_none(self.ctx.db_class, session, row_id)
-
-    async def count_rows(
-        self,
-        session: AsyncSession,
-    ) -> int:
-        return await db_funcs.read.count_rows(self.ctx.db_class, session)
-
-    async def lookup_by_id_or_name(
-        self,
-        session: AsyncSession,
-        row_id: int | None,
-        name: str | None,
-        *,
-        need_object: bool = False,
+        *args: Any,
+        **kwargs: Any,
     ) -> tuple[int, T | None]:
-        return await db_funcs.read.lookup_by_id_or_name(
-            self.ctx.db_class, session, row_id, name, need_object=need_object
-        )
+        pass
 
-    async def update_row(
-        self,
-        session: AsyncSession,
-        row_id: int,
-        **kwargs: Any,
-    ) -> T:
-        return await db_funcs.update.update_row(self.ctx.db_class, session, row_id, **kwargs)
+    @forward_to_db_funcs(db_funcs.update, "update_row")
+    async def update_row(self, session: AsyncSession, *args: Any, **kwargs: Any) -> T:  # type: ignore
+        pass
 
-    async def update_rows(
-        self,
-        session: AsyncSession,
-        updates: Sequence[dict[str, Any]],
-    ) -> list[T]:
-        return await db_funcs.update.update_rows(self.ctx.db_class, session, updates)
+    @forward_to_db_funcs(db_funcs.update, "update_rows")
+    async def update_rows(self, session: AsyncSession, *args: Any, **kwargs: Any) -> list[T]:  # type: ignore
+        pass
 
-    async def delete_row(
-        self,
-        session: AsyncSession,
-        row_id: int,
-        *,
-        capture_data: bool = True,
-    ) -> dict[str, Any] | None:
-        return await db_funcs.delete.delete_row(self.ctx.db_class, session, row_id, capture_data=capture_data)
+    @forward_to_db_funcs(db_funcs.delete, "delete_row")
+    async def delete_row(self, session: AsyncSession, *args: Any, **kwargs: Any) -> dict[str, Any] | None:
+        pass
 
+    @forward_to_db_funcs(db_funcs.delete, "delete_rows")
     async def delete_rows(
-        self,
-        session: AsyncSession,
-        row_ids: list[int],
-        *,
-        capture_data: bool = False,
+        self, session: AsyncSession, *args: Any, **kwargs: Any
     ) -> list[dict[str, Any]] | None:
-        return await db_funcs.delete.delete_rows(
-            self.ctx.db_class, session, row_ids, capture_data=capture_data
-        )
+        pass
 
-    async def bulk_delete_rows(
-        self,
-        session: AsyncSession,
-        row_ids: list[int],
-    ) -> int:
-        return await db_funcs.delete.bulk_delete_rows(self.ctx.db_class, session, row_ids)
+    @forward_to_db_funcs(db_funcs.delete, "bulk_delete_rows")
+    async def bulk_delete_rows(self, session: AsyncSession, *args: Any, **kwargs: Any) -> int:  # type: ignore
+        pass
 
-    async def filter_rows(
-        self,
-        session: AsyncSession,
-        filters: list[Filter] | None = None,
-        logical_op: str = "and",
-        order_by: OrderBy | list[OrderBy] | None = None,
-        skip: int = 0,
-        limit: int | None = None,
-    ) -> Sequence[T]:
-        return await db_funcs.filter.filter_rows(
-            self.ctx.db_class, session, filters, logical_op, order_by, skip, limit
-        )
+    @forward_to_db_funcs(db_funcs.filter, "filter_rows")
+    async def filter_rows(self, session: AsyncSession, *args: Any, **kwargs: Any) -> Sequence[T]:  # type: ignore
+        pass
 
-    async def filter_rows_streaming(
-        self,
-        session: AsyncSession,
-        filters: list[Filter] | None = None,
-        logical_op: str = "and",
-        order_by: OrderBy | list[OrderBy] | None = None,
-        skip: int = 0,
-        limit: int | None = None,
+    @forward_to_db_funcs_streaming(db_funcs.filter, "filter_rows_streaming")
+    async def filter_rows_streaming(  # pylint: disable=unused-argument
+        self, session: AsyncSession, *args: Any, **kwargs: Any
     ) -> AsyncIterator[T]:
-        async for row in db_funcs.filter.filter_rows_streaming(
-            self.ctx.db_class, session, filters, logical_op, order_by, skip, limit
-        ):
-            yield row
+        yield  # type: ignore
 
-    async def count_filtered_rows(
-        self,
-        session: AsyncSession,
-        filters: list[Filter] | None = None,
-        logical_op: str = "and",
-    ) -> int:
-        return await db_funcs.filter.count_filtered_rows(self.ctx.db_class, session, filters, logical_op)
+    @forward_to_db_funcs(db_funcs.filter, "count_filtered_rows")
+    async def count_filtered_rows(self, session: AsyncSession, *args: Any, **kwargs: Any) -> int:  # type: ignore
+        pass
 
-    async def filter_one(
-        self,
-        session: AsyncSession,
-        filters: list[Filter],
-        logical_op: str = "and",
-    ) -> T:
-        return await db_funcs.filter.filter_one(self.ctx.db_class, session, filters, logical_op)
+    @forward_to_db_funcs(db_funcs.filter, "filter_one")
+    async def filter_one(self, session: AsyncSession, *args: Any, **kwargs: Any) -> T:  # type: ignore
+        pass
 
-    async def filter_one_or_none(
-        self,
-        session: AsyncSession,
-        filters: list[Filter],
-        logical_op: str = "and",
-    ) -> T | None:
-        return await db_funcs.filter.filter_one_or_none(self.ctx.db_class, session, filters, logical_op)
+    @forward_to_db_funcs(db_funcs.filter, "filter_one_or_none")
+    async def filter_one_or_none(self, session: AsyncSession, *args: Any, **kwargs: Any) -> T | None:
+        pass
 
-    async def find_by(
-        self,
-        session: AsyncSession,
-        order_by: OrderBy | list[OrderBy] | None = None,
-        skip: int = 0,
-        limit: int | None = None,
-        **kwargs: Any,
-    ) -> Sequence[T]:
-        return await db_funcs.filter.find_by(self.ctx.db_class, session, order_by, skip, limit, **kwargs)
+    @forward_to_db_funcs(db_funcs.filter, "find_by")
+    async def find_by(self, session: AsyncSession, *args: Any, **kwargs: Any) -> Sequence[T]:  # type: ignore
+        pass
 
-    async def find_one_by(
-        self,
-        session: AsyncSession,
-        **kwargs: Any,
-    ) -> T:
-        return await db_funcs.filter.find_one_by(self.ctx.db_class, session, **kwargs)
+    @forward_to_db_funcs(db_funcs.filter, "find_one_by")
+    async def find_one_by(self, session: AsyncSession, *args: Any, **kwargs: Any) -> T:  # type: ignore
+        pass
 
     async def get_create_kwargs(
         self,

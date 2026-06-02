@@ -2,16 +2,48 @@ from __future__ import annotations
 
 import types
 import warnings
+from collections.abc import Callable
+from functools import wraps
 from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
 from ..client.base import RemoteAPI, RemoteTableOperations
-from ..models import Filter, OrderBy
 
 # Type variables
 ResponseT = TypeVar("ResponseT", bound=BaseModel)
 CreateT = TypeVar("CreateT", bound=BaseModel)
+
+
+def with_client[F: Callable[..., Any]](func: F) -> F:
+    """Decorator that injects the remote client into async methods.
+
+    Gets or creates a RemoteTableOperations client and passes the call through.
+    The decorated method should accept `client` as its first argument after `self`.
+
+    Parameters
+    ----------
+    func : Callable
+        Async method that operates on a RemoteTableOperations client
+
+    Returns
+    -------
+    Callable
+        Wrapped method that automatically gets the client
+
+    Examples
+    --------
+    >>> @with_client
+    >>> async def get_row(self, client: RemoteTableOperations, row_id: int) -> ResponseT:
+    ...     return await client.get_row(row_id)
+    """
+
+    @wraps(func)
+    async def wrapper(self: AsyncRemoteOperations, *args: Any, **kwargs: Any) -> Any:
+        client = await self._get_client()
+        return await func(self, client, *args, **kwargs)
+
+    return wrapper  # type: ignore
 
 
 class AsyncRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
@@ -184,180 +216,199 @@ class AsyncRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
 
     # CREATE operations
 
+    @with_client
     async def create_row(
         self,
-        *,
-        validate: bool = True,
+        client: RemoteTableOperations[ResponseT, CreateT],
+        *args: Any,
         **kwargs: Any,
     ) -> ResponseT:
-        client = await self._get_client()
-        return await client.create_row(validate=validate, **kwargs)
+        return await client.create_row(*args, **kwargs)
 
+    @with_client
     async def create_rows(
         self,
-        rows_data: list[dict[str, Any]],
-        *,
-        validate: bool = True,
+        client: RemoteTableOperations[ResponseT, CreateT],
+        *args: Any,
+        **kwargs: Any,
     ) -> list[ResponseT]:
-        client = await self._get_client()
-        return await client.create_rows(rows_data, validate=validate)
+        return await client.create_rows(*args, **kwargs)
 
+    @with_client
     async def create_rows_batched(
         self,
-        rows_data: list[dict[str, Any]],
-        *,
-        validate: bool = True,
-        batch_size: int = 1000,
+        client: RemoteTableOperations[ResponseT, CreateT],
+        *args: Any,
+        **kwargs: Any,
     ) -> list[ResponseT]:
-        client = await self._get_client()
-        return await client.create_rows_batched(rows_data, validate=validate, batch_size=batch_size)
+        return await client.create_rows_batched(*args, **kwargs)
 
+    @with_client
     async def bulk_insert_rows(
         self,
-        rows_data: list[dict[str, Any]],
-        *,
-        validate: bool = True,
+        client: RemoteTableOperations[ResponseT, CreateT],
+        *args: Any,
+        **kwargs: Any,
     ) -> int:
-        client = await self._get_client()
-        return await client.bulk_insert_rows(rows_data, validate=validate)
+        return await client.bulk_insert_rows(*args, **kwargs)
 
     # READ operations
 
+    @with_client
     async def get_row(
         self,
-        row_id: int,
+        client: RemoteTableOperations[ResponseT, CreateT],
+        *args: Any,
+        **kwargs: Any,
     ) -> ResponseT:
-        client = await self._get_client()
-        return await client.get_row(row_id)
+        return await client.get_row(*args, **kwargs)
 
+    @with_client
     async def get_row_or_none(
         self,
-        row_id: int,
+        client: RemoteTableOperations[ResponseT, CreateT],
+        *args: Any,
+        **kwargs: Any,
     ) -> ResponseT | None:
-        client = await self._get_client()
-        return await client.get_row_or_none(row_id)
+        return await client.get_row_or_none(*args, **kwargs)
 
+    @with_client
     async def get_row_by_name(
         self,
-        name: str,
+        client: RemoteTableOperations[ResponseT, CreateT],
+        *args: Any,
+        **kwargs: Any,
     ) -> ResponseT:
-        client = await self._get_client()
-        return await client.get_row_by_name(name)
+        return await client.get_row_by_name(*args, **kwargs)
 
+    @with_client
     async def get_rows(
         self,
-        skip: int = 0,
-        limit: int | None = None,
+        client: RemoteTableOperations[ResponseT, CreateT],
+        *args: Any,
+        **kwargs: Any,
     ) -> list[ResponseT]:
-        client = await self._get_client()
-        return await client.get_rows(skip, limit)
+        return await client.get_rows(*args, **kwargs)
 
-    async def count_rows(self) -> int:
-        client = await self._get_client()
-        return await client.count_rows()
+    @with_client
+    async def count_rows(
+        self,
+        client: RemoteTableOperations[ResponseT, CreateT],
+        *args: Any,
+        **kwargs: Any,
+    ) -> int:
+        return await client.count_rows(*args, **kwargs)
 
+    @with_client
     async def lookup_by_id_or_name(
         self,
-        row_id: int | None = None,
-        name: str | None = None,
+        client: RemoteTableOperations[ResponseT, CreateT],
+        *args: Any,
+        **kwargs: Any,
     ) -> tuple[int, ResponseT]:
-        client = await self._get_client()
-        return await client.lookup_by_id_or_name(row_id, name)
+        return await client.lookup_by_id_or_name(*args, **kwargs)
 
     # UPDATE operations
 
+    @with_client
     async def update_row(
         self,
-        row_id: int,
+        client: RemoteTableOperations[ResponseT, CreateT],
+        *args: Any,
         **kwargs: Any,
     ) -> ResponseT:
-        client = await self._get_client()
-        return await client.update_row(row_id, **kwargs)
+        return await client.update_row(*args, **kwargs)
 
+    @with_client
     async def update_rows(
         self,
-        updates: list[dict[str, Any]],
+        client: RemoteTableOperations[ResponseT, CreateT],
+        *args: Any,
+        **kwargs: Any,
     ) -> list[ResponseT]:
-        client = await self._get_client()
-        return await client.update_rows(updates)
+        return await client.update_rows(*args, **kwargs)
 
     # DELETE operations
 
+    @with_client
     async def delete_row(
         self,
-        row_id: int,
-        *,
-        capture_data: bool = True,
+        client: RemoteTableOperations[ResponseT, CreateT],
+        *args: Any,
+        **kwargs: Any,
     ) -> ResponseT | None:
-        client = await self._get_client()
-        return await client.delete_row(row_id, capture_data=capture_data)
+        return await client.delete_row(*args, **kwargs)
 
+    @with_client
     async def delete_rows(
         self,
-        row_ids: list[int],
-        *,
-        capture_data: bool = False,
+        client: RemoteTableOperations[ResponseT, CreateT],
+        *args: Any,
+        **kwargs: Any,
     ) -> list[ResponseT] | int:
-        client = await self._get_client()
-        return await client.delete_rows(row_ids, capture_data=capture_data)
+        return await client.delete_rows(*args, **kwargs)
 
+    @with_client
     async def bulk_delete_rows(
         self,
-        row_ids: list[int],
+        client: RemoteTableOperations[ResponseT, CreateT],
+        *args: Any,
+        **kwargs: Any,
     ) -> int:
-        client = await self._get_client()
-        return await client.bulk_delete_rows(row_ids)
+        return await client.bulk_delete_rows(*args, **kwargs)
 
     # FILTER/QUERY operations
 
+    @with_client
     async def filter_rows(
         self,
-        filters: list[Filter] | None = None,
-        logical_op: str = "and",
-        order_by: OrderBy | list[OrderBy] | None = None,
-        skip: int = 0,
-        limit: int | None = None,
+        client: RemoteTableOperations[ResponseT, CreateT],
+        *args: Any,
+        **kwargs: Any,
     ) -> list[ResponseT]:
-        client = await self._get_client()
-        return await client.filter_rows(filters, logical_op, order_by, skip, limit)
+        return await client.filter_rows(*args, **kwargs)
 
+    @with_client
     async def count_filtered_rows(
         self,
-        filters: list[Filter] | None = None,
-        logical_op: str = "and",
+        client: RemoteTableOperations[ResponseT, CreateT],
+        *args: Any,
+        **kwargs: Any,
     ) -> int:
-        client = await self._get_client()
-        return await client.count_filtered_rows(filters, logical_op)
+        return await client.count_filtered_rows(*args, **kwargs)
 
+    @with_client
     async def filter_one(
         self,
-        filters: list[Filter],
-        logical_op: str = "and",
+        client: RemoteTableOperations[ResponseT, CreateT],
+        *args: Any,
+        **kwargs: Any,
     ) -> ResponseT:
-        client = await self._get_client()
-        return await client.filter_one(filters, logical_op)
+        return await client.filter_one(*args, **kwargs)
 
+    @with_client
     async def filter_one_or_none(
         self,
-        filters: list[Filter],
-        logical_op: str = "and",
+        client: RemoteTableOperations[ResponseT, CreateT],
+        *args: Any,
+        **kwargs: Any,
     ) -> ResponseT | None:
-        client = await self._get_client()
-        return await client.filter_one_or_none(filters, logical_op)
+        return await client.filter_one_or_none(*args, **kwargs)
 
+    @with_client
     async def find_by(
         self,
-        order_by: OrderBy | list[OrderBy] | None = None,
-        skip: int = 0,
-        limit: int | None = None,
+        client: RemoteTableOperations[ResponseT, CreateT],
+        *args: Any,
         **kwargs: Any,
     ) -> list[ResponseT]:
-        client = await self._get_client()
-        return await client.find_by(order_by, skip, limit, **kwargs)
+        return await client.find_by(*args, **kwargs)
 
+    @with_client
     async def find_one_by(
         self,
+        client: RemoteTableOperations[ResponseT, CreateT],
+        *args: Any,
         **kwargs: Any,
     ) -> ResponseT:
-        client = await self._get_client()
-        return await client.find_one_by(**kwargs)
+        return await client.find_one_by(*args, **kwargs)

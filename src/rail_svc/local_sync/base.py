@@ -3,15 +3,68 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Sequence
-from typing import Any
+from collections.abc import Callable
+from functools import wraps
+from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
 from .. import db, models
 from ..db.base import Base
 from ..local_async.base import LocalOperations
-from ..models import Filter, OrderBy
+
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+def sync_wrapper(async_method: Callable[..., Any]) -> Callable[[F], F]:
+    """Decorator that wraps an async method call with asyncio.run and copies its docstring.
+
+    This decorator is designed for creating synchronous wrappers around async methods.
+    It automatically calls asyncio.run() on the async method and copies the docstring
+    from the async method to the sync wrapper.
+
+    Parameters
+    ----------
+    async_method : Callable
+        The async method to wrap (unbound method reference)
+
+    Returns
+    -------
+    Callable
+        Decorator function that creates a sync wrapper
+
+    Examples
+    --------
+    >>> class AsyncOps:
+    ...     async def get_data(self, x: int) -> int:
+    ...         '''Fetch data asynchronously.'''
+    ...         return x * 2
+    >>>
+    >>> class SyncOps:
+    ...     def __init__(self, async_ops: AsyncOps):
+    ...         self.async_ops = async_ops
+    ...
+    ...     @sync_wrapper(AsyncOps.get_data)
+    ...     def get_data(self, *args, **kwargs):
+    ...         return self.async_ops.get_data(*args, **kwargs)
+    >>>
+    >>> sync_ops = SyncOps(AsyncOps())
+    >>> sync_ops.get_data(5)  # Automatically runs in asyncio.run()
+    10
+    """
+
+    def decorator(func: F) -> F:
+        @wraps(func)
+        def wrapped(self: Any, *args: Any, **kwargs: Any) -> Any:
+            # Call the original function to get the coroutine
+            coro = func(self, *args, **kwargs)
+            # Run it with asyncio.run
+            return asyncio.run(coro)
+
+        wrapped.__doc__ = async_method.__doc__
+        return wrapped  # type: ignore
+
+    return decorator
 
 
 class SyncOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
@@ -44,160 +97,89 @@ class SyncOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
     def __init__(self, async_ops: LocalOperations[T, ResponseT, CreateT]) -> None:
         self.async_ops = async_ops
 
-    def create_row(
-        self,
-        *,
-        validate: bool = True,
-        **kwargs: Any,
-    ) -> ResponseT:
-        return asyncio.run(self.async_ops.create_row(validate=validate, **kwargs))
+    @sync_wrapper(LocalOperations.create_row)
+    def create_row(self, *args: Any, **kwargs: Any) -> ResponseT:
+        return self.async_ops.create_row(*args, **kwargs)  # type: ignore
 
-    def create_rows(
-        self,
-        rows_data: Sequence[dict[str, Any]],
-        *,
-        validate: bool = True,
-    ) -> list[ResponseT]:
-        return asyncio.run(self.async_ops.create_rows(rows_data, validate=validate))
+    @sync_wrapper(LocalOperations.create_rows)
+    def create_rows(self, *args: Any, **kwargs: Any) -> list[ResponseT]:
+        return self.async_ops.create_rows(*args, **kwargs)  # type: ignore
 
-    def create_rows_batched(
-        self,
-        rows_data: Sequence[dict[str, Any]],
-        *,
-        validate: bool = True,
-        batch_size: int = 1000,
-    ) -> list[ResponseT]:
-        return asyncio.run(
-            self.async_ops.create_rows_batched(rows_data, validate=validate, batch_size=batch_size)
-        )
+    @sync_wrapper(LocalOperations.create_rows_batched)
+    def create_rows_batched(self, *args: Any, **kwargs: Any) -> list[ResponseT]:
+        return self.async_ops.create_rows_batched(*args, **kwargs)  # type: ignore
 
-    def bulk_insert_rows(
-        self,
-        rows_data: Sequence[dict[str, Any]],
-        *,
-        validate: bool = True,
-    ) -> int:
-        return asyncio.run(self.async_ops.bulk_insert_rows(rows_data, validate=validate))
+    @sync_wrapper(LocalOperations.bulk_insert_rows)
+    def bulk_insert_rows(self, *args: Any, **kwargs: Any) -> int:
+        return self.async_ops.bulk_insert_rows(*args, **kwargs)  # type: ignore
 
-    def get_row(
-        self,
-        row_id: int,
-    ) -> ResponseT:
-        return asyncio.run(self.async_ops.get_row(row_id))
+    @sync_wrapper(LocalOperations.get_row)
+    def get_row(self, *args: Any, **kwargs: Any) -> ResponseT:
+        return self.async_ops.get_row(*args, **kwargs)  # type: ignore
 
-    def get_row_by_name(
-        self,
-        name: str,
-    ) -> ResponseT:
-        return asyncio.run(self.async_ops.get_row_by_name(name))
+    @sync_wrapper(LocalOperations.get_row_by_name)
+    def get_row_by_name(self, *args: Any, **kwargs: Any) -> ResponseT:
+        return self.async_ops.get_row_by_name(*args, **kwargs)  # type: ignore
 
-    def get_rows(
-        self,
-        skip: int = 0,
-        limit: int | None = None,
-    ) -> list[ResponseT]:
-        return asyncio.run(self.async_ops.get_rows(skip, limit))
+    @sync_wrapper(LocalOperations.get_rows)
+    def get_rows(self, *args: Any, **kwargs: Any) -> list[ResponseT]:
+        return self.async_ops.get_rows(*args, **kwargs)  # type: ignore
 
-    def get_row_or_none(
-        self,
-        row_id: int,
-    ) -> ResponseT | None:
-        return asyncio.run(self.async_ops.get_row_or_none(row_id))
+    @sync_wrapper(LocalOperations.get_row_or_none)
+    def get_row_or_none(self, *args: Any, **kwargs: Any) -> ResponseT | None:
+        return self.async_ops.get_row_or_none(*args, **kwargs)  # type: ignore
 
-    def count_rows(
-        self,
-    ) -> int:
-        return asyncio.run(self.async_ops.count_rows())
+    @sync_wrapper(LocalOperations.count_rows)
+    def count_rows(self, *args: Any, **kwargs: Any) -> int:
+        return self.async_ops.count_rows(*args, **kwargs)  # type: ignore
 
-    def lookup_by_id_or_name(
-        self,
-        row_id: int | None,
-        name: str | None,
-        *,
-        need_object: bool = False,
-    ) -> tuple[int, ResponseT | None]:
-        return asyncio.run(self.async_ops.lookup_by_id_or_name(row_id, name, need_object=need_object))
+    @sync_wrapper(LocalOperations.lookup_by_id_or_name)
+    def lookup_by_id_or_name(self, *args: Any, **kwargs: Any) -> tuple[int, ResponseT | None]:
+        return self.async_ops.lookup_by_id_or_name(*args, **kwargs)  # type: ignore
 
-    def update_row(
-        self,
-        row_id: int,
-        **kwargs: Any,
-    ) -> ResponseT:
-        return asyncio.run(self.async_ops.update_row(row_id, **kwargs))
+    @sync_wrapper(LocalOperations.update_row)
+    def update_row(self, *args: Any, **kwargs: Any) -> ResponseT:
+        return self.async_ops.update_row(*args, **kwargs)  # type: ignore
 
-    def update_rows(
-        self,
-        updates: Sequence[dict[str, Any]],
-    ) -> list[ResponseT]:
-        return asyncio.run(self.async_ops.update_rows(updates))
+    @sync_wrapper(LocalOperations.update_rows)
+    def update_rows(self, *args: Any, **kwargs: Any) -> list[ResponseT]:
+        return self.async_ops.update_rows(*args, **kwargs)  # type: ignore
 
-    def delete_row(
-        self,
-        row_id: int,
-        *,
-        capture_data: bool = True,
-    ) -> dict[str, Any] | None:
-        return asyncio.run(self.async_ops.delete_row(row_id, capture_data=capture_data))
+    @sync_wrapper(LocalOperations.delete_row)
+    def delete_row(self, *args: Any, **kwargs: Any) -> dict[str, Any] | None:
+        return self.async_ops.delete_row(*args, **kwargs)  # type: ignore
 
-    def delete_rows(
-        self,
-        row_ids: list[int],
-        *,
-        capture_data: bool = False,
-    ) -> list[dict[str, Any]] | None:
-        return asyncio.run(self.async_ops.delete_rows(row_ids, capture_data=capture_data))
+    @sync_wrapper(LocalOperations.delete_rows)
+    def delete_rows(self, *args: Any, **kwargs: Any) -> list[dict[str, Any]] | None:
+        return self.async_ops.delete_rows(*args, **kwargs)  # type: ignore
 
-    def bulk_delete_rows(
-        self,
-        row_ids: list[int],
-    ) -> int:
-        return asyncio.run(self.async_ops.bulk_delete_rows(row_ids))
+    @sync_wrapper(LocalOperations.bulk_delete_rows)
+    def bulk_delete_rows(self, *args: Any, **kwargs: Any) -> int:
+        return self.async_ops.bulk_delete_rows(*args, **kwargs)  # type: ignore
 
-    def filter_rows(
-        self,
-        filters: list[Filter] | None = None,
-        logical_op: str = "and",
-        order_by: OrderBy | list[OrderBy] | None = None,
-        skip: int = 0,
-        limit: int | None = None,
-    ) -> list[ResponseT]:
-        return asyncio.run(self.async_ops.filter_rows(filters, logical_op, order_by, skip, limit))
+    @sync_wrapper(LocalOperations.filter_rows)
+    def filter_rows(self, *args: Any, **kwargs: Any) -> list[ResponseT]:
+        return self.async_ops.filter_rows(*args, **kwargs)  # type: ignore
 
-    def count_filtered_rows(
-        self,
-        filters: list[Filter] | None = None,
-        logical_op: str = "and",
-    ) -> int:
-        return asyncio.run(self.async_ops.count_filtered_rows(filters, logical_op))
+    @sync_wrapper(LocalOperations.count_filtered_rows)
+    def count_filtered_rows(self, *args: Any, **kwargs: Any) -> int:
+        return self.async_ops.count_filtered_rows(*args, **kwargs)  # type: ignore
 
-    def filter_one(
-        self,
-        filters: list[Filter],
-        logical_op: str = "and",
-    ) -> ResponseT:
-        return asyncio.run(self.async_ops.filter_one(filters, logical_op))
+    @sync_wrapper(LocalOperations.filter_one)
+    def filter_one(self, *args: Any, **kwargs: Any) -> ResponseT:
+        return self.async_ops.filter_one(*args, **kwargs)  # type: ignore
 
-    def filter_one_or_none(
-        self,
-        filters: list[Filter],
-        logical_op: str = "and",
-    ) -> ResponseT | None:
-        return asyncio.run(self.async_ops.filter_one_or_none(filters, logical_op))
+    @sync_wrapper(LocalOperations.filter_one_or_none)
+    def filter_one_or_none(self, *args: Any, **kwargs: Any) -> ResponseT | None:
+        return self.async_ops.filter_one_or_none(*args, **kwargs)  # type: ignore
 
-    def find_by(
-        self,
-        order_by: OrderBy | list[OrderBy] | None = None,
-        skip: int = 0,
-        limit: int | None = None,
-        **kwargs: Any,
-    ) -> list[ResponseT]:
-        return asyncio.run(self.async_ops.find_by(order_by, skip, limit, **kwargs))
+    @sync_wrapper(LocalOperations.find_by)
+    def find_by(self, *args: Any, **kwargs: Any) -> list[ResponseT]:
+        return self.async_ops.find_by(*args, **kwargs)  # type: ignore
 
-    def find_one_by(
-        self,
-        **kwargs: Any,
-    ) -> ResponseT:
-        return asyncio.run(self.async_ops.find_one_by(**kwargs))
+    @sync_wrapper(LocalOperations.find_one_by)
+    def find_one_by(self, *args: Any, **kwargs: Any) -> ResponseT:
+        return self.async_ops.find_one_by(*args, **kwargs)  # type: ignore
 
 
 class AlgorithmSyncOperations(SyncOperations[db.Algorithm, models.Algorithm, models.AlgorithmCreate]):

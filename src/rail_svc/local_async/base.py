@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Sequence
+from collections.abc import AsyncIterator, Callable
+from functools import wraps
 from typing import Any
 
 from pydantic import BaseModel
@@ -11,7 +12,130 @@ from .. import db, models
 from ..db.base import Base
 from ..db.session import get_session
 from ..db_oper.base import TableOperations
-from ..models import Filter, OrderBy
+
+
+def with_session[F: Callable[..., Any]](func: F) -> F:
+    """Decorator that wraps a method with session management.
+
+    Opens a session context and passes it as the first argument to the
+    wrapped table operations method.
+
+    Parameters
+    ----------
+    func : Callable
+        Method that calls a table operations method
+
+    Returns
+    -------
+    Callable
+        Wrapped method with session management
+    """
+
+    @wraps(func)
+    async def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+        async with get_session() as session:
+            return await func(self, session, *args, **kwargs)
+
+    return wrapper  # type: ignore
+
+
+def with_session_transaction[F: Callable[..., Any]](func: F) -> F:
+    """Decorator that wraps a method with session and transaction management.
+
+    Opens a session context with a transaction and passes the session as
+    the first argument to the wrapped table operations method.
+
+    Parameters
+    ----------
+    func : Callable
+        Method that calls a table operations method
+
+    Returns
+    -------
+    Callable
+        Wrapped method with session and transaction management
+    """
+
+    @wraps(func)
+    async def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+        async with get_session() as session:
+            async with session.begin():
+                return await func(self, session, *args, **kwargs)
+
+    return wrapper  # type: ignore
+
+
+def to_pydantic[F: Callable[..., Any]](func: F) -> F:
+    """Decorator that converts ORM result to Pydantic model.
+
+    Wraps the result of a table operations call with to_pydantic conversion.
+
+    Parameters
+    ----------
+    func : Callable
+        Method that returns an ORM object
+
+    Returns
+    -------
+    Callable
+        Wrapped method that returns a Pydantic model
+    """
+
+    @wraps(func)
+    async def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+        result = await func(self, *args, **kwargs)
+        return self._table_ops.to_pydantic(result)
+
+    return wrapper  # type: ignore
+
+
+def to_pydantic_list[F: Callable[..., Any]](func: F) -> F:
+    """Decorator that converts ORM result list to Pydantic models.
+
+    Wraps the result of a table operations call with to_pydantic_list conversion.
+
+    Parameters
+    ----------
+    func : Callable
+        Method that returns a list/sequence of ORM objects
+
+    Returns
+    -------
+    Callable
+        Wrapped method that returns a list of Pydantic models
+    """
+
+    @wraps(func)
+    async def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+        result = await func(self, *args, **kwargs)
+        return self._table_ops.to_pydantic_list(list(result))
+
+    return wrapper  # type: ignore
+
+
+def to_pydantic_or_none[F: Callable[..., Any]](func: F) -> F:
+    """Decorator that converts ORM result to Pydantic model or None.
+
+    Wraps the result of a table operations call with to_pydantic conversion,
+    handling None results.
+
+    Parameters
+    ----------
+    func : Callable
+        Method that returns an ORM object or None
+
+    Returns
+    -------
+    Callable
+        Wrapped method that returns a Pydantic model or None
+    """
+
+    @wraps(func)
+    async def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+        result = await func(self, *args, **kwargs)
+        return self._table_ops.to_pydantic(result) if result is not None else None
+
+    return wrapper  # type: ignore
 
 
 class LocalOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
@@ -39,262 +163,127 @@ class LocalOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         """
         self._table_ops = table_operations
 
-    async def create_row(
-        self,
-        *,
-        validate: bool = True,
-        **kwargs: Any,
-    ) -> ResponseT:
-        async with get_session() as session:
-            async with session.begin():
-                row = await self._table_ops.create_row(session, validate=validate, **kwargs)
-                return self._table_ops.to_pydantic(row)
+    @with_session_transaction
+    @to_pydantic
+    async def create_row(self, session: Any, *args: Any, **kwargs: Any) -> Any:
+        return await self._table_ops.create_row(session, *args, **kwargs)
 
-    async def create_rows(
-        self,
-        rows_data: Sequence[dict[str, Any]],
-        *,
-        validate: bool = True,
-    ) -> list[ResponseT]:
-        async with get_session() as session:
-            async with session.begin():
-                rows = await self._table_ops.create_rows(session, rows_data, validate=validate)
-                return self._table_ops.to_pydantic_list(rows)
+    @with_session_transaction
+    @to_pydantic_list
+    async def create_rows(self, session: Any, *args: Any, **kwargs: Any) -> Any:
+        return await self._table_ops.create_rows(session, *args, **kwargs)
 
-    async def create_rows_batched(
-        self,
-        rows_data: Sequence[dict[str, Any]],
-        *,
-        validate: bool = True,
-        batch_size: int = 1000,
-    ) -> list[ResponseT]:
-        async with get_session() as session:
-            rows = await self._table_ops.create_rows_batched(
-                session, rows_data, validate=validate, batch_size=batch_size
-            )
-            return self._table_ops.to_pydantic_list(rows)
+    @with_session
+    @to_pydantic_list
+    async def create_rows_batched(self, session: Any, *args: Any, **kwargs: Any) -> Any:
+        return await self._table_ops.create_rows_batched(session, *args, **kwargs)
 
-    async def bulk_insert_rows(
-        self,
-        rows_data: Sequence[dict[str, Any]],
-        *,
-        validate: bool = True,
-    ) -> int:
-        async with get_session() as session:
-            return await self._table_ops.bulk_insert_rows(session, rows_data, validate=validate)
+    @with_session
+    async def bulk_insert_rows(self, session: Any, *args: Any, **kwargs: Any) -> int:
+        return await self._table_ops.bulk_insert_rows(session, *args, **kwargs)
 
-    async def get_row(
-        self,
-        row_id: int,
-    ) -> ResponseT:
-        async with get_session() as session:
-            row = await self._table_ops.get_row(session, row_id)
-            return self._table_ops.to_pydantic(row)
+    @with_session
+    @to_pydantic
+    async def get_row(self, session: Any, *args: Any, **kwargs: Any) -> Any:
+        return await self._table_ops.get_row(session, *args, **kwargs)
 
-    async def get_row_by_name(
-        self,
-        name: str,
-    ) -> ResponseT:
-        async with get_session() as session:
-            row = await self._table_ops.get_row_by_name(session, name)
-            return self._table_ops.to_pydantic(row)
+    @with_session
+    @to_pydantic
+    async def get_row_by_name(self, session: Any, *args: Any, **kwargs: Any) -> Any:
+        return await self._table_ops.get_row_by_name(session, *args, **kwargs)
 
-    async def get_rows(
-        self,
-        skip: int = 0,
-        limit: int | None = None,
-    ) -> list[ResponseT]:
-        async with get_session() as session:
-            rows = await self._table_ops.get_rows(session, skip=skip, limit=limit)
-            return self._table_ops.to_pydantic_list(list(rows))
+    @with_session
+    @to_pydantic_list
+    async def get_rows(self, session: Any, *args: Any, **kwargs: Any) -> Any:
+        return await self._table_ops.get_rows(session, *args, **kwargs)
 
-    async def get_rows_streaming(
-        self,
-        skip: int = 0,
-        limit: int | None = None,
-    ) -> AsyncIterator[ResponseT]:
+    async def get_rows_streaming(self, *args: Any, **kwargs: Any) -> AsyncIterator[ResponseT]:
         async with get_session() as session:
-            async for row in self._table_ops.get_rows_streaming(session, skip=skip, limit=limit):
+            async for row in self._table_ops.get_rows_streaming(session, *args, **kwargs):
                 yield self._table_ops.to_pydantic(row)
 
-    async def get_row_or_none(
-        self,
-        row_id: int,
-    ) -> ResponseT | None:
-        async with get_session() as session:
-            row = await self._table_ops.get_row_or_none(session, row_id)
-            return self._table_ops.to_pydantic(row) if row is not None else None
+    @with_session
+    @to_pydantic_or_none
+    async def get_row_or_none(self, session: Any, *args: Any, **kwargs: Any) -> Any:
+        return await self._table_ops.get_row_or_none(session, *args, **kwargs)
 
-    async def count_rows(
-        self,
-    ) -> int:
-        async with get_session() as session:
-            return await self._table_ops.count_rows(session)
+    @with_session
+    async def count_rows(self, session: Any, *args: Any, **kwargs: Any) -> int:
+        return await self._table_ops.count_rows(session, *args, **kwargs)
 
+    @with_session
     async def lookup_by_id_or_name(
         self,
+        session: Any,
         row_id: int | None,
         name: str | None,
         *,
         need_object: bool = False,  # pylint: disable=unused-argument
     ) -> tuple[int, ResponseT | None]:
-        async with get_session() as session:
-            row_id_resolved, row = await self._table_ops.lookup_by_id_or_name(
-                session,
-                row_id,
-                name,
-                need_object=True,
-            )
-            assert row
-            return row_id_resolved, self._table_ops.to_pydantic(row)
+        row_id_resolved, row = await self._table_ops.lookup_by_id_or_name(
+            session,
+            row_id,
+            name,
+            need_object=True,
+        )
+        assert row
+        return row_id_resolved, self._table_ops.to_pydantic(row)
 
-    async def update_row(
-        self,
-        row_id: int,
-        **kwargs: Any,
-    ) -> ResponseT:
-        async with get_session() as session:
-            async with session.begin():
-                row = await self._table_ops.update_row(session, row_id, **kwargs)
-                return self._table_ops.to_pydantic(row)
+    @with_session_transaction
+    @to_pydantic
+    async def update_row(self, session: Any, *args: Any, **kwargs: Any) -> Any:
+        return await self._table_ops.update_row(session, *args, **kwargs)
 
-    async def update_rows(
-        self,
-        updates: Sequence[dict[str, Any]],
-    ) -> list[ResponseT]:
-        async with get_session() as session:
-            async with session.begin():
-                rows = await self._table_ops.update_rows(session, updates)
-                return self._table_ops.to_pydantic_list(rows)
+    @with_session_transaction
+    @to_pydantic_list
+    async def update_rows(self, session: Any, *args: Any, **kwargs: Any) -> Any:
+        return await self._table_ops.update_rows(session, *args, **kwargs)
 
-    async def delete_row(
-        self,
-        row_id: int,
-        *,
-        capture_data: bool = True,
-    ) -> dict[str, Any] | None:
-        async with get_session() as session:
-            async with session.begin():
-                return await self._table_ops.delete_row(session, row_id, capture_data=capture_data)
+    @with_session_transaction
+    async def delete_row(self, session: Any, *args: Any, **kwargs: Any) -> dict[str, Any] | None:
+        return await self._table_ops.delete_row(session, *args, **kwargs)
 
-    async def delete_rows(
-        self,
-        row_ids: list[int],
-        *,
-        capture_data: bool = False,
-    ) -> list[dict[str, Any]] | None:
-        async with get_session() as session:
-            async with session.begin():
-                return await self._table_ops.delete_rows(session, row_ids, capture_data=capture_data)
+    @with_session_transaction
+    async def delete_rows(self, session: Any, *args: Any, **kwargs: Any) -> list[dict[str, Any]] | None:
+        return await self._table_ops.delete_rows(session, *args, **kwargs)
 
-    async def bulk_delete_rows(
-        self,
-        row_ids: list[int],
-    ) -> int:
-        async with get_session() as session:
-            async with session.begin():
-                return await self._table_ops.bulk_delete_rows(session, row_ids)
+    @with_session_transaction
+    async def bulk_delete_rows(self, session: Any, *args: Any, **kwargs: Any) -> int:
+        return await self._table_ops.bulk_delete_rows(session, *args, **kwargs)
 
-    async def filter_rows(
-        self,
-        filters: list[Filter] | None = None,
-        logical_op: str = "and",
-        order_by: OrderBy | list[OrderBy] | None = None,
-        skip: int = 0,
-        limit: int | None = None,
-    ) -> list[ResponseT]:
-        async with get_session() as session:
-            rows = await self._table_ops.filter_rows(
-                session,
-                filters=filters,
-                logical_op=logical_op,
-                order_by=order_by,
-                skip=skip,
-                limit=limit,
-            )
-            return self._table_ops.to_pydantic_list(list(rows))
+    @with_session
+    @to_pydantic_list
+    async def filter_rows(self, session: Any, *args: Any, **kwargs: Any) -> Any:
+        return await self._table_ops.filter_rows(session, *args, **kwargs)
 
-    async def filter_rows_streaming(
-        self,
-        filters: list[Filter] | None = None,
-        logical_op: str = "and",
-        order_by: OrderBy | list[OrderBy] | None = None,
-        skip: int = 0,
-        limit: int | None = None,
-    ) -> AsyncIterator[ResponseT]:
+    async def filter_rows_streaming(self, *args: Any, **kwargs: Any) -> AsyncIterator[ResponseT]:
         async with get_session() as session:
-            async for row in self._table_ops.filter_rows_streaming(
-                session,
-                filters=filters,
-                logical_op=logical_op,
-                order_by=order_by,
-                skip=skip,
-                limit=limit,
-            ):
+            async for row in self._table_ops.filter_rows_streaming(session, *args, **kwargs):
                 yield self._table_ops.to_pydantic(row)
 
-    async def count_filtered_rows(
-        self,
-        filters: list[Filter] | None = None,
-        logical_op: str = "and",
-    ) -> int:
-        async with get_session() as session:
-            return await self._table_ops.count_filtered_rows(
-                session,
-                filters=filters,
-                logical_op=logical_op,
-            )
+    @with_session
+    async def count_filtered_rows(self, session: Any, *args: Any, **kwargs: Any) -> int:
+        return await self._table_ops.count_filtered_rows(session, *args, **kwargs)
 
-    async def filter_one(
-        self,
-        filters: list[Filter],
-        logical_op: str = "and",
-    ) -> ResponseT:
-        async with get_session() as session:
-            row = await self._table_ops.filter_one(
-                session,
-                filters=filters,
-                logical_op=logical_op,
-            )
-            return self._table_ops.to_pydantic(row)
+    @with_session
+    @to_pydantic
+    async def filter_one(self, session: Any, *args: Any, **kwargs: Any) -> Any:
+        return await self._table_ops.filter_one(session, *args, **kwargs)
 
-    async def filter_one_or_none(
-        self,
-        filters: list[Filter],
-        logical_op: str = "and",
-    ) -> ResponseT | None:
-        async with get_session() as session:
-            row = await self._table_ops.filter_one_or_none(
-                session,
-                filters=filters,
-                logical_op=logical_op,
-            )
-            return self._table_ops.to_pydantic(row) if row is not None else None
+    @with_session
+    @to_pydantic_or_none
+    async def filter_one_or_none(self, session: Any, *args: Any, **kwargs: Any) -> Any:
+        return await self._table_ops.filter_one_or_none(session, *args, **kwargs)
 
-    async def find_by(
-        self,
-        order_by: OrderBy | list[OrderBy] | None = None,
-        skip: int = 0,
-        limit: int | None = None,
-        **kwargs: Any,
-    ) -> list[ResponseT]:
-        async with get_session() as session:
-            rows = await self._table_ops.find_by(
-                session,
-                order_by=order_by,
-                skip=skip,
-                limit=limit,
-                **kwargs,
-            )
-            return self._table_ops.to_pydantic_list(list(rows))
+    @with_session
+    @to_pydantic_list
+    async def find_by(self, session: Any, *args: Any, **kwargs: Any) -> Any:
+        return await self._table_ops.find_by(session, *args, **kwargs)
 
-    async def find_one_by(
-        self,
-        **kwargs: Any,
-    ) -> ResponseT:
-        async with get_session() as session:
-            row = await self._table_ops.find_one_by(session, **kwargs)
-            return self._table_ops.to_pydantic(row)
+    @with_session
+    @to_pydantic
+    async def find_one_by(self, session: Any, *args: Any, **kwargs: Any) -> Any:
+        return await self._table_ops.find_one_by(session, *args, **kwargs)
 
 
 class AlgorithmLocalOperations(LocalOperations[db.Algorithm, models.Algorithm, models.AlgorithmCreate]):

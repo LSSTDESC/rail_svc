@@ -10,7 +10,8 @@ from pydantic import BaseModel, ValidationError
 
 from ..db.base import Base
 from ..local_async import LocalOperations
-from ..models import CountResponse, DeleteResponse, FilterRequest, LookupResponse, OrderBy
+from ..models import (CountResponse, DeleteResponse, FilterRequest,
+                      LookupResponse, OrderBy)
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -363,7 +364,7 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
             500: Internal server error
         """
         try:
-            results = await operations.get_rows(skip=skip, limit=limit)
+            results = await operations.get_rows(skip=skip, limit=limit)  # type: ignore
             return results
         except Exception as e:
             logger.exception("Error getting rows")
@@ -410,7 +411,7 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
             500: Internal server error
         """
         try:
-            count = await operations.count_rows()
+            count = await operations.count_rows()  # type: ignore
             return CountResponse(count=count)
         except Exception as e:
             logger.exception("Error counting rows")
@@ -443,7 +444,7 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
             )
 
         try:
-            resolved_id, result = await operations.lookup_by_id_or_name(id_, name)
+            resolved_id, result = await operations.lookup_by_id_or_name(id_, name)  # type: ignore
 
             if result is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
@@ -669,7 +670,7 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
         validate_pagination_params(request.skip, request.limit)
 
         try:
-            results = await operations.filter_rows(
+            results = await operations.filter_rows(  # type: ignore
                 filters=request.filters if request.filters else None,
                 logical_op=request.logical_op,
                 order_by=request.order_by,
@@ -746,7 +747,7 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
             )
 
         try:
-            count = await operations.count_filtered_rows(
+            count = await operations.count_filtered_rows(  # type: ignore
                 filters=request.filters if request.filters else None,
                 logical_op=request.logical_op,
             )
@@ -785,7 +786,7 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
             )
 
         try:
-            result = await operations.filter_one(filters=request.filters, logical_op=request.logical_op)
+            result = await operations.filter_one(filters=request.filters, logical_op=request.logical_op)  # type: ignore
             if result is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
             return result
@@ -824,7 +825,7 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
             )
 
         try:
-            result = await operations.filter_one_or_none(
+            result = await operations.filter_one_or_none(  # type: ignore
                 filters=request.filters, logical_op=request.logical_op
             )
             return result

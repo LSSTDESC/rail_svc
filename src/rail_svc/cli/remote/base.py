@@ -8,8 +8,8 @@ import click
 from pydantic import BaseModel, ValidationError
 
 from ...models import Filter, FilterOp, OrderBy
-from ...remote_sync.base import SyncRemoteOperations
 from ...models.utils import OutputEnum, output_pydantic
+from ...remote_sync.base import SyncRemoteOperations
 from .. import common_options
 
 logger = logging.getLogger(__name__)

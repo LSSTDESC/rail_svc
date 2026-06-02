@@ -1,8 +1,8 @@
 """Common configuration parameters for pz-rail-service related packages"""
 
 import os
-from typing import Any
 from pathlib import Path
+from typing import Any
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field, SecretStr, field_validator

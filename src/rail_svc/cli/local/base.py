@@ -11,8 +11,8 @@ from sqlalchemy.exc import IntegrityError
 
 from ...db.base import Base
 from ...db.session import init_db
-from ...models import Filter, FilterOp, OrderBy
 from ...local_sync.base import SyncOperations
+from ...models import Filter, FilterOp, OrderBy
 from ...models.utils import OutputEnum, output_pydantic
 from .. import common_options
 
