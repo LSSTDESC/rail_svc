@@ -181,7 +181,7 @@ class TestDatabaseConfiguration:
     def test_valid_database_configuration_defaults(self):
         """Test creating DatabaseConfiguration with default values"""
         db = DatabaseConfiguration()
-        assert db.url == "sqlite:///rail_svc.db"
+        assert db.url == "sqlite+aiosqlite:///rail_svc.db"
         assert db.password is None
         assert db.table_schema is None
         assert db.echo is False
