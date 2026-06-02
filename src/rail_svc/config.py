@@ -217,7 +217,8 @@ class DatabaseConfiguration(BaseModel):
             ("postgresql://", "sqlite://", "sqlite+aiosqlite://", "mysql://", "postgresql+psycopg2://")
         ):
             raise ValueError(
-                "Database URL must start with a valid scheme(postgresql://, sqlite://, sqlite+aiosqlite://, mysql://, postgresql+psycopg2://)"
+                "Database URL must start with a valid scheme(postgresql://, "
+                ":sqlite://, sqlite+aiosqlite://, mysql://, postgresql+psycopg2://)"
             )
         return v
 
