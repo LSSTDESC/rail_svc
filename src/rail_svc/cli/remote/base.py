@@ -336,9 +336,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
         All rows are created atomically.
         """
 
-        @self.group.command(
-            name="create-many", help=f"Create multiple {self.table_name} rows from JSON file"
-        )
+        @self.group.command(name="create-many", help=f"Create multiple {self.table_name} rows from JSON file")
         @common_options.output()
         @click.option("--no-validate", is_flag=True, help="Skip Pydantic validation")
         @click.argument("json_file", type=click.Path(exists=True))
@@ -387,9 +385,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
         Allows partial success if later batches fail.
         """
 
-        @self.group.command(
-            name="create-batched", help=f"Create multiple {self.table_name} rows in batches"
-        )
+        @self.group.command(name="create-batched", help=f"Create multiple {self.table_name} rows in batches")
         @common_options.output()
         @click.option("--batch-size", type=int, default=1000, help="Number of rows per batch (default: 1000)")
         @click.option("--no-validate", is_flag=True, help="Skip Pydantic validation")
@@ -436,8 +432,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                     rows_data=rows_data, validate=not no_validate, batch_size=batch_size
                 )
                 click.echo(
-                    f"Successfully created {len(rows)} {self.table_name} rows "
-                    f"in batches of {batch_size}"
+                    f"Successfully created {len(rows)} {self.table_name} rows " f"in batches of {batch_size}"
                 )
                 print(output_pydantic(rows, output))
 
@@ -585,9 +580,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
         All updates are performed atomically.
         """
 
-        @self.group.command(
-            name="update-many", help=f"Update multiple {self.table_name} rows from JSON file"
-        )
+        @self.group.command(name="update-many", help=f"Update multiple {self.table_name} rows from JSON file")
         @common_options.output()
         @click.argument("json_file", type=click.Path(exists=True))
         def command(
@@ -1013,9 +1006,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
         Adds a Click command that counts rows matching filter conditions.
         """
 
-        @self.group.command(
-            name="count-filtered", help=f"Count {self.table_name} rows matching conditions"
-        )
+        @self.group.command(name="count-filtered", help=f"Count {self.table_name} rows matching conditions")
         @click.option("--field", "-f", multiple=True, help="Filter condition: FIELD:OPERATOR:VALUE")
         @click.option("--or", "use_or", is_flag=True, help="Use OR logic for multiple filters (default: AND)")
         def command(

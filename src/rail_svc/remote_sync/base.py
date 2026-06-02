@@ -214,15 +214,12 @@ class SyncRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
 
 # Subclasses
 
-class AlgorithmSyncRemoteOperations(
-    SyncRemoteOperations[models.Algorithm, models.AlgorithmCreate]
-):
+
+class AlgorithmSyncRemoteOperations(SyncRemoteOperations[models.Algorithm, models.AlgorithmCreate]):
     """Sync wrapper for remote operations on Algorithm table."""
 
 
-class BandSyncRemoteOperations(
-    SyncRemoteOperations[models.Band, models.BandCreate]
-):
+class BandSyncRemoteOperations(SyncRemoteOperations[models.Band, models.BandCreate]):
     """Sync wrapper for remote operations on Band table."""
 
 
@@ -232,37 +229,25 @@ class CatalogBandAssocSyncRemoteOperations(
     """Sync wrapper for remote operations on CatalogBandAssoc table."""
 
 
-class CatalogTagSyncRemoteOperations(
-    SyncRemoteOperations[models.CatalogTag, models.CatalogTagCreate]
-):
+class CatalogTagSyncRemoteOperations(SyncRemoteOperations[models.CatalogTag, models.CatalogTagCreate]):
     """Sync wrapper for remote operations on CatalogTag table."""
 
 
-class DatasetSyncRemoteOperations(
-    SyncRemoteOperations[models.Dataset, models.DatasetCreate]
-):
+class DatasetSyncRemoteOperations(SyncRemoteOperations[models.Dataset, models.DatasetCreate]):
     """Sync wrapper for remote operations on Dataset table."""
 
 
-class DatasetAssocSyncRemoteOperations(
-    SyncRemoteOperations[models.DatasetAssoc, models.DatasetAssocCreate]
-):
+class DatasetAssocSyncRemoteOperations(SyncRemoteOperations[models.DatasetAssoc, models.DatasetAssocCreate]):
     """Sync wrapper for remote operations on DatasetAssoc table."""
 
 
-class EstimatesSyncRemoteOperations(
-    SyncRemoteOperations[models.Estimates, models.EstimatesCreate]
-):
+class EstimatesSyncRemoteOperations(SyncRemoteOperations[models.Estimates, models.EstimatesCreate]):
     """Sync wrapper for remote operations on Estimates table."""
 
 
-class EstimatorSyncRemoteOperations(
-    SyncRemoteOperations[models.Estimator, models.EstimatorCreate]
-):
+class EstimatorSyncRemoteOperations(SyncRemoteOperations[models.Estimator, models.EstimatorCreate]):
     """Sync wrapper for remote operations on Estimator table."""
 
 
-class ModelSyncRemoteOperations(
-    SyncRemoteOperations[models.Model, models.ModelCreate]
-):
+class ModelSyncRemoteOperations(SyncRemoteOperations[models.Model, models.ModelCreate]):
     """Sync wrapper for remote operations on Model table."""

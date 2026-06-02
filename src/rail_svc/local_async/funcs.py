@@ -5,8 +5,7 @@ import qp
 
 from .. import db_oper, models
 from ..db.session import get_session
-from ..rail_funcs.estimation_funcs import (CatEstimatorEnsembleWrapper,
-                                           CatEstimatorPdfWrapper)
+from ..rail_funcs.estimation_funcs import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
 
 
 async def build_pdf_estimation_wrapper(

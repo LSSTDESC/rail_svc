@@ -19,7 +19,6 @@ from ..models.filtering import Filter, FilterOp, OrderBy
 logger = structlog.get_logger(__name__)
 
 
-
 def _apply_filter(
     query: Select,
     the_class: type[T],

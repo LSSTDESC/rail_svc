@@ -10,8 +10,7 @@ from pydantic import BaseModel, ValidationError
 
 from ..db.base import Base
 from ..local_async import LocalOperations
-from ..models import (CountResponse, DeleteResponse, FilterRequest,
-                      LookupResponse, OrderBy)
+from ..models import CountResponse, DeleteResponse, FilterRequest, LookupResponse, OrderBy
 
 # Configure logging
 logger = logging.getLogger(__name__)

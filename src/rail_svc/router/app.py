@@ -184,8 +184,7 @@ def add_health_check(app: FastAPI) -> None:
         try:
             # Add any health checks here (database connection, etc.)
             return JSONResponse(
-                status_code=200,
-                content={"status": "healthy", "service": "api", "version": "1.0.0"}
+                status_code=200, content={"status": "healthy", "service": "api", "version": "1.0.0"}
             )
         except Exception as e:
             logger.exception("Health check failed")
@@ -231,10 +230,7 @@ def add_error_handlers(app: FastAPI) -> None:
         """Handle 405 errors."""
         return JSONResponse(
             status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
-            content={
-                "error": "Method not allowed",
-                "request": request
-            },
+            content={"error": "Method not allowed", "request": request},
         )
 
     @app.exception_handler(RequestValidationError)
@@ -242,11 +238,7 @@ def add_error_handlers(app: FastAPI) -> None:
         """Handle validation errors."""
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={
-                "error": "Validation error",
-                "request": request,
-                "details": exc.errors()
-            },
+            content={"error": "Validation error", "request": request, "details": exc.errors()},
         )
 
     @app.exception_handler(500)
@@ -258,7 +250,7 @@ def add_error_handlers(app: FastAPI) -> None:
             content={
                 "error": "Internal server error",
                 "request": request,
-                "details": str(exc) if app.debug else None
+                "details": str(exc) if app.debug else None,
             },
         )
 
@@ -526,18 +518,3 @@ def setup_fastapi_app(
         add_rate_limiting(app, default_limits=rate_limits, storage_uri=rate_limit_storage)
 
     logger.info("FastAPI app setup complete")
-
-
-# Create the default app instance
-fastapi_app = create_fastapi_app(
-    title="Database API",
-    description="RESTful API for database operations with full CRUD support",
-    version="1.0.0",
-    enable_rate_limiting=True,
-    rate_limits=["1000 per day", "100 per hour"],
-    rate_limit_storage="memory://",  # Change to "redis://localhost:6379" in production
-    enable_cors=True,
-    cors_origins=["*"],  # Specify exact origins in production
-    api_prefix="/api/v1",
-    debug=False,
-)

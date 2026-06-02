@@ -9,8 +9,7 @@ from typing import Any, cast
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from ..models import (CountResponse, Filter, FilterRequest, LookupResponse,
-                      OrderBy, RemoteAPIError)
+from ..models import CountResponse, Filter, FilterRequest, LookupResponse, OrderBy, RemoteAPIError
 
 # Configure logging
 logger = logging.getLogger(__name__)
