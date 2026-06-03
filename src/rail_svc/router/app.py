@@ -12,6 +12,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from .. import local_async
+from ..db.session import init_db
 from .base import create_table_router
 
 # Configure logging
@@ -451,6 +452,8 @@ def create_fastapi_app(
         add_rate_limiting(app, default_limits=rate_limits, storage_uri=rate_limit_storage)
 
     logger.info(f"FastAPI app '{title}' v{version} setup complete")
+
+    init_db()
 
     return app
 
