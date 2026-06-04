@@ -28,7 +28,7 @@ class CatalogTag(CatalogTagBase):
     model_config = ConfigDict(from_attributes=True)
 
     #: column names to use when printing the table
-    col_names_for_table: ClassVar[list[str]] = ["id", "name"]
+    col_names_for_table: ClassVar[list[str]] = ["id_", "name"]
 
     #: primary key
     id_: int = Field(..., gt=0)

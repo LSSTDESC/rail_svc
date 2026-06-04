@@ -39,7 +39,7 @@ class Estimates(EstimatesBase):
         "id_",
         "estimator_id",
         "dataset_id",
-        "qp_file_path",
+        "path",
     ]
 
     #: primary key
