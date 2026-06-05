@@ -22,7 +22,7 @@ from rail_svc.router.base import (
 
 
 # Test Models
-class TestBase(Base):
+class RouterTestBase(Base):
     """Test database model."""
 
     __tablename__ = "test_table"
@@ -33,7 +33,7 @@ class TestBase(Base):
     value: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
-class TestResponse(BaseModel):
+class RouterTestResponse(BaseModel):
     """Test response model."""
 
     id: int
@@ -41,7 +41,7 @@ class TestResponse(BaseModel):
     value: int
 
 
-class TestCreate(BaseModel):
+class RouterTestCreate(BaseModel):
     """Test create model."""
 
     name: str
@@ -57,7 +57,7 @@ def mock_operations() -> MagicMock:
     # Mock the table operations context
     mock_table_ops = MagicMock()
     mock_ctx = MagicMock()
-    mock_ctx.response_class = TestResponse
+    mock_ctx.response_class = RouterTestResponse
     operations._table_ops = mock_table_ops
     operations._table_ops.ctx = mock_ctx
 
@@ -193,7 +193,7 @@ class TestCreateEndpoints:
 
     def test_create_row_success(self, client: TestClient, mock_operations: MagicMock) -> None:
         """Test successful row creation."""
-        mock_operations.create_row.return_value = TestResponse(id=1, name="test", value=100)
+        mock_operations.create_row.return_value = RouterTestResponse(id=1, name="test", value=100)
 
         response = client.post("/test/create_row", json={"name": "test", "value": 100})
 
@@ -204,7 +204,7 @@ class TestCreateEndpoints:
     def test_create_row_validation_error(self, client: TestClient, mock_operations: MagicMock) -> None:
         """Test row creation with validation error."""
         mock_operations.create_row.side_effect = ValidationError.from_exception_data(
-            "TestResponse",
+            "RouterTestResponse",
             [{"type": "missing", "loc": ("name",), "msg": "Field required", "input": {}}],
         )
 
@@ -215,7 +215,7 @@ class TestCreateEndpoints:
 
     def test_create_row_without_validation(self, client: TestClient, mock_operations: MagicMock) -> None:
         """Test row creation without validation."""
-        mock_operations.create_row.return_value = TestResponse(id=1, name="test", value=100)
+        mock_operations.create_row.return_value = RouterTestResponse(id=1, name="test", value=100)
 
         response = client.post("/test/create_row?validate=false", json={"name": "test", "value": 100})
 
@@ -225,8 +225,8 @@ class TestCreateEndpoints:
     def test_create_rows_success(self, client: TestClient, mock_operations: MagicMock) -> None:
         """Test successful multiple rows creation."""
         mock_operations.create_rows.return_value = [
-            TestResponse(id=1, name="test1", value=100),
-            TestResponse(id=2, name="test2", value=200),
+            RouterTestResponse(id=1, name="test1", value=100),
+            RouterTestResponse(id=2, name="test2", value=200),
         ]
 
         response = client.post(
@@ -252,8 +252,8 @@ class TestCreateEndpoints:
     def test_create_rows_batched_success(self, client: TestClient, mock_operations: MagicMock) -> None:
         """Test batched row creation."""
         mock_operations.create_rows_batched.return_value = [
-            TestResponse(id=1, name="test1", value=100),
-            TestResponse(id=2, name="test2", value=200),
+            RouterTestResponse(id=1, name="test1", value=100),
+            RouterTestResponse(id=2, name="test2", value=200),
         ]
 
         response = client.post(
@@ -295,7 +295,7 @@ class TestReadEndpoints:
 
     def test_get_row_success(self, client: TestClient, mock_operations: MagicMock) -> None:
         """Test successful row retrieval."""
-        mock_operations.get_row.return_value = TestResponse(id=1, name="test", value=100)
+        mock_operations.get_row.return_value = RouterTestResponse(id=1, name="test", value=100)
 
         response = client.get("/test/get_row/1")
 
@@ -314,7 +314,7 @@ class TestReadEndpoints:
 
     def test_get_row_or_none_found(self, client: TestClient, mock_operations: MagicMock) -> None:
         """Test get_row_or_none when row exists."""
-        mock_operations.get_row_or_none.return_value = TestResponse(id=1, name="test", value=100)
+        mock_operations.get_row_or_none.return_value = RouterTestResponse(id=1, name="test", value=100)
 
         response = client.get("/test/get_row_or_none/1")
 
@@ -334,8 +334,8 @@ class TestReadEndpoints:
         """Test streaming rows."""
 
         items = [
-            TestResponse(id=1, name="test1", value=100),
-            TestResponse(id=2, name="test2", value=200),
+            RouterTestResponse(id=1, name="test1", value=100),
+            RouterTestResponse(id=2, name="test2", value=200),
         ]
 
         # Replace the mock method entirely with an async generator function
@@ -360,7 +360,7 @@ class TestUpdateEndpoints:
 
     def test_update_row_success(self, client: TestClient, mock_operations: MagicMock) -> None:
         """Test successful row update."""
-        mock_operations.update_row.return_value = TestResponse(id=1, name="updated", value=200)
+        mock_operations.update_row.return_value = RouterTestResponse(id=1, name="updated", value=200)
 
         response = client.put("/test/update_row/1", json={"name": "updated", "value": 200})
 
@@ -371,7 +371,7 @@ class TestUpdateEndpoints:
 
     def test_update_row_patch(self, client: TestClient, mock_operations: MagicMock) -> None:
         """Test row update with PATCH method."""
-        mock_operations.update_row.return_value = TestResponse(id=1, name="updated", value=200)
+        mock_operations.update_row.return_value = RouterTestResponse(id=1, name="updated", value=200)
 
         response = client.patch("/test/update_row/1", json={"name": "updated"})
 
@@ -386,7 +386,7 @@ class TestUpdateEndpoints:
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_update_row_validation_error(self, client: TestClient, mock_operations: MagicMock) -> None:
+    def test_update_row_validation_error(self, client: RouterTestClient, mock_operations: MagicMock) -> None:
         """Test update with validation error."""
         mock_operations.update_row.side_effect = ValidationError.from_exception_data(
             "TestResponse",
@@ -402,7 +402,7 @@ class TestUpdateEndpoints:
         # FastAPI validation will catch this, so expect 422
         response = client.put("/test/update_rows", json=["not_a_dict"])
 
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 # DELETE Endpoint Tests
@@ -471,7 +471,7 @@ class TestDeleteEndpoints:
         """Test deleting rows with non-integer ID."""
         response = client.request("DELETE", "/test/delete_rows", json=[1, "invalid", 3])
 
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
         assert "integer" in response.json()["detail"][0]["msg"]
 
     def test_bulk_delete_rows_success(self, client: TestClient, mock_operations: MagicMock) -> None:
@@ -499,7 +499,7 @@ class TestFilterEndpoints:
     def test_filter_rows_success(self, client: TestClient, mock_operations: MagicMock) -> None:
         """Test filtering rows."""
         mock_operations.filter_rows.return_value = [
-            TestResponse(id=1, name="test", value=100),
+            RouterTestResponse(id=1, name="test", value=100),
         ]
 
         filter_request = {
@@ -546,7 +546,7 @@ class TestFilterEndpoints:
         """Test streaming filtered rows."""
 
         async def mock_generator():
-            yield TestResponse(id=1, name="test", value=100)
+            yield RouterTestResponse(id=1, name="test", value=100)
 
         mock_operations.filter_rows_streaming.return_value = mock_generator()
 
@@ -576,7 +576,7 @@ class TestFilterEndpoints:
 
     def test_filter_one_success(self, client: TestClient, mock_operations: MagicMock) -> None:
         """Test filter_one success."""
-        mock_operations.filter_one.return_value = TestResponse(id=1, name="test", value=100)
+        mock_operations.filter_one.return_value = RouterTestResponse(id=1, name="test", value=100)
 
         filter_request = {
             "filters": [{"field": "name", "op": "eq", "value": "test"}],
@@ -614,7 +614,7 @@ class TestFilterEndpoints:
 
     def test_filter_one_or_none_found(self, client: TestClient, mock_operations: MagicMock) -> None:
         """Test filter_one_or_none when row exists."""
-        mock_operations.filter_one_or_none.return_value = TestResponse(id=1, name="test", value=100)
+        mock_operations.filter_one_or_none.return_value = RouterTestResponse(id=1, name="test", value=100)
 
         filter_request = {
             "filters": [{"field": "name", "op": "eq", "value": "test"}],
@@ -653,7 +653,7 @@ class TestFilterEndpoints:
     def test_find_by_success(self, client: TestClient, mock_operations: MagicMock) -> None:
         """Test find_by with field values."""
         mock_operations.find_by.return_value = [
-            TestResponse(id=1, name="test", value=100),
+            RouterTestResponse(id=1, name="test", value=100),
         ]
 
         response = client.post(
@@ -727,7 +727,7 @@ class TestFilterEndpoints:
 
     def test_find_one_by_success(self, client: TestClient, mock_operations: MagicMock) -> None:
         """Test find_one_by success."""
-        mock_operations.find_one_by.return_value = TestResponse(id=1, name="test", value=100)
+        mock_operations.find_one_by.return_value = RouterTestResponse(id=1, name="test", value=100)
 
         response = client.post("/test/find_one_by", json={"name": "test"})
 
@@ -773,7 +773,7 @@ class TestEdgeCases:
         """Test error handling in streaming endpoint."""
 
         async def failing_generator():
-            yield TestResponse(id=1, name="test", value=100)
+            yield RouterTestResponse(id=1, name="test", value=100)
             raise RuntimeError("Stream error")
 
         mock_operations.get_rows_streaming.return_value = failing_generator()
@@ -817,7 +817,7 @@ class TestRouterConfiguration:
         app.include_router(router)
         client = TestClient(app)
 
-        mock_operations.get_row.return_value = TestResponse(id=1, name="test", value=100)
+        mock_operations.get_row.return_value = RouterTestResponse(id=1, name="test", value=100)
 
         response = client.get("/items/get_row/123")
 
@@ -848,13 +848,13 @@ class TestIntegration:
     def test_create_and_retrieve_flow(self, client: TestClient, mock_operations: MagicMock) -> None:
         """Test creating and then retrieving a row."""
         # Create
-        mock_operations.create_row.return_value = TestResponse(id=1, name="test", value=100)
+        mock_operations.create_row.return_value = RouterTestResponse(id=1, name="test", value=100)
         create_response = client.post("/test/create_row", json={"name": "test", "value": 100})
         assert create_response.status_code == status.HTTP_201_CREATED
         created_id = create_response.json()["id"]
 
         # Retrieve
-        mock_operations.get_row.return_value = TestResponse(id=1, name="test", value=100)
+        mock_operations.get_row.return_value = RouterTestResponse(id=1, name="test", value=100)
         get_response = client.get(f"/test/get_row/{created_id}")
         assert get_response.status_code == status.HTTP_200_OK
         assert get_response.json() == create_response.json()
@@ -862,12 +862,12 @@ class TestIntegration:
     def test_create_update_delete_flow(self, client: TestClient, mock_operations: MagicMock) -> None:
         """Test full CRUD cycle."""
         # Create
-        mock_operations.create_row.return_value = TestResponse(id=1, name="test", value=100)
+        mock_operations.create_row.return_value = RouterTestResponse(id=1, name="test", value=100)
         create_response = client.post("/test/create_row", json={"name": "test", "value": 100})
         row_id = create_response.json()["id"]
 
         # Update
-        mock_operations.update_row.return_value = TestResponse(id=1, name="updated", value=200)
+        mock_operations.update_row.return_value = RouterTestResponse(id=1, name="updated", value=200)
         update_response = client.put(f"/test/update_row/{row_id}", json={"name": "updated"})
         assert update_response.status_code == status.HTTP_200_OK
         assert update_response.json()["name"] == "updated"
@@ -886,8 +886,8 @@ class TestIntegration:
 
         # Filter
         mock_operations.filter_rows.return_value = [
-            TestResponse(id=1, name="test1", value=100),
-            TestResponse(id=2, name="test2", value=200),
+            RouterTestResponse(id=1, name="test1", value=100),
+            RouterTestResponse(id=2, name="test2", value=200),
         ]
         filter_response = client.post("/test/filter_rows", json=filter_request)
         filter_count = len(filter_response.json())
@@ -910,14 +910,14 @@ class TestPerformanceAndLimits:
             "/test/create_rows_batched?batch_size=0",
             json=[{"name": "test", "value": 100}],
         )
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
         # Too large
         response = client.post(
             "/test/create_rows_batched?batch_size=10001",
             json=[{"name": "test", "value": 100}],
         )
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     def test_limit_constraints(self, client: TestClient, mock_operations: MagicMock) -> None:
         """Test limit parameter constraints."""
@@ -929,14 +929,14 @@ class TestPerformanceAndLimits:
 
         # Exceeds maximum
         response = client.get("/test/get_rows?limit=10001")
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     def test_large_batch_operations(self, client: TestClient, mock_operations: MagicMock) -> None:
         """Test operations with large batches near limits."""
         # Create rows at limit
         data = [{"name": f"test{i}", "value": i} for i in range(10000)]
         mock_operations.create_rows.return_value = [
-            TestResponse(id=i, name=f"test{i}", value=i) for i in range(10000)
+            RouterTestResponse(id=i, name=f"test{i}", value=i) for i in range(10000)
         ]
 
         response = client.post("/test/create_rows", json=data)

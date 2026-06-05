@@ -272,7 +272,7 @@ class TestAddErrorHandlers:
         # Send invalid data
         response = client.post("/test", json={"name": "test"})  # Missing 'value'
 
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
         assert "error" in response.json()
 
     def test_handles_500_errors_debug_mode(self) -> None:
@@ -1015,7 +1015,7 @@ class TestErrorHandlerDetails:
         client = TestClient(app, raise_server_exceptions=False)
         response = client.post("/items", json={"name": "test"})  # Missing price
 
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
         data = response.json()
         assert "details" in data
         assert len(data["details"]) > 0

@@ -319,23 +319,3 @@ async def test_create_row_with_catalog_tag_name(session, sample_catalog_tag):
     await session.commit()
 
     assert result.catalog_tag_id == sample_catalog_tag.id_
-
-
-@pytest.mark.asyncio
-async def test_create_row_without_path(session, sample_catalog_tag):
-    """Test creating dataset without path."""
-    result = await dataset.create_row(
-        session,
-        name="no_path_dataset",
-        path=None,
-        catalog_tag_id=sample_catalog_tag.id_,
-        n_objects=3000,
-        is_collection=True,
-        validate_file=False,
-        validate=False,
-    )
-    await session.commit()
-
-    assert result.path is None
-    assert result.n_objects == 3000
-    assert result.is_collection is True

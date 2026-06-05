@@ -259,7 +259,6 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
 
             try:
                 row = self.sync_oper.get_row_or_none(row_id=row_id)
-
                 if row is None:
                     click.echo(f"No {self.ctx.class_string} found with ID {row_id}")
                 else:
@@ -805,7 +804,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                     # Convert dict to list for output_pydantic compatibility
                     print(
                         output_pydantic(
-                            [cast(ResponseT, deleted_data)],
+                            [self.ctx.response_class(**deleted_data)],
                             output,
                             self.ctx.response_class.col_names_for_table,
                         )
@@ -898,7 +897,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                     click.echo("\nDeleted data:")
                     print(
                         output_pydantic(
-                            cast(list[ResponseT], deleted_data),
+                            [self.ctx.response_class(**del_d) for del_d in deleted_data],
                             output,
                             self.ctx.response_class.col_names_for_table,
                         )
