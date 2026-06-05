@@ -121,14 +121,16 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
             db.Algorithm, session, algo_id, algo_name, need_object=validate_file
         )
 
-        assert algo_obj
+        if validate_file:
+            assert algo_obj
 
         # Resolve catalog_tag foreign key
         catalog_tag_id, catalog_tag_obj = await db_funcs.read.lookup_by_id_or_name(
             db.CatalogTag, session, catalog_tag_id, catalog_tag_name, need_object=validate_file
         )
 
-        assert catalog_tag_obj
+        if validate_file:
+            assert catalog_tag_obj
 
         assert path
 

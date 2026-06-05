@@ -222,7 +222,7 @@ def add_error_handlers(app: FastAPI) -> None:
             status_code=status.HTTP_404_NOT_FOUND,
             content={
                 "error": "Endpoint not found",
-                "request": request,
+                "request": request.url.path,
             },
         )
 
@@ -231,7 +231,11 @@ def add_error_handlers(app: FastAPI) -> None:
         """Handle 405 errors."""
         return JSONResponse(
             status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
-            content={"error": "Method not allowed", "request": request},
+            content={
+                "error": "Method not allowed",
+                "path": request.url.path,  # Changed from request object
+                "method": request.method,  # Add method info
+            },
         )
 
     @app.exception_handler(RequestValidationError)
@@ -239,7 +243,11 @@ def add_error_handlers(app: FastAPI) -> None:
         """Handle validation errors."""
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={"error": "Validation error", "request": request, "details": exc.errors()},
+            content={
+                "error": "Validation error",
+                "path": request.url.path,  # Changed from request object
+                "details": exc.errors(),
+            },
         )
 
     @app.exception_handler(500)
@@ -250,7 +258,7 @@ def add_error_handlers(app: FastAPI) -> None:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "error": "Internal server error",
-                "request": request,
+                "request": request.url.path,
                 "details": str(exc) if app.debug else None,
             },
         )
@@ -263,7 +271,7 @@ def add_error_handlers(app: FastAPI) -> None:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "error": "Internal server error",
-                "request": request,
+                "request": request.url.path,
                 "details": str(exc) if app.debug else "An unexpected error occurred",
             },
         )

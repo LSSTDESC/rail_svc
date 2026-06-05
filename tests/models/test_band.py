@@ -12,9 +12,7 @@ class TestBandBase:
     def test_valid_band_base(self):
         """Test creating valid BandBase instance"""
         band = BandBase(
-            name="test_band",
-            band_wavelengths=[400.0, 500.0, 600.0],
-            band_transmission=[0.1, 0.9, 0.2]
+            name="test_band", band_wavelengths=[400.0, 500.0, 600.0], band_transmission=[0.1, 0.9, 0.2]
         )
         assert band.name == "test_band"
         assert band.band_wavelengths == [400.0, 500.0, 600.0]
@@ -23,37 +21,21 @@ class TestBandBase:
     def test_empty_wavelengths_raises_error(self):
         """Test that empty wavelengths array raises ValidationError"""
         with pytest.raises(ValidationError, match="Array must not be empty"):
-            BandBase(
-                name="test",
-                band_wavelengths=[],
-                band_transmission=[0.5]
-            )
+            BandBase(name="test", band_wavelengths=[], band_transmission=[0.5])
 
     def test_empty_transmission_raises_error(self):
         """Test that empty transmission array raises ValidationError"""
         with pytest.raises(ValidationError, match="Array must not be empty"):
-            BandBase(
-                name="test",
-                band_wavelengths=[500.0],
-                band_transmission=[]
-            )
+            BandBase(name="test", band_wavelengths=[500.0], band_transmission=[])
 
     def test_mismatched_array_lengths_raises_error(self):
         """Test that mismatched array lengths raise ValidationError"""
         with pytest.raises(ValidationError, match="must have same length"):
-            BandBase(
-                name="test",
-                band_wavelengths=[400.0, 500.0, 600.0],
-                band_transmission=[0.1, 0.9]
-            )
+            BandBase(name="test", band_wavelengths=[400.0, 500.0, 600.0], band_transmission=[0.1, 0.9])
 
     def test_single_element_arrays(self):
         """Test that single-element arrays are valid"""
-        band = BandBase(
-            name="test",
-            band_wavelengths=[500.0],
-            band_transmission=[0.8]
-        )
+        band = BandBase(name="test", band_wavelengths=[500.0], band_transmission=[0.8])
         assert len(band.band_wavelengths) == 1
         assert len(band.band_transmission) == 1
 
@@ -68,19 +50,11 @@ class TestBandCreate:
 
     def test_band_create_inherits_validation(self):
         """Test that BandCreate inherits validation from BandBase"""
-        band = BandCreate(
-            name="create_test",
-            band_wavelengths=[450.0, 550.0],
-            band_transmission=[0.3, 0.7]
-        )
+        band = BandCreate(name="create_test", band_wavelengths=[450.0, 550.0], band_transmission=[0.3, 0.7])
         assert band.name == "create_test"
-        
+
         with pytest.raises(ValidationError):
-            BandCreate(
-                name="test",
-                band_wavelengths=[],
-                band_transmission=[0.5]
-            )
+            BandCreate(name="test", band_wavelengths=[], band_transmission=[0.5])
 
 
 class TestBand:
@@ -89,10 +63,7 @@ class TestBand:
     def test_valid_band(self):
         """Test creating valid Band instance"""
         band = Band(
-            id_=1,
-            name="g_band",
-            band_wavelengths=[400.0, 500.0, 600.0],
-            band_transmission=[0.1, 0.95, 0.15]
+            id_=1, name="g_band", band_wavelengths=[400.0, 500.0, 600.0], band_transmission=[0.1, 0.95, 0.15]
         )
         assert band.id_ == 1
         assert band.name == "g_band"
@@ -100,21 +71,17 @@ class TestBand:
     def test_id_must_be_positive(self):
         """Test that id_ must be greater than 0"""
         with pytest.raises(ValidationError):
-            Band(
-                id_=0,
-                name="test",
-                band_wavelengths=[500.0],
-                band_transmission=[0.5]
-            )
+            Band(id_=0, name="test", band_wavelengths=[500.0], band_transmission=[0.5])
 
     def test_from_attributes_config(self):
         """Test that from_attributes config works with ORM objects"""
+
         class MockORMObject:
             id_ = 5
             name = "orm_band"
             band_wavelengths = [450.0, 550.0]
             band_transmission = [0.4, 0.6]
-        
+
         band = Band.model_validate(MockORMObject())
         assert band.id_ == 5
         assert band.name == "orm_band"
@@ -125,12 +92,7 @@ class TestBand:
 
     def test_col_names_not_instance_attribute(self):
         """Test that col_names_for_table is not an instance attribute"""
-        band = Band(
-            id_=1,
-            name="test",
-            band_wavelengths=[500.0],
-            band_transmission=[0.5]
-        )
+        band = Band(id_=1, name="test", band_wavelengths=[500.0], band_transmission=[0.5])
         assert "col_names_for_table" not in band.model_dump()
 
 
@@ -142,21 +104,13 @@ class TestArrayValidation:
         """Test arrays of various matching lengths"""
         wavelengths = [float(i) for i in range(length)]
         transmission = [0.5] * length
-        band = BandBase(
-            name="test",
-            band_wavelengths=wavelengths,
-            band_transmission=transmission
-        )
+        band = BandBase(name="test", band_wavelengths=wavelengths, band_transmission=transmission)
         assert len(band.band_wavelengths) == length
         assert len(band.band_transmission) == length
 
     def test_wavelengths_can_be_any_float(self):
         """Test that wavelengths accept any float values"""
-        band = BandBase(
-            name="test",
-            band_wavelengths=[0.1, 1e6, -100.0],
-            band_transmission=[0.0, 0.5, 1.0]
-        )
+        band = BandBase(name="test", band_wavelengths=[0.1, 1e6, -100.0], band_transmission=[0.0, 0.5, 1.0])
         assert band.band_wavelengths == [0.1, 1e6, -100.0]
 
     def test_transmission_can_be_any_float(self):
@@ -164,7 +118,7 @@ class TestArrayValidation:
         band = BandBase(
             name="test",
             band_wavelengths=[500.0, 600.0],
-            band_transmission=[-0.1, 2.0]  # Values outside [0,1] are allowed
+            band_transmission=[-0.1, 2.0],  # Values outside [0,1] are allowed
         )
         assert band.band_transmission == [-0.1, 2.0]
 
@@ -174,12 +128,7 @@ class TestModelSerialization:
 
     def test_band_to_dict(self):
         """Test converting Band to dict"""
-        band = Band(
-            id_=42,
-            name="r_band",
-            band_wavelengths=[600.0, 700.0],
-            band_transmission=[0.2, 0.8]
-        )
+        band = Band(id_=42, name="r_band", band_wavelengths=[600.0, 700.0], band_transmission=[0.2, 0.8])
         data = band.model_dump()
         assert data["id_"] == 42
         assert data["name"] == "r_band"
@@ -189,10 +138,7 @@ class TestModelSerialization:
     def test_json_serialization(self):
         """Test JSON serialization round-trip"""
         original = Band(
-            id_=7,
-            name="i_band",
-            band_wavelengths=[700.0, 800.0, 900.0],
-            band_transmission=[0.1, 0.9, 0.3]
+            id_=7, name="i_band", band_wavelengths=[700.0, 800.0, 900.0], band_transmission=[0.1, 0.9, 0.3]
         )
         json_str = original.model_dump_json()
         restored = Band.model_validate_json(json_str)

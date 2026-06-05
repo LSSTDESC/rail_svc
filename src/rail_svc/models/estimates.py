@@ -14,6 +14,9 @@ class EstimatesBase(BaseModel):
     #: path to the output file
     path: str | None = Field(None, description="Path to the output qp ensemble file")
 
+    #: Number of objects
+    n_objects: int | None = Field(None, description="Number of object in file")
+
 
 class EstimatesCreate(EstimatesBase):
     """Estimates Parameters that are used to create new rows but not in DB tables"""
@@ -40,6 +43,7 @@ class Estimates(EstimatesBase):
         "estimator_id",
         "dataset_id",
         "path",
+        "n_objects",
     ]
 
     #: primary key

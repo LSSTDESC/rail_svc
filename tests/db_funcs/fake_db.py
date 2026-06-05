@@ -1,8 +1,7 @@
-from datetime import datetime, UTC
+from datetime import UTC, datetime
+
 from pydantic import BaseModel
-
-
-from sqlalchemy import String, Integer, DateTime
+from sqlalchemy import DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from rail_svc.db.base import Base

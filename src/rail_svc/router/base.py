@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from collections.abc import AsyncGenerator
-from typing import Any
 
 from fastapi import APIRouter, Body, Header, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
@@ -10,8 +9,7 @@ from pydantic import BaseModel, ValidationError
 
 from ..db.base import Base
 from ..local_async import LocalOperations
-from ..models import (CountResponse, DeleteResponse, FilterRequest,
-                      LookupResponse, OrderBy)
+from ..models import CountResponse, DeleteResponse, FilterRequest, LookupResponse, OrderBy
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -118,7 +116,6 @@ def validate_batch_size(batch_size: int) -> int:
 def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
     name: str,
     operations: LocalOperations[T, ResponseT, CreateT],
-    id_param: str = "id",
 ) -> APIRouter:
     """Create a FastAPI router with CRUD endpoints for a table.
 
@@ -128,8 +125,6 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
         Name of the table (used for router prefix and tags)
     operations : LocalOperations
         The local operations instance for this table
-    id_param : str
-        Name of the ID parameter in URLs (default: "id")
 
     Returns
     -------
@@ -281,12 +276,14 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
 
     # READ endpoints
-    @router.get(f"/get_row/{{{id_param}}}", response_model=response_model)
-    async def get_row(**kwargs: Any) -> ResponseT:
+    @router.get("/get_row/{row_id}", response_model=response_model)
+    async def get_row(
+        row_id: int,
+    ) -> ResponseT:
         """Get a single row by ID.
 
         Path Parameters:
-            id (int): Row ID
+            row_id (int): Row ID
 
         Returns:
             200: Row data
@@ -294,7 +291,6 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
             500: Internal server error
         """
         try:
-            row_id = kwargs[id_param]
             result = await operations.get_row(row_id)
             if result is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
@@ -305,19 +301,20 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
             logger.exception("Error getting row")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
 
-    @router.get(f"/get_row_or_none/{{{id_param}}}", response_model=response_model | None)
-    async def get_row_or_none(**kwargs: Any) -> ResponseT | None:
+    @router.get("/get_row_or_none/{row_id}", response_model=response_model | None)
+    async def get_row_or_none(
+        row_id: int,
+    ) -> ResponseT | None:
         """Get a single row by ID or None if not found.
 
         Path Parameters:
-            id (int): Row ID
+            row_id (int): Row ID
 
         Returns:
             200: Row data or null
             500: Internal server error
         """
         try:
-            row_id = kwargs[id_param]
             result = await operations.get_row_or_none(row_id)
             return result
         except Exception as e:
@@ -457,13 +454,16 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
 
     # UPDATE endpoints
-    @router.put(f"/update_row/{{{id_param}}}", response_model=response_model)
-    @router.patch(f"/update_row/{{{id_param}}}", response_model=response_model)
-    async def update_row(data: dict = Body(...), **kwargs: Any) -> ResponseT:
+    @router.put("/update_row/{row_id}", response_model=response_model)
+    @router.patch("/update_row/{row_id}", response_model=response_model)
+    async def update_row(
+        row_id: int,
+        data: dict = Body(...),
+    ) -> ResponseT:
         """Update a single row.
 
         Path Parameters:
-            id (int): Row ID
+            row_id (int): Row ID
 
         Request Body:
             JSON object with fields to update
@@ -475,7 +475,6 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
             500: Internal server error
         """
         try:
-            row_id = kwargs[id_param]
             result = await operations.update_row(row_id, **data)
             if result is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
@@ -534,11 +533,10 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
 
     # DELETE endpoints
-    @router.delete(f"/delete_row/{{{id_param}}}", response_model=response_model | DeleteResponse)
+    @router.delete("/delete_row/{row_id}", response_model=response_model | DeleteResponse)
     async def delete_row(
-        *,
+        row_id: int,
         capture_data: bool = Query(default=True, description="Whether to return deleted row data"),
-        **kwargs: Any,
     ) -> ResponseT | DeleteResponse:
         """Delete a single row.
 
@@ -554,7 +552,6 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
             500: Internal server error
         """
         try:
-            row_id = kwargs[id_param]
             result = await operations.delete_row(row_id, capture_data=capture_data)
 
             if result is None and capture_data:

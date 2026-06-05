@@ -2,8 +2,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from sqlalchemy.ext.asyncio import (AsyncEngine, AsyncSession,
-                                    async_sessionmaker, create_async_engine)
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
 from ..config import config as global_config
 
@@ -88,7 +87,8 @@ async def close_db() -> None:
     --------
     >>> await close_db()
     """
-    global _engine  # pylint: disable=global-statement
+    global _engine, _async_session_factory  # pylint: disable=global-statement
     if _engine:
         await _engine.dispose()
         _engine = None
+    _async_session_factory = None  # Also clear the session factory

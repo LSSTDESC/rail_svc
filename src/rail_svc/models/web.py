@@ -51,7 +51,7 @@ class FindRequest(BaseModel):
     skip: int = 0
     limit: int | None = None
 
-    class Config:
+    class ConfigDict:
         """pydantic config"""
 
         extra = "allow"  # Allow additional fields for query params
