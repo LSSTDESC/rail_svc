@@ -55,7 +55,9 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
         # For remote operations, we don't have ctx from table_ops
         # We'll need to get table name from the operations
         self.table_name = sync_oper.async_ops.table_name
-
+        self.response_model = self.sync_oper.async_ops.response_model
+        self.col_names_for_table = self.response_model.col_names_for_table
+        
     # ========================================================================
     # UTILITY METHODS
     # ========================================================================
@@ -107,7 +109,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
             """Get a single row by ID."""
             try:
                 row = self.sync_oper.get_row(row_id=row_id)
-                print(output_pydantic([row], output))
+                print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as exc:
                 self._handle_error(exc, f"getting {self.table_name} with ID {row_id}")
@@ -128,7 +130,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
             """Get a single row by name."""
             try:
                 row = self.sync_oper.get_row_by_name(name=name)
-                print(output_pydantic([row], output))
+                print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as exc:
                 self._handle_error(exc, f"getting {self.table_name} with name '{name}'")
@@ -166,7 +168,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                     skip=skip,
                     limit=limit or page_size,
                 )
-                print(output_pydantic(rows, output))
+                print(output_pydantic(rows, output, self.col_names_for_table))
 
             except Exception as exc:
                 self._handle_error(exc, f"listing {self.table_name} rows")
@@ -195,7 +197,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 if row is None:
                     click.echo(f"No {self.table_name} found with ID {row_id}")
                 else:
-                    print(output_pydantic([row], output))
+                    print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as exc:
                 self._handle_error(exc, f"getting {self.table_name} with ID {row_id}")
@@ -239,7 +241,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
 
             try:
                 _found_id, row = self.sync_oper.lookup_by_id_or_name(row_id=row_id, name=name)
-                print(output_pydantic([row], output))
+                print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as exc:
                 identifier = f"ID {row_id}" if row_id else f"name '{name}'"
@@ -324,7 +326,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
             try:
                 row = self.sync_oper.create_row(validate=not no_validate, **row_data)
                 click.echo(f"Created {self.table_name} row successfully")
-                print(output_pydantic([row], output))
+                print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as exc:
                 self._handle_error(exc, f"creating {self.table_name} row")
@@ -373,7 +375,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
             try:
                 rows = self.sync_oper.create_rows(rows_data=rows_data, validate=not no_validate)
                 click.echo(f"Successfully created {len(rows)} {self.table_name} rows")
-                print(output_pydantic(rows, output))
+                print(output_pydantic(rows, output, self.col_names_for_table))
 
             except Exception as exc:
                 self._handle_error(exc, f"creating {self.table_name} rows")
@@ -434,7 +436,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 click.echo(
                     f"Successfully created {len(rows)} {self.table_name} rows " f"in batches of {batch_size}"
                 )
-                print(output_pydantic(rows, output))
+                print(output_pydantic(rows, output, self.col_names_for_table))
 
             except Exception as exc:
                 self._handle_error(exc, f"creating {self.table_name} rows in batches")
@@ -568,7 +570,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
             try:
                 row = self.sync_oper.update_row(row_id=row_id, **update_data)
                 click.echo(f"Successfully updated {self.table_name} row with ID {row_id}")
-                print(output_pydantic([row], output))
+                print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as exc:
                 self._handle_error(exc, f"updating {self.table_name} row with ID {row_id}")
@@ -631,7 +633,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
             try:
                 rows = self.sync_oper.update_rows(updates=updates)
                 click.echo(f"Successfully updated {len(rows)} {self.table_name} rows")
-                print(output_pydantic(rows, output))
+                print(output_pydantic(rows, output, self.col_names_for_table))
 
             except Exception as exc:
                 self._handle_error(exc, f"updating {self.table_name} rows")
@@ -686,7 +688,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
 
                 if deleted_data and not no_capture:
                     click.echo("\nDeleted data:")
-                    print(output_pydantic([deleted_data], output))
+                    print(output_pydantic([deleted_data], output, self.col_names_for_table))
 
             except Exception as exc:
                 self._handle_error(exc, f"deleting {self.table_name} row with ID {row_id}")
@@ -769,7 +771,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                     click.echo(f"Successfully deleted {len(deleted_data)} {self.table_name} rows")
                     if capture_data:
                         click.echo("\nDeleted data:")
-                        print(output_pydantic(deleted_data, output))
+                        print(output_pydantic(deleted_data, output, self.col_names_for_table))
                 else:
                     click.echo(f"Successfully deleted {deleted_data} {self.table_name} rows")
 
@@ -993,9 +995,8 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                     skip=skip,
                     limit=limit or page_size,
                 )
-
                 click.echo(f"Found {len(rows)} matching {self.table_name} rows")
-                print(output_pydantic(rows, output))
+                print(output_pydantic(rows, output, self.col_names_for_table))
 
             except Exception as exc:
                 self._handle_error(exc, f"filtering {self.table_name} rows")
@@ -1139,7 +1140,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 )
 
                 click.echo(f"Found {len(rows)} matching {self.table_name} rows")
-                print(output_pydantic(rows, output))
+                print(output_pydantic(rows, output, self.col_names_for_table))
 
             except Exception as exc:
                 self._handle_error(exc, f"finding {self.table_name} rows")
@@ -1185,7 +1186,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
 
             try:
                 row = self.sync_oper.find_one_by(**kwargs)
-                print(output_pydantic([row], output))
+                print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as exc:
                 self._handle_error(exc, f"finding {self.table_name}")

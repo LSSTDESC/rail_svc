@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, Mock, patch, call
+from unittest.mock import MagicMock, patch
 
 import pytest
 import click
@@ -37,9 +37,9 @@ class TestInitCommand:
     ) -> None:
         """Test init command without reset flag."""
         mock_config.db.url = "sqlite+aiosqlite:///test.db"
-        
+
         result = runner.invoke(init)
-        
+
         assert result.exit_code == 0
         mock_asyncio_run.assert_called_once()
 
@@ -52,9 +52,9 @@ class TestInitCommand:
     ) -> None:
         """Test init command with reset flag."""
         mock_config.db.url = "sqlite+aiosqlite:///test.db"
-        
+
         result = runner.invoke(init, ['--reset'])
-        
+
         assert result.exit_code == 0
         mock_asyncio_run.assert_called_once()
 
@@ -77,7 +77,7 @@ class TestInitCommand:
     ) -> None:
         """Test init command help message."""
         result = runner.invoke(init, ['--help'])
-        
+
         assert result.exit_code == 0
         assert "--reset" in result.output
 
@@ -89,18 +89,18 @@ class TestMakeTableGroup:
     def test_creates_click_group(self) -> None:
         """Test that make_table_group creates a Click group."""
         mock_ops = MagicMock()
-        
+
         group = make_table_group("test", mock_ops, "Test description")
-        
+
         assert isinstance(group, click.Group)
         assert group.name == "test"
 
     def test_group_has_help_text(self) -> None:
         """Test that created group has help text."""
         mock_ops = MagicMock()
-        
+
         group = make_table_group("test", mock_ops, "Test description")
-        
+
         assert group.help == "Test description"
 
 
@@ -141,14 +141,14 @@ class TestMainCLI:
     def test_cli_has_version_option(self, runner: CliRunner) -> None:
         """Test that CLI has version option."""
         result = runner.invoke(cli, ['--version'])
-        
+
         assert result.exit_code == 0
         assert __version__ in result.output
 
     def test_cli_has_init_command(self, runner: CliRunner) -> None:
         """Test that CLI includes init command."""
         result = runner.invoke(cli, ['--help'])
-        
+
         assert result.exit_code == 0
         assert "init" in result.output
 
@@ -160,7 +160,7 @@ class TestCLIIntegration:
     def test_nonexistent_command(self, runner: CliRunner) -> None:
         """Test invoking non-existent command."""
         result = runner.invoke(cli, ['nonexistent'])
-        
+
         assert result.exit_code != 0
 
 
@@ -177,12 +177,12 @@ class TestErrorHandling:
     ) -> None:
         """Test init handles database connection errors."""
         mock_config.db.url = "sqlite+aiosqlite:///test.db"
-        
+
         # Simulate connection error
         mock_asyncio_run.side_effect = RuntimeError("Connection failed")
-        
+
         result = runner.invoke(init)
-        
+
         # Should fail gracefully
         assert result.exit_code != 0
 
@@ -211,7 +211,7 @@ class TestVersionDisplay:
     def test_version_option_long(self, runner: CliRunner) -> None:
         """Test long version option."""
         result = runner.invoke(cli, ['--version'])
-        
+
         assert result.exit_code == 0
         assert __version__ in result.output
 
@@ -243,9 +243,9 @@ class TestCommandInvocation:
     ) -> None:
         """Test that init can be invoked as standalone command."""
         mock_config.db.url = "sqlite+aiosqlite:///test.db"
-        
+
         result = runner.invoke(cli, ['init'])
-        
+
         assert result.exit_code == 0
 
 
@@ -262,9 +262,9 @@ class TestAsyncExecution:
     ) -> None:
         """Test that init uses asyncio.run."""
         mock_config.db.url = "sqlite+aiosqlite:///test.db"
-        
+
         runner.invoke(cli, ['init'])
-        
+
         # asyncio.run should be called with async function
         assert mock_asyncio_run.called
 
@@ -286,7 +286,7 @@ class TestEdgeCases:
     def test_empty_args_list(self, runner: CliRunner) -> None:
         """Test CLI with empty args."""
         result = runner.invoke(cli, [])
-        
+
         # Should succeed (show help or usage)
         assert result.exit_code == 0 or "Usage" in result.output
 

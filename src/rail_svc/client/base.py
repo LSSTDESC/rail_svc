@@ -440,7 +440,7 @@ class RemoteTableOperations[ResponseT: BaseModel, CreateT: BaseModel]:
 
         result = cast(dict[str, Any], self._handle_response(response))
         lookup_response = LookupResponse[ResponseT](**result)
-        return lookup_response.id, self.response_model(**lookup_response.data.model_dump())
+        return lookup_response.id, self.response_model(**result['data'])
 
     # UPDATE operations
 

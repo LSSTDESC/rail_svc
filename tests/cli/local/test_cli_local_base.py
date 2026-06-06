@@ -1451,7 +1451,7 @@ class TestOutputFormats:
 
         assert result.exit_code == 0
         assert mock_output.call_args[0][1] == OutputEnum.yaml
-        
+
 
 # Test Error Handling
 class TestErrorHandling:
