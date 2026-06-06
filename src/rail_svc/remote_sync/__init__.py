@@ -16,17 +16,12 @@ Examples
 from typing import Any
 
 from .. import remote_async
-from .base import (
-    AlgorithmSyncRemoteOperations,
-    BandSyncRemoteOperations,
-    CatalogBandAssocSyncRemoteOperations,
-    CatalogTagSyncRemoteOperations,
-    DatasetAssocSyncRemoteOperations,
-    DatasetSyncRemoteOperations,
-    EstimatesSyncRemoteOperations,
-    EstimatorSyncRemoteOperations,
-    ModelSyncRemoteOperations,
-)
+from .base import (AlgorithmSyncRemoteOperations, BandSyncRemoteOperations,
+                   CatalogBandAssocSyncRemoteOperations,
+                   CatalogTagSyncRemoteOperations,
+                   DatasetAssocSyncRemoteOperations,
+                   DatasetSyncRemoteOperations, EstimatesSyncRemoteOperations,
+                   EstimatorSyncRemoteOperations, ModelSyncRemoteOperations)
 
 
 def algorithm() -> AlgorithmSyncRemoteOperations:

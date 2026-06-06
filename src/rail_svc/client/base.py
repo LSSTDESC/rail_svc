@@ -9,7 +9,8 @@ from typing import Any, cast
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from ..models import CountResponse, Filter, FilterRequest, LookupResponse, OrderBy, RemoteAPIError
+from ..models import (CountResponse, Filter, FilterRequest, LookupResponse,
+                      OrderBy, RemoteAPIError)
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -440,7 +441,7 @@ class RemoteTableOperations[ResponseT: BaseModel, CreateT: BaseModel]:
 
         result = cast(dict[str, Any], self._handle_response(response))
         lookup_response = LookupResponse[ResponseT](**result)
-        return lookup_response.id, self.response_model(**result['data'])
+        return lookup_response.id, self.response_model(**result["data"])
 
     # UPDATE operations
 

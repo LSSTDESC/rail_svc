@@ -57,7 +57,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
         self.table_name = sync_oper.async_ops.table_name
         self.response_model = self.sync_oper.async_ops.response_model
         self.col_names_for_table = self.response_model.col_names_for_table
-        
+
     # ========================================================================
     # UTILITY METHODS
     # ========================================================================
