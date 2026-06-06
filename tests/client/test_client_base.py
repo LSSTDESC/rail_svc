@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import httpx
 import pytest
 from pydantic import BaseModel
 
-from rail_svc.models import CountResponse, Filter, FilterRequest, LookupResponse, OrderBy, RemoteAPIError
+from rail_svc.models import Filter, OrderBy, RemoteAPIError
 from rail_svc.client.base import RemoteAPI, RemoteTableOperations
 
 
@@ -1097,7 +1096,7 @@ class TestEdgeCases:
         )
 
         async_iter = AsyncIterator([])
-    
+
         mock_stream = AsyncMock()
         mock_stream.status_code = 200
         mock_stream.aiter_lines = Mock(return_value=async_iter)
@@ -1105,7 +1104,7 @@ class TestEdgeCases:
         stream_context = AsyncMock()
         stream_context.__aenter__.return_value = mock_stream
         stream_context.__aexit__.return_value = None
-    
+
         mock_client.stream.return_value = stream_context
 
         results = []

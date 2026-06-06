@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, Mock, patch
 
-import pytest
 from pydantic import BaseModel
 
 from rail_svc.client.client import RemoteDatabase, TABLE_CONFIGS
@@ -41,13 +39,13 @@ class TestRemoteDatabase:
     async def test_context_manager_lifecycle(self) -> None:
         """Test that context manager properly initializes and cleans up."""
         db = RemoteDatabase("http://api.example.com")
-        
+
         assert db._api is None
-        
+
         async with db:
             assert db._api is not None
             assert isinstance(db._api, RemoteAPI)
-            
+
         # API should still exist but be closed
         assert db._api is not None
 
@@ -72,11 +70,11 @@ class TestRemoteDatabase:
         """Test that table clients have correct response and create models."""
         async with RemoteDatabase("http://api.example.com") as db:
             from rail_svc import models
-            
+
             # Check algorithms table
             assert db.algorithms.response_model == models.Algorithm
             assert db.algorithms.create_model == models.AlgorithmCreate
-            
+
             # Check datasets table
             assert db.datasets.response_model == models.Dataset
             assert db.datasets.create_model == models.DatasetCreate
@@ -88,7 +86,7 @@ class TestRemoteDatabase:
             algo_client = db.algorithms
             data_client = db.datasets
             model_client = db.models
-            
+
             # They should all share the same underlying HTTP client
             assert algo_client.client is data_client.client
             assert data_client.client is model_client.client
@@ -97,9 +95,9 @@ class TestRemoteDatabase:
     def test_list_tables(self) -> None:
         """Test listing all available tables."""
         db = RemoteDatabase("http://api.example.com")
-        
+
         tables = db.list_tables()
-        
+
         assert isinstance(tables, list)
         assert len(tables) > 0
         assert "algorithms" in tables
@@ -107,7 +105,7 @@ class TestRemoteDatabase:
         assert "models" in tables
         assert "bands" in tables
         assert "estimators" in tables
-        
+
         # Should match TABLE_CONFIGS
         assert set(tables) == set(TABLE_CONFIGS.keys())
 
@@ -115,7 +113,7 @@ class TestRemoteDatabase:
         """Test getting a client for an existing table."""
         async with RemoteDatabase("http://api.example.com") as db:
             algo_client = db.get_client("algorithms")
-            
+
             assert algo_client is not None
             assert isinstance(algo_client, RemoteTableOperations)
             assert algo_client is db.algorithms
@@ -124,7 +122,7 @@ class TestRemoteDatabase:
         """Test getting a client for a non-existent table."""
         async with RemoteDatabase("http://api.example.com") as db:
             client = db.get_client("nonexistent_table")
-            
+
             assert client is None
 
     async def test_get_client_returns_same_instance(self) -> None:
@@ -132,7 +130,7 @@ class TestRemoteDatabase:
         async with RemoteDatabase("http://api.example.com") as db:
             client1 = db.algorithms
             client2 = db.get_client("algorithms")
-            
+
             assert client1 is client2
 
     async def test_multiple_databases_independent(self) -> None:
@@ -146,14 +144,14 @@ class TestRemoteDatabase:
     async def test_context_manager_handles_exceptions(self) -> None:
         """Test that context manager properly handles exceptions."""
         api_ref = None
-        
+
         try:
             async with RemoteDatabase("http://api.example.com") as db:
                 api_ref = db._api
                 raise ValueError("Test exception")
         except ValueError:
             pass
-        
+
         # API should still exist and be closed
         assert api_ref is not None
         assert api_ref.client.is_closed
@@ -164,11 +162,11 @@ class TestRemoteDatabase:
             for table_name, (response_model, create_model) in TABLE_CONFIGS.items():
                 # Check attribute exists
                 assert hasattr(db, table_name), f"Table {table_name} not accessible"
-                
+
                 # Check it's a RemoteTableOperations instance
                 client = getattr(db, table_name)
                 assert isinstance(client, RemoteTableOperations)
-                
+
                 # Check models are correct
                 assert client.response_model == response_model
                 assert client.create_model == create_model
@@ -185,7 +183,7 @@ class TestRemoteDatabaseIntegration:
             assert db.datasets is not None
             assert db.models is not None
             assert db.estimators is not None
-            
+
             # All should share the same API instance
             assert db.algorithms.client is db.datasets.client
 
@@ -193,7 +191,7 @@ class TestRemoteDatabaseIntegration:
         """Test discovering available tables."""
         async with RemoteDatabase("http://api.example.com") as db:
             tables = db.list_tables()
-            
+
             # Should be able to get clients for all listed tables
             for table_name in tables:
                 client = db.get_client(table_name)
@@ -213,7 +211,7 @@ class TestRemoteDatabaseIntegration:
             assert db._api.api_prefix == "/v2"
             assert db._api.timeout == 120.0
             assert db._api.auth_token == "custom-token"
-            
+
             # Verify clients use the correct configuration
             assert "http://custom.api.com/v2" in db.algorithms.endpoint
 
@@ -221,7 +219,7 @@ class TestRemoteDatabaseIntegration:
         """Test accessing all table clients sequentially."""
         async with RemoteDatabase("http://api.example.com") as db:
             clients = []
-            
+
             # Access all tables
             clients.append(db.algorithms)
             clients.append(db.bands)
@@ -231,10 +229,10 @@ class TestRemoteDatabaseIntegration:
             clients.append(db.estimates)
             clients.append(db.estimators)
             clients.append(db.models)
-            
+
             # All should be valid RemoteTableOperations instances
             assert all(isinstance(c, RemoteTableOperations) for c in clients)
-            
+
             # All should share the same HTTP client
             http_clients = {c.client for c in clients}
             assert len(http_clients) == 1
@@ -251,9 +249,9 @@ class TestRemoteDatabaseIntegration:
             "estimators",
             "models",
         }
-        
+
         actual_tables = set(TABLE_CONFIGS.keys())
-        
+
         assert actual_tables == expected_tables
 
 
@@ -264,12 +262,12 @@ class TestTableConfigurations:
         """Test that TABLE_CONFIGS has the correct structure."""
         assert isinstance(TABLE_CONFIGS, dict)
         assert len(TABLE_CONFIGS) > 0
-        
+
         for table_name, config in TABLE_CONFIGS.items():
             assert isinstance(table_name, str)
             assert isinstance(config, tuple)
             assert len(config) == 2
-            
+
             response_model, create_model = config
             assert issubclass(response_model, BaseModel)
             assert issubclass(create_model, BaseModel)
@@ -277,7 +275,7 @@ class TestTableConfigurations:
     def test_table_configs_model_pairs(self) -> None:
         """Test that each table has valid response and create models."""
         from rail_svc import models
-        
+
         expected_pairs = {
             "algorithms": (models.Algorithm, models.AlgorithmCreate),
             "bands": (models.Band, models.BandCreate),
@@ -288,7 +286,7 @@ class TestTableConfigurations:
             "estimators": (models.Estimator, models.EstimatorCreate),
             "models": (models.Model, models.ModelCreate),
         }
-        
+
         for table_name, (response_model, create_model) in expected_pairs.items():
             assert table_name in TABLE_CONFIGS
             config_response, config_create = TABLE_CONFIGS[table_name]
@@ -301,7 +299,7 @@ class TestTableConfigurations:
             # Check they inherit from BaseModel
             assert issubclass(response_model, BaseModel), f"{table_name} response model not a BaseModel"
             assert issubclass(create_model, BaseModel), f"{table_name} create model not a BaseModel"
-            
+
             # Check they're not the base class itself
             assert response_model is not BaseModel
             assert create_model is not BaseModel

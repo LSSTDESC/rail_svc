@@ -62,10 +62,10 @@ class TestCliRemoteOperationsBasics:
     ) -> None:
         """Test that registering commands adds them to the group."""
         cli_ops = CliRemoteOperations(mock_sync_ops, cli_group)
-        
+
         initial_count = len(cli_group.commands)
         cli_ops.register_get_row()
-        
+
         assert len(cli_group.commands) == initial_count + 1
         assert "get-row" in cli_group.commands
 
@@ -90,7 +90,7 @@ class TestReadCommands:
         mock_sync_ops.async_ops.table_name = "test_table"
         mock_sync_ops.async_ops.response_model = TestResponse
         cli_ops = CliRemoteOperations(mock_sync_ops, test_cli)
-        
+
         return test_cli, mock_sync_ops, cli_ops
 
     def test_get_row_command_exists(
@@ -127,7 +127,7 @@ class TestReadCommands:
         cli_ops.register_get_rows()
 
         result = runner.invoke(cli_group, ["get-rows", "--skip", "10", "--limit", "5"])
-        
+
         assert result.exit_code == 0
         mock_ops.get_rows.assert_called_once_with(skip=10, limit=5)
 
@@ -140,7 +140,7 @@ class TestReadCommands:
         cli_ops.register_count_rows()
 
         result = runner.invoke(cli_group, ["count"])
-        
+
         assert result.exit_code == 0
         assert "42" in result.output
         mock_ops.count_rows.assert_called_once()
@@ -181,7 +181,7 @@ class TestCreateCommands:
         mock_sync_ops.async_ops.table_name = "test_table"
         mock_sync_ops.async_ops.response_model = TestResponse
         cli_ops = CliRemoteOperations(mock_sync_ops, test_cli)
-        
+
         return test_cli, mock_sync_ops, cli_ops
 
     def test_create_row_with_key_value_pairs(
@@ -209,7 +209,7 @@ class TestCreateCommands:
         cli_ops.register_create_row()
 
         json_data = '{"name": "test", "value": 100}'
-        
+
         with patch("builtins.open", mock_open(read_data=json_data)):
             result = runner.invoke(cli_group, ["create", "--from-json", "test.json"])
 
@@ -225,10 +225,10 @@ class TestCreateCommands:
         cli_ops.register_create_rows()
 
         json_data = '{"name": "test"}'  # Not an array
-        
+
         with patch("builtins.open", mock_open(read_data=json_data)):
             result = runner.invoke(cli_group, ["create-many", "test.json"])
-        
+
         assert result.exit_code != 0
         assert "array" in result.output.lower()
 
@@ -249,11 +249,11 @@ class TestUpdateCommands:
             pass
 
         mock_sync_ops = Mock(spec=SyncRemoteOperations)
-        mock_sync_ops.async_ops = Mock()        
+        mock_sync_ops.async_ops = Mock()
         mock_sync_ops.async_ops.table_name = "test_table"
-        mock_sync_ops.async_ops.response_model = TestResponse     
+        mock_sync_ops.async_ops.response_model = TestResponse
         cli_ops = CliRemoteOperations(mock_sync_ops, test_cli)
-        
+
         return test_cli, mock_sync_ops, cli_ops
 
     def test_update_row_with_key_value_pairs(
@@ -265,7 +265,7 @@ class TestUpdateCommands:
         cli_ops.register_update_row()
 
         result = runner.invoke(cli_group, ["update", "1", "name=updated", "value=99"])
-        
+
         assert result.exit_code == 0
         mock_ops.update_row.assert_called_once_with(row_id=1, name="updated", value=99)
 
@@ -277,7 +277,7 @@ class TestUpdateCommands:
         cli_ops.register_update_row()
 
         result = runner.invoke(cli_group, ["update", "1", "id=2"])
-        
+
         assert result.exit_code != 0
         assert "Cannot change row ID" in result.output
 
@@ -302,7 +302,7 @@ class TestDeleteCommands:
         mock_sync_ops.async_ops.table_name = "test_table"
         mock_sync_ops.async_ops.response_model = TestResponse
         cli_ops = CliRemoteOperations(mock_sync_ops, test_cli)
-        
+
         return test_cli, mock_sync_ops, cli_ops
 
     def test_delete_row_requires_confirmation(
@@ -315,7 +315,7 @@ class TestDeleteCommands:
 
         # Without --confirm, need to provide input
         result = runner.invoke(cli_group, ["delete", "1"], input="n\n")
-        
+
         assert "cancelled" in result.output.lower()
         mock_ops.delete_row.assert_not_called()
 
@@ -328,7 +328,7 @@ class TestDeleteCommands:
         cli_ops.register_delete_row()
 
         result = runner.invoke(cli_group, ["delete", "--confirm", "1"])
-        
+
         assert result.exit_code == 0
         mock_ops.delete_row.assert_called_once()
 
@@ -341,7 +341,7 @@ class TestDeleteCommands:
         cli_ops.register_delete_rows()
 
         result = runner.invoke(cli_group, ["delete-many", "--confirm", "1", "2", "3"])
-        
+
         assert result.exit_code == 0
         mock_ops.delete_rows.assert_called_once()
 
@@ -362,11 +362,11 @@ class TestFilterCommands:
             pass
 
         mock_sync_ops = Mock(spec=SyncRemoteOperations)
-        mock_sync_ops.async_ops = Mock()        
+        mock_sync_ops.async_ops = Mock()
         mock_sync_ops.async_ops.table_name = "test_table"
-        mock_sync_ops.async_ops.response_model = TestResponse        
+        mock_sync_ops.async_ops.response_model = TestResponse
         cli_ops = CliRemoteOperations(mock_sync_ops, test_cli)
-        
+
         return test_cli, mock_sync_ops, cli_ops
 
     def test_filter_rows_with_conditions(
@@ -389,7 +389,7 @@ class TestFilterCommands:
         cli_ops.register_filter_rows()
 
         result = runner.invoke(cli_group, ["filter", "-f", "invalidformat"])
-        
+
         assert result.exit_code != 0
         assert "Invalid filter format" in result.output
 
@@ -402,7 +402,7 @@ class TestFilterCommands:
         cli_ops.register_find_by()
 
         result = runner.invoke(cli_group, ["find-by", "name=test"])
-        
+
         assert result.exit_code == 0
         mock_ops.find_by.assert_called_once()
 
@@ -418,20 +418,20 @@ class TestConvenienceMethods:
             pass
 
         mock_sync_ops = Mock(spec=SyncRemoteOperations)
-        mock_sync_ops.async_ops = Mock()        
+        mock_sync_ops.async_ops = Mock()
         mock_sync_ops.async_ops.table_name = "test_table"
-        mock_sync_ops.async_ops.response_model = TestResponse        
+        mock_sync_ops.async_ops.response_model = TestResponse
         cli_ops = CliRemoteOperations(mock_sync_ops, test_cli)
-        
+
         return test_cli, mock_sync_ops, cli_ops
 
     def test_register_all_read_commands(self, setup_cli: tuple) -> None:
         """Test register_all_read_commands adds all read commands."""
         cli_group, mock_ops, cli_ops = setup_cli
-        
+
         initial_count = len(cli_group.commands)
         cli_ops.register_all_read_commands()
-        
+
         # Should have added multiple commands
         assert len(cli_group.commands) > initial_count
         assert "get-row" in cli_group.commands
@@ -441,9 +441,9 @@ class TestConvenienceMethods:
     def test_register_all_create_commands(self, setup_cli: tuple) -> None:
         """Test register_all_create_commands adds all create commands."""
         cli_group, mock_ops, cli_ops = setup_cli
-        
+
         cli_ops.register_all_create_commands()
-        
+
         assert "create" in cli_group.commands
         assert "create-many" in cli_group.commands
         assert "bulk-insert" in cli_group.commands
@@ -451,18 +451,18 @@ class TestConvenienceMethods:
     def test_register_all_update_commands(self, setup_cli: tuple) -> None:
         """Test register_all_update_commands adds all update commands."""
         cli_group, mock_ops, cli_ops = setup_cli
-        
+
         cli_ops.register_all_update_commands()
-        
+
         assert "update" in cli_group.commands
         assert "update-many" in cli_group.commands
 
     def test_register_all_delete_commands(self, setup_cli: tuple) -> None:
         """Test register_all_delete_commands adds all delete commands."""
         cli_group, mock_ops, cli_ops = setup_cli
-        
+
         cli_ops.register_all_delete_commands()
-        
+
         assert "delete" in cli_group.commands
         assert "delete-many" in cli_group.commands
         assert "bulk-delete" in cli_group.commands
@@ -470,9 +470,9 @@ class TestConvenienceMethods:
     def test_register_all_filter_commands(self, setup_cli: tuple) -> None:
         """Test register_all_filter_commands adds all filter commands."""
         cli_group, mock_ops, cli_ops = setup_cli
-        
+
         cli_ops.register_all_filter_commands()
-        
+
         assert "filter" in cli_group.commands
         assert "find-by" in cli_group.commands
 
@@ -493,11 +493,11 @@ class TestErrorHandling:
             pass
 
         mock_sync_ops = Mock(spec=SyncRemoteOperations)
-        mock_sync_ops.async_ops = Mock()        
+        mock_sync_ops.async_ops = Mock()
         mock_sync_ops.async_ops.table_name = "test_table"
-        mock_sync_ops.async_ops.response_model = TestResponse        
+        mock_sync_ops.async_ops.response_model = TestResponse
         cli_ops = CliRemoteOperations(mock_sync_ops, test_cli)
-        
+
         return test_cli, mock_sync_ops, cli_ops
 
     def test_handle_error_displays_message(
@@ -509,7 +509,7 @@ class TestErrorHandling:
         cli_ops.register_get_row()
 
         result = runner.invoke(cli_group, ["get-row", "1"])
-        
+
         assert result.exit_code != 0
         assert "Test error" in result.output
 
@@ -518,19 +518,19 @@ class TestErrorHandling:
     ) -> None:
         """Test handling of validation errors."""
         cli_group, mock_ops, cli_ops = setup_cli
-        
+
         from pydantic import ValidationError
-        
+
         # Create a validation error
         try:
             TestResponse(id="not_an_int", name="test")  # type: ignore
         except ValidationError as e:
             mock_ops.get_row.side_effect = e
-        
+
         cli_ops.register_get_row()
 
         result = runner.invoke(cli_group, ["get-row", "1"])
-        
+
         assert result.exit_code != 0
         assert "Validation failed" in result.output
 
@@ -551,11 +551,11 @@ class TestOutputFormats:
             pass
 
         mock_sync_ops = Mock(spec=SyncRemoteOperations)
-        mock_sync_ops.async_ops = Mock()        
+        mock_sync_ops.async_ops = Mock()
         mock_sync_ops.async_ops.table_name = "test_table"
-        mock_sync_ops.async_ops.response_model = TestResponse        
+        mock_sync_ops.async_ops.response_model = TestResponse
         cli_ops = CliRemoteOperations(mock_sync_ops, test_cli)
-        
+
         return test_cli, mock_sync_ops, cli_ops
 
     def test_get_row_with_json_output(
@@ -567,7 +567,7 @@ class TestOutputFormats:
         cli_ops.register_get_row()
 
         result = runner.invoke(cli_group, ["get-row", "--output", "json", "1"])
-        
+
         assert result.exit_code == 0
         # Output should be valid JSON
         import json
@@ -585,7 +585,7 @@ class TestOutputFormats:
         cli_ops.register_get_row()
 
         result = runner.invoke(cli_group, ["get-row", "--output", "table", "1"])
-        
+
         assert result.exit_code == 0
 
 
@@ -607,9 +607,9 @@ class TestInputParsing:
         mock_sync_ops = Mock(spec=SyncRemoteOperations)
         mock_sync_ops.async_ops = Mock()
         mock_sync_ops.async_ops.table_name = "test_table"
-        mock_sync_ops.async_ops.response_model = TestResponse        
+        mock_sync_ops.async_ops.response_model = TestResponse
         cli_ops = CliRemoteOperations(mock_sync_ops, test_cli)
-        
+
         return test_cli, mock_sync_ops, cli_ops
 
     def test_create_parses_json_values(
@@ -622,7 +622,7 @@ class TestInputParsing:
 
         # Boolean as JSON
         result = runner.invoke(cli_group, ["create", "name=test", "value=42"])
-        
+
         assert result.exit_code == 0
         call_kwargs = mock_ops.create_row.call_args[1]
         # Should parse 42 as int, not string
@@ -636,7 +636,7 @@ class TestInputParsing:
         cli_ops.register_update_row()
 
         result = runner.invoke(cli_group, ["update", "1"])
-        
+
         assert result.exit_code != 0
         assert "No update data" in result.output
 
@@ -649,7 +649,7 @@ class TestInputParsing:
         cli_ops.register_filter_rows()
 
         result = runner.invoke(cli_group, ["filter", "-f", "value:gt:10", "-f", "name:eq:test"])
-        
+
         assert result.exit_code == 0
         # Check that filters were passed
         call_args = mock_ops.filter_rows.call_args
@@ -677,7 +677,7 @@ class TestBatchOperations:
         mock_sync_ops.async_ops.table_name = "test_table"
         mock_sync_ops.async_ops.response_model = TestResponse
         cli_ops = CliRemoteOperations(mock_sync_ops, test_cli)
-        
+
         return test_cli, mock_sync_ops, cli_ops
 
     @pytest.mark.skip(reason="mock_open doesn't include file check")
@@ -689,10 +689,10 @@ class TestBatchOperations:
         cli_ops.register_create_rows_batched()
 
         json_data = '[{"name": "test"}]'
-        
+
         with patch("builtins.open", mock_open(read_data=json_data)):
             result = runner.invoke(cli_group, ["create-batched", "--batch-size", "0", "test.json"])
-        
+
         assert result.exit_code != 0
         assert "Batch size must be at least 1" in result.output
 
@@ -706,10 +706,10 @@ class TestBatchOperations:
         cli_ops.register_bulk_insert_rows()
 
         json_data = '[{"name": "test"}]'
-        
+
         with patch("builtins.open", mock_open(read_data=json_data)):
             result = runner.invoke(cli_group, ["bulk-insert", "test.json"])
-        
+
         assert result.exit_code == 0
         assert "100" in result.output
 
@@ -734,7 +734,7 @@ class TestEdgeCases:
         mock_sync_ops.async_ops.table_name = "test_table"
         mock_sync_ops.async_ops.response_model = TestResponse
         cli_ops = CliRemoteOperations(mock_sync_ops, test_cli)
-        
+
         return test_cli, mock_sync_ops, cli_ops
 
     def test_get_row_or_none_displays_not_found(
@@ -746,7 +746,7 @@ class TestEdgeCases:
         cli_ops.register_get_row_or_none()
 
         result = runner.invoke(cli_group, ["get-row-if-exists", "999"])
-        
+
         assert result.exit_code == 0
         assert "No test_table found" in result.output
 
@@ -760,10 +760,10 @@ class TestEdgeCases:
         cli_ops.register_delete_rows()
 
         json_data = '[1, 2, 3]'
-        
+
         with patch("builtins.open", mock_open(read_data=json_data)):
             result = runner.invoke(cli_group, ["delete-many", "--confirm", "--from-file", "ids.json"])
-        
+
         assert result.exit_code == 0
 
     @pytest.mark.skip(reason="mock_open doesn't include file check")
@@ -776,10 +776,10 @@ class TestEdgeCases:
         cli_ops.register_delete_rows()
 
         text_data = '1\n2\n3\n'
-        
+
         with patch("builtins.open", mock_open(read_data=text_data)):
             result = runner.invoke(cli_group, ["delete-many", "--confirm", "--from-file", "ids.txt"])
-        
+
         assert result.exit_code == 0
 
     def test_filter_with_in_operator(
@@ -791,7 +791,7 @@ class TestEdgeCases:
         cli_ops.register_filter_rows()
 
         result = runner.invoke(cli_group, ["filter", "-f", "status:in:active,pending,done"])
-        
+
         assert result.exit_code == 0
         call_args = mock_ops.filter_rows.call_args
         filters = call_args[1]["filters"]
@@ -807,6 +807,6 @@ class TestEdgeCases:
         cli_ops.register_count_filtered_rows()
 
         result = runner.invoke(cli_group, ["count-filtered"])
-        
+
         assert result.exit_code == 0
         assert "42" in result.output

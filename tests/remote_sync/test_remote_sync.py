@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 
 from rail_svc import remote_async
 from rail_svc.remote_sync import (
@@ -107,7 +106,7 @@ class TestFactoryInstances:
         """Test that calling algorithm() creates new instances."""
         ops1 = algorithm()
         ops2 = algorithm()
-        
+
         # Should be different wrapper instances
         assert ops1 is not ops2
         # But should wrap the same async instance
@@ -117,7 +116,7 @@ class TestFactoryInstances:
         """Test that calling dataset() creates new instances."""
         ops1 = dataset()
         ops2 = dataset()
-        
+
         assert ops1 is not ops2
         assert ops1.async_ops is ops2.async_ops
 
@@ -128,7 +127,7 @@ class TestSyncOperationsHaveMethods:
     def test_algorithm_has_crud_methods(self) -> None:
         """Test algorithm sync ops have CRUD methods."""
         ops = algorithm()
-        
+
         assert hasattr(ops, "get_row")
         assert hasattr(ops, "create_row")
         assert hasattr(ops, "update_row")
@@ -138,7 +137,7 @@ class TestSyncOperationsHaveMethods:
     def test_dataset_has_filter_methods(self) -> None:
         """Test dataset sync ops have filter methods."""
         ops = dataset()
-        
+
         assert hasattr(ops, "filter_rows")
         assert hasattr(ops, "count_rows")
         assert callable(ops.filter_rows)
@@ -150,7 +149,7 @@ class TestModuleExports:
     def test_all_exports_defined(self) -> None:
         """Test that __all__ contains expected exports."""
         from rail_svc.remote_sync import __all__
-        
+
         expected = [
             "algorithm",
             "band",
@@ -162,14 +161,14 @@ class TestModuleExports:
             "estimator",
             "model",
         ]
-        
+
         assert set(__all__) == set(expected)
 
     def test_all_exports_are_callable(self) -> None:
         """Test that all exports are callable factory functions."""
         from rail_svc.remote_sync import __all__
         import rail_svc.remote_sync as remote_sync
-        
+
         for export_name in __all__:
             factory = getattr(remote_sync, export_name)
             assert callable(factory)
@@ -191,7 +190,7 @@ class TestFactoryCompleteness:
             estimator,
             model,
         ]
-        
+
         # All should be callable
         for factory in factories:
             assert callable(factory)

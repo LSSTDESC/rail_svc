@@ -82,7 +82,7 @@ class TestCliBasics:
             cli,
             ["--base-url", "http://test.com", "--timeout", "60", "--help"]
         )
-        
+
         assert result.exit_code == 0
 
 class TestEnvironmentVariables:

@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock
 
 import pytest
 from pydantic import BaseModel
 
-from rail_svc import models
 from rail_svc.remote_async.base import AsyncRemoteOperations
 from rail_svc.remote_sync.base import (
     AlgorithmSyncRemoteOperations,

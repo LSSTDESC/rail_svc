@@ -2,18 +2,12 @@
 
 from __future__ import annotations
 
-import pytest
 
 from rail_svc import models
 from rail_svc.remote_async import (
     algorithm,
     band,
-    catalog_band_assoc,
-    catalog_tag,
     dataset,
-    dataset_assoc,
-    estimates,
-    estimator,
     model,
 )
 from rail_svc.remote_async.base import AsyncRemoteOperations
@@ -26,7 +20,7 @@ class TestModuleBasics:
         """Test that all exported instances are AsyncRemoteOperations."""
         from rail_svc.remote_async import __all__
         import rail_svc.remote_async as remote_async
-        
+
         for export_name in __all__:
             obj = getattr(remote_async, export_name)
             assert isinstance(obj, AsyncRemoteOperations)
@@ -113,7 +107,7 @@ class TestModelCoverage:
     def test_all_major_tables_covered(self) -> None:
         """Test that operations exist for all major table types."""
         from rail_svc.remote_async import __all__
-        
+
         # Just verify we have a reasonable set of operations
         assert len(__all__) >= 5  # Should have several tables
         assert "algorithm" in __all__

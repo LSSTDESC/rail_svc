@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import warnings
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, patch
 
-import pytest
 from pydantic import BaseModel
 
 from rail_svc.client.base import RemoteAPI, RemoteTableOperations
@@ -271,7 +270,7 @@ class TestGetClient:
         )
 
         mock_client = AsyncMock(spec=RemoteTableOperations)
-        
+
         with patch.object(RemoteAPI, 'table', return_value=mock_client):
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
@@ -294,7 +293,7 @@ class TestGetClient:
 
         mock_client = AsyncMock(spec=RemoteTableOperations)
         mock_client.endpoint = "http://api.example.com/api/v1/test"
-        
+
         with patch.object(RemoteAPI, 'table', return_value=mock_client):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
@@ -855,7 +854,7 @@ class TestWarningBehavior:
         )
 
         mock_client = AsyncMock(spec=RemoteTableOperations)
-        
+
         with patch.object(RemoteAPI, 'table', return_value=mock_client):
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
@@ -866,7 +865,7 @@ class TestWarningBehavior:
                 assert "temporary client" in message.lower()
                 assert "AsyncRemoteOperations" in message
                 assert "context manager" in message.lower()
-                assert "async with" in message.lower()        
+                assert "async with" in message.lower()
 
     async def test_no_warning_with_context_manager(self) -> None:
         """Test that no warning is issued when using context manager."""
@@ -898,19 +897,19 @@ class TestWarningBehavior:
         )
 
         mock_client = AsyncMock(spec=RemoteTableOperations)
-        
+
         with patch.object(RemoteAPI, 'table', return_value=mock_client):
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
-                
+
                 # First call - should warn
                 await ops._get_client()
                 first_count = len(w)
-                
+
                 # Subsequent calls - should not warn
                 await ops._get_client()
                 await ops._get_client()
-                
+
                 resource_warnings = [warning for warning in w if issubclass(warning.category, ResourceWarning)]
                 assert len(resource_warnings) == 1
                 assert first_count == 1

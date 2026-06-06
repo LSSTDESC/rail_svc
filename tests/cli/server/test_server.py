@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, Mock, call, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from click.testing import CliRunner
@@ -42,13 +42,13 @@ class TestServeCommand:
     ) -> None:
         """Test serve command with default options."""
         result = runner.invoke(serve)
-        
+
         # Should complete successfully
         assert result.exit_code == 0
-        
+
         # Should call uvicorn.run
         assert mock_uvicorn_run.called
-        
+
         # Should create app
         assert mock_create_app.called
 
@@ -57,9 +57,9 @@ class TestServeCommand:
     ) -> None:
         """Test serve command with custom host and port."""
         result = runner.invoke(serve, ["--host", "0.0.0.0", "--port", "9000"])
-        
+
         assert result.exit_code == 0
-        
+
         # Check uvicorn was called with correct host/port
         call_kwargs = mock_uvicorn_run.call_args[1]
         assert call_kwargs["host"] == "0.0.0.0"
@@ -70,11 +70,11 @@ class TestServeCommand:
     ) -> None:
         """Test serve command with reload enabled."""
         result = runner.invoke(serve, ["--reload"])
-        
+
         assert result.exit_code == 0
         assert "development mode" in result.output
         assert "Auto-reload is enabled" in result.output
-        
+
         # Check reload flag is set
         call_kwargs = mock_uvicorn_run.call_args[1]
         assert call_kwargs.get("reload") is True
@@ -85,11 +85,11 @@ class TestServeCommand:
     ) -> None:
         """Test serve command with multiple workers."""
         result = runner.invoke(serve, ["--workers", "4"])
-        
+
         assert result.exit_code == 0
         assert "production mode" in result.output
         assert "4 worker" in result.output
-        
+
         # Check workers are set
         call_kwargs = mock_uvicorn_run.call_args[1]
         assert call_kwargs.get("workers") == 4
@@ -100,10 +100,10 @@ class TestServeCommand:
     ) -> None:
         """Test serve command with custom API prefix."""
         result = runner.invoke(serve, ["--api-prefix", "/api/v2"])
-        
+
         assert result.exit_code == 0
         assert "/api/v2" in result.output
-        
+
         # Check app was created with custom prefix
         call_kwargs = mock_create_app.call_args[1]
         assert call_kwargs["api_prefix"] == "/api/v2"
@@ -113,9 +113,9 @@ class TestServeCommand:
     ) -> None:
         """Test serve command with debug mode."""
         result = runner.invoke(serve, ["--debug"])
-        
+
         assert result.exit_code == 0
-        
+
         # Check app was created with debug=True
         call_kwargs = mock_create_app.call_args[1]
         assert call_kwargs["debug"] is True
@@ -131,9 +131,9 @@ class TestServeCommand:
                 "--rate-limit-storage", "redis://localhost:6379"
             ]
         )
-        
+
         assert result.exit_code == 0
-        
+
         # Check app was created with rate limiting
         call_kwargs = mock_create_app.call_args[1]
         assert call_kwargs["enable_rate_limiting"] is True
@@ -150,9 +150,9 @@ class TestServeCommand:
                 "--cors-origins", "http://localhost:3000,https://example.com"
             ]
         )
-        
+
         assert result.exit_code == 0
-        
+
         # Check app was created with CORS
         call_kwargs = mock_create_app.call_args[1]
         assert call_kwargs["enable_cors"] is True
@@ -167,9 +167,9 @@ class TestServeCommand:
             serve,
             ["--cors-origins", "http://a.com, http://b.com , http://c.com"]
         )
-        
+
         assert result.exit_code == 0
-        
+
         # Check origins are trimmed
         call_kwargs = mock_create_app.call_args[1]
         cors_origins = call_kwargs["cors_origins"]
@@ -184,9 +184,9 @@ class TestServeCommand:
     ) -> None:
         """Test serve command with custom log level."""
         result = runner.invoke(serve, ["--log-level", "debug"])
-        
+
         assert result.exit_code == 0
-        
+
         # Check log level is passed to uvicorn
         call_kwargs = mock_uvicorn_run.call_args[1]
         assert call_kwargs["log_level"] == "debug"
@@ -196,9 +196,9 @@ class TestServeCommand:
     ) -> None:
         """Test that serve command displays helpful startup information."""
         result = runner.invoke(serve, ["--host", "localhost", "--port", "8000"])
-        
+
         assert result.exit_code == 0
-        
+
         # Should show helpful messages
         assert "http://localhost:8000" in result.output
         assert "/health" in result.output
@@ -209,9 +209,9 @@ class TestServeCommand:
     ) -> None:
         """Test that app is created with correct configuration."""
         result = runner.invoke(serve)
-        
+
         assert result.exit_code == 0
-        
+
         # Check app creation call
         call_kwargs = mock_create_app.call_args[1]
         assert "title" in call_kwargs
@@ -225,11 +225,11 @@ class TestServeCommand:
         """Test that uvicorn.run receives the created app."""
         mock_app = MagicMock()
         mock_create_app.return_value = mock_app
-        
+
         result = runner.invoke(serve)
-        
+
         assert result.exit_code == 0
-        
+
         # First argument to uvicorn.run should be the app
         assert mock_uvicorn_run.call_args[0][0] is mock_app
 
@@ -260,9 +260,9 @@ class TestServeCommandEdgeCases:
     ) -> None:
         """Test that reload takes precedence over workers."""
         result = runner.invoke(serve, ["--reload", "--workers", "4"])
-        
+
         assert result.exit_code == 0
-        
+
         # Reload should be set, workers should not
         call_kwargs = mock_uvicorn_run.call_args[1]
         assert call_kwargs.get("reload") is True
@@ -273,9 +273,9 @@ class TestServeCommandEdgeCases:
     ) -> None:
         """Test serve with empty CORS origins string."""
         result = runner.invoke(serve, ["--cors-origins", ""])
-        
+
         assert result.exit_code == 0
-        
+
         call_kwargs = mock_create_app.call_args[1]
         # Should result in a list with one empty string (after strip)
         assert isinstance(call_kwargs["cors_origins"], list)
@@ -298,14 +298,14 @@ class TestServeCommandEdgeCases:
                 "--cors-origins", "http://localhost:3000",
             ]
         )
-        
+
         assert result.exit_code == 0
-        
+
         # Verify key configurations made it through
         uvicorn_kwargs = mock_uvicorn_run.call_args[1]
         assert uvicorn_kwargs["host"] == "0.0.0.0"
         assert uvicorn_kwargs["port"] == 9000
-        
+
         app_kwargs = mock_create_app.call_args[1]
         assert app_kwargs["api_prefix"] == "/api/v3"
         assert app_kwargs["enable_cors"] is True
