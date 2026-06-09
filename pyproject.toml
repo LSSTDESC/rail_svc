@@ -133,12 +133,10 @@ exclude_lines = [
     "unexpected",
     "as uexc:",
     "def __repr__",
-    "if self.debug:",
     "if settings.DEBUG",
     "forward_to_db_funcs",
     "raise AssertionError",
     "raise NotImplementedError",
-    "if 0:",
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
 ]
