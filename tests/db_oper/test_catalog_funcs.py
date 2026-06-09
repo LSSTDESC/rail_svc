@@ -11,8 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rail_svc import db
 from rail_svc.db_oper import catalog_funcs
-from rail_svc.models import (BandCreate, CatalogBandAssocCreate,
-                             CatalogTagCreate)
+from rail_svc.models import BandCreate, CatalogBandAssocCreate, CatalogTagCreate
 
 
 @pytest.fixture

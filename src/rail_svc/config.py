@@ -7,6 +7,7 @@ from typing import Any
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from .common import unexpected
 
 __all__ = ["Configuration", "config"]
 
@@ -246,9 +247,9 @@ class StorageConfiguration(BaseModel):
         path = Path(v)
         if not path.exists():
             raise ValueError(f"Path {path} does not exist")
-        if not path.is_dir():
+        if unexpected(not path.is_dir()):
             raise ValueError(f"Path {path} is not a directory")
-        if not os.access(path, os.W_OK):
+        if unexpected(not os.access(path, os.W_OK)):
             raise ValueError(f"Path {path} is not writeable")
         return v
 

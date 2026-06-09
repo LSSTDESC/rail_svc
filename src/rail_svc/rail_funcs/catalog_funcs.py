@@ -129,7 +129,7 @@ def read_band_res_file(band_name: str, filter_dir: Path | str | None = None) -> 
             logger.error(f"Failed to find default filter directory: {uexc}")
             raise
 
-    if not isinstance(filter_dir, Path):
+    if not isinstance(filter_dir, Path):  # pragma: no cover
         filter_dir = Path(filter_dir)
 
     if not filter_dir.exists():

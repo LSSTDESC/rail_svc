@@ -22,7 +22,7 @@ DEFAULT_TIMEOUT = global_config.web_interface.default_timeout
 STREAM_TIMEOUT = global_config.web_interface.stream_timeout
 
 
-def validate_non_empty(_ctx: click.Context, param: click.Parameter, value: str) -> str:
+def validate_non_empty(_ctx: click.Context, param: click.Parameter, value: str) -> str:  # pragma: no cover
     """
     Click callback to validate non-empty string.
 

@@ -1,10 +1,16 @@
 from .. import local_async
 from . import funcs
-from .base import (AlgorithmSyncOperations, BandSyncOperations,
-                   CatalogBandAssocOperations, CatalogTagSyncOperations,
-                   DatasetAssocSyncOperations, DatasetSyncOperations,
-                   EstimatesSyncOperations, EstimatorSyncOperations,
-                   ModelSyncOperations)
+from .base import (
+    AlgorithmSyncOperations,
+    BandSyncOperations,
+    CatalogBandAssocOperations,
+    CatalogTagSyncOperations,
+    DatasetAssocSyncOperations,
+    DatasetSyncOperations,
+    EstimatesSyncOperations,
+    EstimatorSyncOperations,
+    ModelSyncOperations,
+)
 
 algorithm = AlgorithmSyncOperations(local_async.algorithm)
 band = BandSyncOperations(local_async.band)

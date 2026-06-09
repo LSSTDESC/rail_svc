@@ -10,8 +10,7 @@ from pydantic import BaseModel, ValidationError
 from ..common import unexpected
 from ..db.base import Base
 from ..local_async import LocalOperations
-from ..models import (CountResponse, DeleteResponse, FilterRequest,
-                      LookupResponse, OrderBy)
+from ..models import CountResponse, DeleteResponse, FilterRequest, LookupResponse, OrderBy
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -162,14 +161,14 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
         try:
             result = await operations.create_row(validate=validate, **data)
             return result
-        except ValidationError as uexc:
+        except ValidationError as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"error": "Validation error", "details": uexc.errors()},
-            ) from uexc
-        except Exception as uexc:
+                detail={"error": "Validation error", "details": exc.errors()},
+            ) from exc
+        except Exception as exc:
             logger.exception("Error creating row")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     @router.post("/create_rows", status_code=status.HTTP_201_CREATED, response_model=list[ResponseT])
     async def create_rows(
@@ -203,9 +202,9 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={"error": "Validation error", "details": uexc.errors()},
             ) from uexc
-        except Exception as uexc:
+        except Exception as exc:
             logger.exception("Error creating rows")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     @router.post("/create_rows_batched", status_code=status.HTTP_201_CREATED, response_model=list[ResponseT])
     async def create_rows_batched(
@@ -231,14 +230,14 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
         try:
             results = await operations.create_rows_batched(data, validate=validate, batch_size=batch_size)
             return results
-        except ValidationError as uexc:
+        except ValidationError as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"error": "Validation error", "details": uexc.errors()},
-            ) from uexc
-        except Exception as uexc:
+                detail={"error": "Validation error", "details": exc.errors()},
+            ) from exc
+        except Exception as exc:
             logger.exception("Error creating rows batched")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     @router.post("/bulk_insert_rows", status_code=status.HTTP_201_CREATED, response_model=CountResponse)
     async def bulk_insert_rows(
@@ -268,14 +267,14 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
         try:
             count = await operations.bulk_insert_rows(data, validate=validate)
             return CountResponse(count=count)
-        except ValidationError as uexc:
+        except ValidationError as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"error": "Validation error", "details": uexc.errors()},
-            ) from uexc
-        except Exception as uexc:
+                detail={"error": "Validation error", "details": exc.errors()},
+            ) from exc
+        except Exception as exc:
             logger.exception("Error bulk inserting rows")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     # READ endpoints
     @router.get("/get_row/{row_id}", response_model=response_model)
@@ -299,9 +298,9 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
             return result
         except HTTPException:
             raise
-        except Exception as uexc:
+        except Exception as exc:
             logger.exception("Error getting row")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     @router.get("/get_row_or_none/{row_id}", response_model=response_model | None)
     async def get_row_or_none(
@@ -319,9 +318,9 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
         try:
             result = await operations.get_row_or_none(row_id)
             return result
-        except Exception as uexc:
+        except Exception as exc:
             logger.exception("Error getting row or none")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     @router.get("/get_row_by_name/{name}", response_model=response_model)
     async def get_row_by_name(name: str) -> ResponseT:
@@ -342,9 +341,9 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
             return result
         except HTTPException:
             raise
-        except Exception as uexc:
+        except Exception as exc:
             logger.exception("Error getting row by name")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     @router.get("/get_rows", response_model=list[ResponseT])
     async def get_rows(
@@ -365,9 +364,9 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
         try:
             results = await operations.get_rows(skip=skip, limit=limit)  # type: ignore
             return results
-        except Exception as uexc:
+        except Exception as exc:
             logger.exception("Error getting rows")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     @router.get("/get_rows_streaming")
     async def get_rows_streaming(
@@ -488,9 +487,9 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={"error": "Validation error", "details": e.errors()},
             ) from e
-        except Exception as uexc:
+        except Exception as exc:
             logger.exception("Error updating row")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     @router.put("/update_rows", response_model=list[ResponseT])
     @router.patch("/update_rows", response_model=list[ResponseT])
@@ -513,7 +512,7 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
 
         # Validate that all items have an 'id' field
         for i, item in enumerate(data):
-            if not isinstance(item, dict):
+            if unexpected(not isinstance(item, dict)):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST, detail=f"Item at index {i} is not an object"
                 )
@@ -565,9 +564,9 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
             return response_model(**result)
         except HTTPException:
             raise
-        except Exception as uexc:
+        except Exception as exc:
             logger.exception("Error deleting row")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     @router.delete("/delete_rows", response_model=list[ResponseT] | CountResponse)
     async def delete_rows(
@@ -606,9 +605,9 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
                 assert result is not None
                 return [response_model(**item_) for item_ in result]
             return CountResponse(count=len(data))
-        except Exception as uexc:
+        except Exception as exc:
             logger.exception("Error deleting rows")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     @router.delete("/bulk_delete_rows", response_model=CountResponse)
     async def bulk_delete_rows(data: list[int] = Body(...)) -> CountResponse:
@@ -638,9 +637,9 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
         try:
             count = await operations.bulk_delete_rows(data)
             return CountResponse(count=count)
-        except Exception as uexc:
+        except Exception as exc:
             logger.exception("Error bulk deleting rows")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     # FILTER/QUERY endpoints
     @router.post("/filter_rows", response_model=list[ResponseT])
@@ -683,9 +682,9 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={"error": "Invalid filter syntax", "details": uexc.errors()},
             ) from uexc
-        except Exception as uexc:
+        except Exception as exc:
             logger.exception("Error filtering rows")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     @router.post("/filter_rows_streaming")
     async def filter_rows_streaming(request: FilterRequest) -> StreamingResponse:
@@ -757,9 +756,9 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={"error": "Invalid filter syntax", "details": uexc.errors()},
             ) from uexc
-        except Exception as uexc:
+        except Exception as exc:
             logger.exception("Error counting filtered rows")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     @router.post("/filter_one", response_model=response_model)
     async def filter_one(request: FilterRequest) -> ResponseT:
@@ -797,9 +796,9 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={"error": "Invalid filter syntax", "details": uexc.errors()},
             ) from uexc
-        except Exception as uexc:
+        except Exception as exc:
             logger.exception("Error filtering one row")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     @router.post("/filter_one_or_none", response_model=response_model | None)
     async def filter_one_or_none(request: FilterRequest) -> ResponseT | None:
@@ -834,9 +833,9 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={"error": "Invalid filter syntax", "details": uexc.errors()},
             ) from uexc
-        except Exception as uexc:
+        except Exception as exc:
             logger.exception("Error filtering one or none row")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     @router.post("/find_by", response_model=list[ResponseT])
     async def find_by(request: dict = Body(...)) -> list[ResponseT]:
@@ -897,9 +896,9 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
                 **query_params,
             )
             return results
-        except Exception as uexc:
+        except Exception as exc:
             logger.exception("Error finding rows")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     @router.post("/find_one_by", response_model=response_model)
     async def find_one_by(data: dict = Body(...)) -> ResponseT:
@@ -929,8 +928,8 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
             return result
         except HTTPException:
             raise
-        except Exception as uexc:
+        except Exception as exc:
             logger.exception("Error finding one row")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     return router

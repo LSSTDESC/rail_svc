@@ -10,11 +10,17 @@ from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 
-from rail_svc.router.app import (add_cors_middleware, add_error_handlers,
-                                 add_health_check, add_rate_limiting,
-                                 create_all_routers, create_fastapi_app,
-                                 lifespan, register_all_routers,
-                                 setup_fastapi_app)
+from rail_svc.router.app import (
+    add_cors_middleware,
+    add_error_handlers,
+    add_health_check,
+    add_rate_limiting,
+    create_all_routers,
+    create_fastapi_app,
+    lifespan,
+    register_all_routers,
+    setup_fastapi_app,
+)
 
 
 # Test create_all_routers

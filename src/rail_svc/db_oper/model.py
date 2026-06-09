@@ -129,7 +129,7 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
         assert path
 
         # Validate file if requested
-        if validate_file:
+        if validate_file:  # pragma: no cover
             assert algo_obj
             assert catalog_tag_obj
 

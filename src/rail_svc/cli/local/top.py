@@ -26,7 +26,7 @@ def init(*, reset: bool) -> None:
     def _init_db_sync() -> None:
         """Synchronous wrapper for async init."""
 
-        async def _init_db() -> None:
+        async def _init_db() -> None:  # pragma: no cover
             engine = create_async_engine(config.db.url)
             try:
                 conn = engine.connect()

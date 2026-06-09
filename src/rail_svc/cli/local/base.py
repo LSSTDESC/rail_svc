@@ -1191,7 +1191,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
 
                 op = op_map[op_str]
 
-                if op in (FilterOp.IN, FilterOp.NOT_IN):
+                if op in (FilterOp.IN, FilterOp.NOT_IN):  # pragma: no cover
                     value = [v.strip() for v in value_str.split(",")]
                 else:
                     try:

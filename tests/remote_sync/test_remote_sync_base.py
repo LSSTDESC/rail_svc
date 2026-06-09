@@ -9,16 +9,19 @@ import pytest
 from pydantic import BaseModel
 
 from rail_svc.remote_async.base import AsyncRemoteOperations
-from rail_svc.remote_sync.base import (AlgorithmSyncRemoteOperations,
-                                       BandSyncRemoteOperations,
-                                       CatalogBandAssocSyncRemoteOperations,
-                                       CatalogTagSyncRemoteOperations,
-                                       DatasetAssocSyncRemoteOperations,
-                                       DatasetSyncRemoteOperations,
-                                       EstimatesSyncRemoteOperations,
-                                       EstimatorSyncRemoteOperations,
-                                       ModelSyncRemoteOperations,
-                                       SyncRemoteOperations, run_async)
+from rail_svc.remote_sync.base import (
+    AlgorithmSyncRemoteOperations,
+    BandSyncRemoteOperations,
+    CatalogBandAssocSyncRemoteOperations,
+    CatalogTagSyncRemoteOperations,
+    DatasetAssocSyncRemoteOperations,
+    DatasetSyncRemoteOperations,
+    EstimatesSyncRemoteOperations,
+    EstimatorSyncRemoteOperations,
+    ModelSyncRemoteOperations,
+    SyncRemoteOperations,
+    run_async,
+)
 
 
 # Test models

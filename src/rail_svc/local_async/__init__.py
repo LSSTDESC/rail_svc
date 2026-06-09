@@ -26,11 +26,18 @@ Examples
 
 from .. import db_oper
 from . import funcs
-from .base import (AlgorithmLocalOperations, BandLocalOperations,
-                   CatalogBandAssocLocalOperations, CatalogTagLocalOperations,
-                   DatasetAssocLocalOperations, DatasetLocalOperations,
-                   EstimatesLocalOperations, EstimatorLocalOperations,
-                   LocalOperations, ModelLocalOperations)
+from .base import (
+    AlgorithmLocalOperations,
+    BandLocalOperations,
+    CatalogBandAssocLocalOperations,
+    CatalogTagLocalOperations,
+    DatasetAssocLocalOperations,
+    DatasetLocalOperations,
+    EstimatesLocalOperations,
+    EstimatorLocalOperations,
+    LocalOperations,
+    ModelLocalOperations,
+)
 
 # Create local operations - each has all methods via dynamic binding
 algorithm = AlgorithmLocalOperations(db_oper.algorithm)

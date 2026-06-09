@@ -216,6 +216,7 @@ class TestErrorHandling:
         def close_coro(coro):
             coro.close()
             return None
+
         mock_asyncio_run.side_effect = close_coro
 
         # Simulate connection error

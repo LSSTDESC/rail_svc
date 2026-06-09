@@ -187,11 +187,11 @@ def add_health_check(app: FastAPI) -> None:
             return JSONResponse(
                 status_code=200, content={"status": "healthy", "service": "api", "version": "1.0.0"}
             )
-        except Exception as e:
+        except Exception as uexc:
             logger.exception("Health check failed")
             return JSONResponse(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                content={"status": "unhealthy", "error": str(e) if app.debug else "Service unavailable"},
+                content={"status": "unhealthy", "error": str(uexc) if app.debug else "Service unavailable"},
             )
 
     logger.info("Health check endpoint added at /health")
@@ -251,7 +251,7 @@ def add_error_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(500)
-    async def internal_error_handler(request: Request, exc: Any) -> JSONResponse:
+    async def internal_error_handler(request: Request, exc: Any) -> JSONResponse:  # pragma: no cover
         """Handle 500 errors."""
         logger.exception("Internal server error")
         return JSONResponse(

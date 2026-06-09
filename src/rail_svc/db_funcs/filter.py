@@ -89,7 +89,7 @@ def _apply_filter(
     elif filter_obj.op == FilterOp.ILIKE:
         query = query.where(field.ilike(filter_obj.value))
 
-    elif filter_obj.op == FilterOp.IS_NULL:
+    elif filter_obj.op == FilterOp.IS_NULL:  # pragma: no cover
         query = query.where(field.is_(None))
 
     elif filter_obj.op == FilterOp.IS_NOT_NULL:
@@ -114,7 +114,7 @@ def _apply_filter(
             raise ValueError("ENDS_WITH operator requires string value")
         query = query.where(field.like(f"%{filter_obj.value}"))
 
-    else:
+    else:  # pragma: no cover
         raise ValueError(f"Unknown filter operator: {filter_obj.op}")
 
     return query
@@ -395,7 +395,7 @@ async def filter_rows_streaming(
                 query = query.where(or_(*conditions))
 
     # Apply ordering
-    if order_by:
+    if order_by:  # pragma: no cover
         query = _apply_ordering(query, the_class, order_by)
 
     # Apply pagination

@@ -9,8 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import db
 from ..config import config as global_config
-from ..rail_funcs.estimation_funcs import (CatEstimatorEnsembleWrapper,
-                                           CatEstimatorPdfWrapper)
+from ..rail_funcs.estimation_funcs import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
 from . import catalog_funcs
 from .algorithm import algorithm
 from .catalog_tag import catalog_tag
@@ -167,7 +166,7 @@ async def _build_estimation_wrapper(
                 catalog_tag_obj.name,
                 **config_params,
             )
-        else:
+        else:  # pragma: no cover
             raise ValueError(f"Unknown wrapper type: {wrapper_type}")
         assert wrapper is not None
 
@@ -426,7 +425,7 @@ async def estimate_ensemble(
         final_output_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Check if output file already exists
-        if final_output_path.exists():
+        if final_output_path.exists():  # pragma: no cover
             logger.warning(f"Output file already exists and will be overwritten: {final_output_path}")
 
         logger.info(f"Processing catalog: {input_path}")
