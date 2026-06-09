@@ -10,7 +10,6 @@ from rail_svc.db_oper.base import TableContext
 from rail_svc.db_oper.model import ModelOperations, model
 from rail_svc.models import Model as ModelModel
 
-
 # ============================================================================
 # ModelOperations class tests
 # ============================================================================

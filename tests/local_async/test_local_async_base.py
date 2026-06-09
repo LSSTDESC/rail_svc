@@ -6,14 +6,9 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from pydantic import BaseModel
 
-from rail_svc.local_async.base import (
-    LocalOperations,
-    to_pydantic,
-    to_pydantic_list,
-    to_pydantic_or_none,
-    with_session,
-    with_session_transaction,
-)
+from rail_svc.local_async.base import (LocalOperations, to_pydantic,
+                                       to_pydantic_list, to_pydantic_or_none,
+                                       with_session, with_session_transaction)
 
 # ============================================================================
 # Mock classes for testing
@@ -98,8 +93,8 @@ async def test_to_pydantic_decorator():
 
     class TestClass:
         def __init__(self):
-            self._table_ops = Mock()
-            self._table_ops.to_pydantic.return_value = MockResponse(id_=1, name="test")
+            self.table_ops = Mock()
+            self.table_ops.to_pydantic.return_value = MockResponse(id_=1, name="test")
 
         @to_pydantic
         async def test_method(self) -> Any:
@@ -111,7 +106,7 @@ async def test_to_pydantic_decorator():
     assert isinstance(result, MockResponse)
     assert result.id_ == 1
     assert result.name == "test"
-    obj._table_ops.to_pydantic.assert_called_once_with(mock_orm)
+    obj.table_ops.to_pydantic.assert_called_once_with(mock_orm)
 
 
 @pytest.mark.asyncio
@@ -122,8 +117,8 @@ async def test_to_pydantic_list_decorator():
 
     class TestClass:
         def __init__(self):
-            self._table_ops = Mock()
-            self._table_ops.to_pydantic_list.return_value = [
+            self.table_ops = Mock()
+            self.table_ops.to_pydantic_list.return_value = [
                 MockResponse(id_=1, name="test1"),
                 MockResponse(id_=2, name="test2"),
             ]
@@ -147,8 +142,8 @@ async def test_to_pydantic_or_none_decorator_with_result():
 
     class TestClass:
         def __init__(self):
-            self._table_ops = Mock()
-            self._table_ops.to_pydantic.return_value = MockResponse(id_=1, name="test")
+            self.table_ops = Mock()
+            self.table_ops.to_pydantic.return_value = MockResponse(id_=1, name="test")
 
         @to_pydantic_or_none
         async def test_method(self) -> Any:
@@ -158,7 +153,7 @@ async def test_to_pydantic_or_none_decorator_with_result():
     result = await obj.test_method()
 
     assert isinstance(result, MockResponse)
-    obj._table_ops.to_pydantic.assert_called_once_with(mock_orm)
+    obj.table_ops.to_pydantic.assert_called_once_with(mock_orm)
 
 
 @pytest.mark.asyncio
@@ -167,7 +162,7 @@ async def test_to_pydantic_or_none_decorator_with_none():
 
     class TestClass:
         def __init__(self):
-            self._table_ops = Mock()
+            self.table_ops = Mock()
 
         @to_pydantic_or_none
         async def test_method(self) -> Any:
@@ -177,7 +172,7 @@ async def test_to_pydantic_or_none_decorator_with_none():
     result = await obj.test_method()
 
     assert result is None
-    obj._table_ops.to_pydantic.assert_not_called()
+    obj.table_ops.to_pydantic.assert_not_called()
 
 
 # ============================================================================

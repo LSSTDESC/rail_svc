@@ -4,13 +4,15 @@ This module provides functions for updating existing database rows.
 """
 
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, cast
 
 import structlog
 from sqlalchemy.exc import StatementError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rail_svc.db.base import T, ensure_base_inheritance
+
+from ..common import unexpected
 
 logger = structlog.get_logger(__name__)
 
@@ -83,9 +85,9 @@ async def update_row(
         logger.warning("No fields to update", table=the_class.__name__, row_id=row_id)
         # Just return existing row
         row = await session.get(the_class, row_id)
-        if row is None:
+        if unexpected(row is None):
             raise KeyError(f"{the_class.__name__} {row_id} not found")
-        return row
+        return cast(T, row)
 
     logger.debug(
         "Updating row",

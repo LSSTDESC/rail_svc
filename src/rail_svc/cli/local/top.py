@@ -22,45 +22,44 @@ CreateT = TypeVar("CreateT", bound=BaseModel)
 @click.option("--reset", is_flag=True, help="Delete all existing database data.")
 def init(*, reset: bool) -> None:
     """Initialize the DB"""
-    # logger = structlog.get_logger(config.logging.handle)
-    # engine = create_database_engine(config.db.url, config.db.password)
 
-    async def _init_db() -> None:
-        engine = create_async_engine(config.db.url)
-        try:
-            conn = engine.connect()
-        except Exception as msg:
-            await engine.dispose()
-            raise RuntimeError(f"{msg}") from msg
-        try:
-            await conn.start()
+    def _init_db_sync() -> None:
+        """Synchronous wrapper for async init."""
 
-            if db.Base.metadata.schema is not None:  # pragma: no cover
-                await conn.execute(CreateSchema(db.Base.metadata.schema, if_not_exists=True))
-            if reset:
-                await conn.run_sync(db.Base.metadata.drop_all)
-            await conn.run_sync(db.Base.metadata.create_all)
-        except Exception as msg:
-            await conn.rollback()
+        async def _init_db() -> None:
+            engine = create_async_engine(config.db.url)
+            try:
+                conn = engine.connect()
+            except Exception as msg:
+                await engine.dispose()
+                raise RuntimeError(f"{msg}") from msg
+            try:
+                await conn.start()
+
+                if db.Base.metadata.schema is not None:
+                    await conn.execute(CreateSchema(db.Base.metadata.schema, if_not_exists=True))
+                if reset:
+                    await conn.run_sync(db.Base.metadata.drop_all)
+                await conn.run_sync(db.Base.metadata.create_all)
+            except Exception as msg:
+                await conn.rollback()
+                await conn.close()
+                await engine.dispose()
+                raise RuntimeError(f"{msg}") from msg
+
             await conn.close()
             await engine.dispose()
-            raise RuntimeError(f"{msg}") from msg
 
-        await conn.close()
-        await engine.dispose()
+        asyncio.run(_init_db())
 
-    # async def _init_db() -> None:
-    #    await initialize_database(engine, logger, schema=Base.metadata, reset=reset)
-    #    await engine.dispose()
-
-    asyncio.run(_init_db())
+    _init_db_sync()
 
 
 def make_table_group(name: str, ops: Any, desc: str) -> click.Group:
     """Create table CLI group with all commands."""
 
     @click.group(name=name, help=desc)
-    def grp() -> None:
+    def grp() -> None:  # pragma: no cover
         pass
 
     cli_ops = CliOperations(ops, grp)

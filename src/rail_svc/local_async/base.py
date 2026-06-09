@@ -84,7 +84,7 @@ def to_pydantic[F: Callable[..., Any]](func: F) -> F:
     @wraps(func)
     async def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
         result = await func(self, *args, **kwargs)
-        return self._table_ops.to_pydantic(result)
+        return self.table_ops.to_pydantic(result)
 
     return wrapper  # type: ignore
 
@@ -108,7 +108,7 @@ def to_pydantic_list[F: Callable[..., Any]](func: F) -> F:
     @wraps(func)
     async def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
         result = await func(self, *args, **kwargs)
-        return self._table_ops.to_pydantic_list(list(result))
+        return self.table_ops.to_pydantic_list(list(result))
 
     return wrapper  # type: ignore
 
@@ -133,7 +133,7 @@ def to_pydantic_or_none[F: Callable[..., Any]](func: F) -> F:
     @wraps(func)
     async def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
         result = await func(self, *args, **kwargs)
-        return self._table_ops.to_pydantic(result) if result is not None else None
+        return self.table_ops.to_pydantic(result) if result is not None else None
 
     return wrapper  # type: ignore
 
@@ -162,6 +162,10 @@ class LocalOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             The table operations instance to wrap
         """
         self._table_ops = table_operations
+
+    @property
+    def table_ops(self) -> TableOperations[T, ResponseT, CreateT]:
+        return self._table_ops
 
     @with_session_transaction
     @to_pydantic

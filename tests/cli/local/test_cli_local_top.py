@@ -4,17 +4,12 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
 import click
+import pytest
 from click.testing import CliRunner
 
-from rail_svc.cli.local.top import (
-    init,
-    make_table_group,
-    cli,
-    TABLES,
-)
 from rail_svc import __version__
+from rail_svc.cli.local.top import TABLES, cli, init, make_table_group
 
 
 # Fixtures
@@ -28,55 +23,91 @@ def runner() -> CliRunner:
 class TestInitCommand:
     """Tests for database initialization command."""
 
-    @patch('rail_svc.cli.local.top.create_async_engine')
-    @patch('rail_svc.cli.local.top.config')
-    @patch('rail_svc.cli.local.top.asyncio.run')
+    @patch("rail_svc.cli.local.top.create_async_engine")
+    @patch("rail_svc.cli.local.top.config")
+    @patch("rail_svc.cli.local.top.asyncio.run")
     def test_init_without_reset(
-        self, mock_asyncio_run: MagicMock, mock_config: MagicMock,
-        mock_create_engine: MagicMock, runner: CliRunner
+        self,
+        mock_asyncio_run: MagicMock,
+        mock_config: MagicMock,
+        mock_create_engine: MagicMock,
+        runner: CliRunner,
     ) -> None:
         """Test init command without reset flag."""
         mock_config.db.url = "sqlite+aiosqlite:///test.db"
+
+        # Capture and close the coroutine to prevent warning
+        def close_coro(coro):
+            coro.close()
+            return None
+
+        mock_asyncio_run.side_effect = close_coro
 
         result = runner.invoke(init)
 
         assert result.exit_code == 0
         mock_asyncio_run.assert_called_once()
 
-    @patch('rail_svc.cli.local.top.create_async_engine')
-    @patch('rail_svc.cli.local.top.config')
-    @patch('rail_svc.cli.local.top.asyncio.run')
+    @patch("rail_svc.cli.local.top.create_async_engine")
+    @patch("rail_svc.cli.local.top.config")
+    @patch("rail_svc.cli.local.top.asyncio.run")
     def test_init_with_reset(
-        self, mock_asyncio_run: MagicMock, mock_config: MagicMock,
-        mock_create_engine: MagicMock, runner: CliRunner
+        self,
+        mock_asyncio_run: MagicMock,
+        mock_config: MagicMock,
+        mock_create_engine: MagicMock,
+        runner: CliRunner,
     ) -> None:
         """Test init command with reset flag."""
         mock_config.db.url = "sqlite+aiosqlite:///test.db"
 
-        result = runner.invoke(init, ['--reset'])
+        # Capture and close the coroutine to prevent warning
+        def close_coro(coro):
+            coro.close()
+            return None
+
+        mock_asyncio_run.side_effect = close_coro
+
+        result = runner.invoke(init, ["--reset"])
 
         assert result.exit_code == 0
         mock_asyncio_run.assert_called_once()
 
-    @patch('rail_svc.cli.local.top.create_async_engine')
-    @patch('rail_svc.cli.local.top.config')
-    @patch('rail_svc.cli.local.top.asyncio.run')
+    @patch("rail_svc.cli.local.top.create_async_engine")
+    @patch("rail_svc.cli.local.top.config")
+    @patch("rail_svc.cli.local.top.asyncio.run")
     def test_init_command_name(
-        self, mock_asyncio_run: MagicMock, mock_config: MagicMock,
-        mock_create_engine: MagicMock
+        self, mock_asyncio_run: MagicMock, mock_config: MagicMock, mock_create_engine: MagicMock
     ) -> None:
         """Test that init command has correct name."""
+
+        # Capture and close the coroutine to prevent warning
+        def close_coro(coro):
+            coro.close()
+            return None
+
+        mock_asyncio_run.side_effect = close_coro
         assert init.name == "init"
 
-    @patch('rail_svc.cli.local.top.create_async_engine')
-    @patch('rail_svc.cli.local.top.config')
-    @patch('rail_svc.cli.local.top.asyncio.run')
+    @patch("rail_svc.cli.local.top.create_async_engine")
+    @patch("rail_svc.cli.local.top.config")
+    @patch("rail_svc.cli.local.top.asyncio.run")
     def test_init_help_message(
-        self, mock_asyncio_run: MagicMock, mock_config: MagicMock,
-        mock_create_engine: MagicMock, runner: CliRunner
+        self,
+        mock_asyncio_run: MagicMock,
+        mock_config: MagicMock,
+        mock_create_engine: MagicMock,
+        runner: CliRunner,
     ) -> None:
         """Test init command help message."""
-        result = runner.invoke(init, ['--help'])
+
+        # Capture and close the coroutine to prevent warning
+        def close_coro(coro):
+            coro.close()
+            return None
+
+        mock_asyncio_run.side_effect = close_coro
+        result = runner.invoke(init, ["--help"])
 
         assert result.exit_code == 0
         assert "--reset" in result.output
@@ -140,14 +171,14 @@ class TestMainCLI:
 
     def test_cli_has_version_option(self, runner: CliRunner) -> None:
         """Test that CLI has version option."""
-        result = runner.invoke(cli, ['--version'])
+        result = runner.invoke(cli, ["--version"])
 
         assert result.exit_code == 0
         assert __version__ in result.output
 
     def test_cli_has_init_command(self, runner: CliRunner) -> None:
         """Test that CLI includes init command."""
-        result = runner.invoke(cli, ['--help'])
+        result = runner.invoke(cli, ["--help"])
 
         assert result.exit_code == 0
         assert "init" in result.output
@@ -159,7 +190,7 @@ class TestCLIIntegration:
 
     def test_nonexistent_command(self, runner: CliRunner) -> None:
         """Test invoking non-existent command."""
-        result = runner.invoke(cli, ['nonexistent'])
+        result = runner.invoke(cli, ["nonexistent"])
 
         assert result.exit_code != 0
 
@@ -168,15 +199,24 @@ class TestCLIIntegration:
 class TestErrorHandling:
     """Tests for error handling in CLI."""
 
-    @patch('rail_svc.cli.local.top.create_async_engine')
-    @patch('rail_svc.cli.local.top.config')
-    @patch('rail_svc.cli.local.top.asyncio.run')
+    @patch("rail_svc.cli.local.top.create_async_engine")
+    @patch("rail_svc.cli.local.top.config")
+    @patch("rail_svc.cli.local.top.asyncio.run")
     def test_init_handles_connection_error(
-        self, mock_asyncio_run: MagicMock, mock_config: MagicMock,
-        mock_create_engine: MagicMock, runner: CliRunner
+        self,
+        mock_asyncio_run: MagicMock,
+        mock_config: MagicMock,
+        mock_create_engine: MagicMock,
+        runner: CliRunner,
     ) -> None:
         """Test init handles database connection errors."""
         mock_config.db.url = "sqlite+aiosqlite:///test.db"
+
+        # Capture and close the coroutine to prevent warning
+        def close_coro(coro):
+            coro.close()
+            return None
+        mock_asyncio_run.side_effect = close_coro
 
         # Simulate connection error
         mock_asyncio_run.side_effect = RuntimeError("Connection failed")
@@ -210,7 +250,7 @@ class TestVersionDisplay:
 
     def test_version_option_long(self, runner: CliRunner) -> None:
         """Test long version option."""
-        result = runner.invoke(cli, ['--version'])
+        result = runner.invoke(cli, ["--version"])
 
         assert result.exit_code == 0
         assert __version__ in result.output
@@ -222,29 +262,39 @@ class TestCLIGroupStructure:
 
     def test_cli_has_subcommands(self) -> None:
         """Test that CLI has subcommands."""
-        assert hasattr(cli, 'commands')
+        assert hasattr(cli, "commands")
         assert len(cli.commands) > 0
 
     def test_init_in_commands(self) -> None:
         """Test that init is in commands."""
-        assert 'init' in cli.commands
+        assert "init" in cli.commands
 
 
 # Test command invocation
 class TestCommandInvocation:
     """Tests for command invocation patterns."""
 
-    @patch('rail_svc.cli.local.top.create_async_engine')
-    @patch('rail_svc.cli.local.top.config')
-    @patch('rail_svc.cli.local.top.asyncio.run')
+    @patch("rail_svc.cli.local.top.create_async_engine")
+    @patch("rail_svc.cli.local.top.config")
+    @patch("rail_svc.cli.local.top.asyncio.run")
     def test_init_can_be_invoked_standalone(
-        self, mock_asyncio_run: MagicMock, mock_config: MagicMock,
-        mock_create_engine: MagicMock, runner: CliRunner
+        self,
+        mock_asyncio_run: MagicMock,
+        mock_config: MagicMock,
+        mock_create_engine: MagicMock,
+        runner: CliRunner,
     ) -> None:
         """Test that init can be invoked as standalone command."""
         mock_config.db.url = "sqlite+aiosqlite:///test.db"
+        
+        # Capture and close the coroutine to prevent warning
+        def close_coro(coro):
+            coro.close()
+            return None
 
-        result = runner.invoke(cli, ['init'])
+        mock_asyncio_run.side_effect = close_coro        
+
+        result = runner.invoke(cli, ["init"])
 
         assert result.exit_code == 0
 
@@ -253,17 +303,27 @@ class TestCommandInvocation:
 class TestAsyncExecution:
     """Tests for async execution patterns."""
 
-    @patch('rail_svc.cli.local.top.create_async_engine')
-    @patch('rail_svc.cli.local.top.config')
-    @patch('rail_svc.cli.local.top.asyncio.run')
+    @patch("rail_svc.cli.local.top.create_async_engine")
+    @patch("rail_svc.cli.local.top.config")
+    @patch("rail_svc.cli.local.top.asyncio.run")
     def test_init_uses_asyncio_run(
-        self, mock_asyncio_run: MagicMock, mock_config: MagicMock,
-        mock_create_engine: MagicMock, runner: CliRunner
+        self,
+        mock_asyncio_run: MagicMock,
+        mock_config: MagicMock,
+        mock_create_engine: MagicMock,
+        runner: CliRunner,
     ) -> None:
         """Test that init uses asyncio.run."""
         mock_config.db.url = "sqlite+aiosqlite:///test.db"
+        
+        # Capture and close the coroutine to prevent warning
+        def close_coro(coro):
+            coro.close()
+            return None
 
-        runner.invoke(cli, ['init'])
+        mock_asyncio_run.side_effect = close_coro        
+
+        runner.invoke(cli, ["init"])
 
         # asyncio.run should be called with async function
         assert mock_asyncio_run.called

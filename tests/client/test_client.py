@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-
 from pydantic import BaseModel
 
-from rail_svc.client.client import RemoteDatabase, TABLE_CONFIGS
 from rail_svc.client.base import RemoteAPI, RemoteTableOperations
+from rail_svc.client.client import TABLE_CONFIGS, RemoteDatabase
 
 
 class TestRemoteDatabase:

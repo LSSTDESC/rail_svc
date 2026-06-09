@@ -10,7 +10,6 @@ from rail_svc.db_oper.base import FileValidatedOperations, TableContext
 from rail_svc.db_oper.dataset import DatasetOperations, dataset
 from rail_svc.models import Dataset as DatasetModel
 
-
 # ============================================================================
 # DatasetOperations class tests
 # ============================================================================

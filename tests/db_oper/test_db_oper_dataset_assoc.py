@@ -4,9 +4,9 @@ import pytest
 
 from rail_svc.db import DatasetAssoc
 from rail_svc.db_oper.base import TableContext
-from rail_svc.db_oper.dataset_assoc import DatasetAssocOperations, dataset_assoc
+from rail_svc.db_oper.dataset_assoc import (DatasetAssocOperations,
+                                            dataset_assoc)
 from rail_svc.models import DatasetAssoc as DatasetAssocModel
-
 
 # ============================================================================
 # DatasetAssocOperations class tests

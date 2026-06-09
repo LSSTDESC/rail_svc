@@ -9,23 +9,20 @@ import pytest
 from pydantic import BaseModel
 
 from rail_svc.remote_async.base import AsyncRemoteOperations
-from rail_svc.remote_sync.base import (
-    AlgorithmSyncRemoteOperations,
-    BandSyncRemoteOperations,
-    CatalogBandAssocSyncRemoteOperations,
-    CatalogTagSyncRemoteOperations,
-    DatasetAssocSyncRemoteOperations,
-    DatasetSyncRemoteOperations,
-    EstimatesSyncRemoteOperations,
-    EstimatorSyncRemoteOperations,
-    ModelSyncRemoteOperations,
-    SyncRemoteOperations,
-    run_async,
-)
+from rail_svc.remote_sync.base import (AlgorithmSyncRemoteOperations,
+                                       BandSyncRemoteOperations,
+                                       CatalogBandAssocSyncRemoteOperations,
+                                       CatalogTagSyncRemoteOperations,
+                                       DatasetAssocSyncRemoteOperations,
+                                       DatasetSyncRemoteOperations,
+                                       EstimatesSyncRemoteOperations,
+                                       EstimatorSyncRemoteOperations,
+                                       ModelSyncRemoteOperations,
+                                       SyncRemoteOperations, run_async)
 
 
 # Test models
-class TestResponse(BaseModel):
+class RemoteSyncTestResponse(BaseModel):
     """Test response model."""
 
     id: int
@@ -33,7 +30,7 @@ class TestResponse(BaseModel):
     value: int = 0
 
 
-class TestCreate(BaseModel):
+class RemoteSyncTestCreate(BaseModel):
     """Test create model."""
 
     name: str
@@ -128,15 +125,15 @@ class TestSyncCRUDOperations:
         """Test that get_row calls the async version."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_get_row(row_id: int) -> TestResponse:
-            return TestResponse(id=row_id, name="test")
+        async def mock_get_row(row_id: int) -> RemoteSyncTestResponse:
+            return RemoteSyncTestResponse(id=row_id, name="test")
 
         mock_async_ops.get_row = mock_get_row
 
         sync_ops = SyncRemoteOperations(mock_async_ops)
         result = sync_ops.get_row(42)
 
-        assert isinstance(result, TestResponse)
+        assert isinstance(result, RemoteSyncTestResponse)
         assert result.id == 42
         assert result.name == "test"
 
@@ -144,15 +141,15 @@ class TestSyncCRUDOperations:
         """Test that create_row calls the async version."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_create_row(**kwargs) -> TestResponse:
-            return TestResponse(id=1, **kwargs)
+        async def mock_create_row(**kwargs) -> RemoteSyncTestResponse:
+            return RemoteSyncTestResponse(id=1, **kwargs)
 
         mock_async_ops.create_row = mock_create_row
 
         sync_ops = SyncRemoteOperations(mock_async_ops)
         result = sync_ops.create_row(name="created", value=100)
 
-        assert isinstance(result, TestResponse)
+        assert isinstance(result, RemoteSyncTestResponse)
         assert result.name == "created"
         assert result.value == 100
 
@@ -160,8 +157,8 @@ class TestSyncCRUDOperations:
         """Test that update_row calls the async version."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_update_row(row_id: int, **kwargs) -> TestResponse:
-            return TestResponse(id=row_id, **kwargs)
+        async def mock_update_row(row_id: int, **kwargs) -> RemoteSyncTestResponse:
+            return RemoteSyncTestResponse(id=row_id, **kwargs)
 
         mock_async_ops.update_row = mock_update_row
 
@@ -176,8 +173,8 @@ class TestSyncCRUDOperations:
         """Test that delete_row calls the async version."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_delete_row(row_id: int, **kwargs) -> TestResponse:
-            return TestResponse(id=row_id, name="deleted")
+        async def mock_delete_row(row_id: int, **kwargs) -> RemoteSyncTestResponse:
+            return RemoteSyncTestResponse(id=row_id, name="deleted")
 
         mock_async_ops.delete_row = mock_delete_row
 
@@ -191,8 +188,8 @@ class TestSyncCRUDOperations:
         """Test that get_rows returns a list."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_get_rows(**kwargs) -> list[TestResponse]:
-            return [TestResponse(id=i, name=f"row{i}") for i in range(5)]
+        async def mock_get_rows(**kwargs) -> list[RemoteSyncTestResponse]:
+            return [RemoteSyncTestResponse(id=i, name=f"row{i}") for i in range(5)]
 
         mock_async_ops.get_rows = mock_get_rows
 
@@ -201,7 +198,7 @@ class TestSyncCRUDOperations:
 
         assert isinstance(results, list)
         assert len(results) == 5
-        assert all(isinstance(r, TestResponse) for r in results)
+        assert all(isinstance(r, RemoteSyncTestResponse) for r in results)
 
     def test_count_rows_returns_int(self) -> None:
         """Test that count_rows returns an integer."""
@@ -226,8 +223,8 @@ class TestSyncFilterOperations:
         """Test that filter_rows calls the async version."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_filter_rows(**kwargs) -> list[TestResponse]:
-            return [TestResponse(id=1, name="match", value=10)]
+        async def mock_filter_rows(**kwargs) -> list[RemoteSyncTestResponse]:
+            return [RemoteSyncTestResponse(id=1, name="match", value=10)]
 
         mock_async_ops.filter_rows = mock_filter_rows
 
@@ -255,8 +252,8 @@ class TestSyncFilterOperations:
         """Test that find_by calls the async version."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_find_by(**kwargs) -> list[TestResponse]:
-            return [TestResponse(id=1, name=kwargs.get("name", "test"))]
+        async def mock_find_by(**kwargs) -> list[RemoteSyncTestResponse]:
+            return [RemoteSyncTestResponse(id=1, name=kwargs.get("name", "test"))]
 
         mock_async_ops.find_by = mock_find_by
 
@@ -274,8 +271,8 @@ class TestSyncBatchOperations:
         """Test that create_rows_batched calls the async version."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_create_rows_batched(data, **kwargs) -> list[TestResponse]:
-            return [TestResponse(id=i, **row) for i, row in enumerate(data, 1)]
+        async def mock_create_rows_batched(data, **kwargs) -> list[RemoteSyncTestResponse]:
+            return [RemoteSyncTestResponse(id=i, **row) for i, row in enumerate(data, 1)]
 
         mock_async_ops.create_rows_batched = mock_create_rows_batched
 
@@ -348,7 +345,7 @@ class TestOptionalReturnTypes:
         """Test that get_row_or_none can return None."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_get_row_or_none(row_id: int) -> TestResponse | None:
+        async def mock_get_row_or_none(row_id: int) -> RemoteSyncTestResponse | None:
             return None
 
         mock_async_ops.get_row_or_none = mock_get_row_or_none
@@ -362,8 +359,8 @@ class TestOptionalReturnTypes:
         """Test that get_row_or_none can return a value."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_get_row_or_none(row_id: int) -> TestResponse | None:
-            return TestResponse(id=row_id, name="found")
+        async def mock_get_row_or_none(row_id: int) -> RemoteSyncTestResponse | None:
+            return RemoteSyncTestResponse(id=row_id, name="found")
 
         mock_async_ops.get_row_or_none = mock_get_row_or_none
 
@@ -377,9 +374,9 @@ class TestOptionalReturnTypes:
         """Test that delete_row can return None."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_delete_row(row_id: int, **kwargs) -> TestResponse | None:
+        async def mock_delete_row(row_id: int, **kwargs) -> RemoteSyncTestResponse | None:
             if kwargs.get("capture_data"):
-                return TestResponse(id=row_id, name="deleted")
+                return RemoteSyncTestResponse(id=row_id, name="deleted")
             return None
 
         mock_async_ops.delete_row = mock_delete_row
@@ -397,8 +394,8 @@ class TestErrorHandling:
         """Test that sync operations raise error from async context."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_get_row(row_id: int) -> TestResponse:
-            return TestResponse(id=row_id, name="test")
+        async def mock_get_row(row_id: int) -> RemoteSyncTestResponse:
+            return RemoteSyncTestResponse(id=row_id, name="test")
 
         mock_async_ops.get_row = mock_get_row
 
@@ -414,7 +411,7 @@ class TestErrorHandling:
         """Test that exceptions from async operations are propagated."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_get_row(row_id: int) -> TestResponse:
+        async def mock_get_row(row_id: int) -> RemoteSyncTestResponse:
             raise ValueError("Test error")
 
         mock_async_ops.get_row = mock_get_row
@@ -435,17 +432,17 @@ class TestMultipleOperations:
 
         call_count = {"get": 0, "create": 0, "update": 0}
 
-        async def mock_get_row(row_id: int) -> TestResponse:
+        async def mock_get_row(row_id: int) -> RemoteSyncTestResponse:
             call_count["get"] += 1
-            return TestResponse(id=row_id, name="test")
+            return RemoteSyncTestResponse(id=row_id, name="test")
 
-        async def mock_create_row(**kwargs) -> TestResponse:
+        async def mock_create_row(**kwargs) -> RemoteSyncTestResponse:
             call_count["create"] += 1
-            return TestResponse(id=1, **kwargs)
+            return RemoteSyncTestResponse(id=1, **kwargs)
 
-        async def mock_update_row(row_id: int, **kwargs) -> TestResponse:
+        async def mock_update_row(row_id: int, **kwargs) -> RemoteSyncTestResponse:
             call_count["update"] += 1
-            return TestResponse(id=row_id, **kwargs)
+            return RemoteSyncTestResponse(id=row_id, **kwargs)
 
         mock_async_ops.get_row = mock_get_row
         mock_async_ops.create_row = mock_create_row
@@ -468,9 +465,9 @@ class TestMultipleOperations:
 
         state = {"counter": 0}
 
-        async def mock_create_row(**kwargs) -> TestResponse:
+        async def mock_create_row(**kwargs) -> RemoteSyncTestResponse:
             state["counter"] += 1
-            return TestResponse(id=state["counter"], **kwargs)
+            return RemoteSyncTestResponse(id=state["counter"], **kwargs)
 
         mock_async_ops.create_row = mock_create_row
 
@@ -493,10 +490,10 @@ class TestLookupOperations:
         """Test that lookup_by_id_or_name returns tuple."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_lookup(id_=None, name=None) -> tuple[int, TestResponse]:
+        async def mock_lookup(id_=None, name=None) -> tuple[int, RemoteSyncTestResponse]:
             if id_ is not None:
-                return (id_, TestResponse(id=id_, name="by_id"))
-            return (10, TestResponse(id=10, name=name or "by_name"))
+                return (id_, RemoteSyncTestResponse(id=id_, name="by_id"))
+            return (10, RemoteSyncTestResponse(id=10, name=name or "by_name"))
 
         mock_async_ops.lookup_by_id_or_name = mock_lookup
 
@@ -516,8 +513,8 @@ class TestLookupOperations:
         """Test that get_row_by_name calls the async version."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_get_row_by_name(name: str) -> TestResponse:
-            return TestResponse(id=1, name=name)
+        async def mock_get_row_by_name(name: str) -> RemoteSyncTestResponse:
+            return RemoteSyncTestResponse(id=1, name=name)
 
         mock_async_ops.get_row_by_name = mock_get_row_by_name
 
@@ -534,8 +531,8 @@ class TestUpdateAndDeleteOperations:
         """Test that update_rows returns a list."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_update_rows(data) -> list[TestResponse]:
-            return [TestResponse(**row) for row in data]
+        async def mock_update_rows(data) -> list[RemoteSyncTestResponse]:
+            return [RemoteSyncTestResponse(**row) for row in data]
 
         mock_async_ops.update_rows = mock_update_rows
 
@@ -553,9 +550,9 @@ class TestUpdateAndDeleteOperations:
         """Test that delete_rows with capture returns list."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_delete_rows(ids, **kwargs) -> list[TestResponse] | int:
+        async def mock_delete_rows(ids, **kwargs) -> list[RemoteSyncTestResponse] | int:
             if kwargs.get("capture_data"):
-                return [TestResponse(id=i, name=f"deleted{i}") for i in ids]
+                return [RemoteSyncTestResponse(id=i, name=f"deleted{i}") for i in ids]
             return len(ids)
 
         mock_async_ops.delete_rows = mock_delete_rows
@@ -570,9 +567,9 @@ class TestUpdateAndDeleteOperations:
         """Test that delete_rows without capture returns count."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_delete_rows(ids, **kwargs) -> list[TestResponse] | int:
+        async def mock_delete_rows(ids, **kwargs) -> list[RemoteSyncTestResponse] | int:
             if kwargs.get("capture_data"):
-                return [TestResponse(id=i, name=f"deleted{i}") for i in ids]
+                return [RemoteSyncTestResponse(id=i, name=f"deleted{i}") for i in ids]
             return len(ids)
 
         mock_async_ops.delete_rows = mock_delete_rows
@@ -605,22 +602,22 @@ class TestFilterOneOperations:
         """Test that filter_one returns a single result."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_filter_one(**kwargs) -> TestResponse:
-            return TestResponse(id=1, name="unique")
+        async def mock_filter_one(**kwargs) -> RemoteSyncTestResponse:
+            return RemoteSyncTestResponse(id=1, name="unique")
 
         mock_async_ops.filter_one = mock_filter_one
 
         sync_ops = SyncRemoteOperations(mock_async_ops)
         result = sync_ops.filter_one(filters=[])
 
-        assert isinstance(result, TestResponse)
+        assert isinstance(result, RemoteSyncTestResponse)
         assert result.name == "unique"
 
     def test_filter_one_or_none_returns_none(self) -> None:
         """Test that filter_one_or_none can return None."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_filter_one_or_none(**kwargs) -> TestResponse | None:
+        async def mock_filter_one_or_none(**kwargs) -> RemoteSyncTestResponse | None:
             return None
 
         mock_async_ops.filter_one_or_none = mock_filter_one_or_none
@@ -634,8 +631,8 @@ class TestFilterOneOperations:
         """Test that filter_one_or_none can return a result."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_filter_one_or_none(**kwargs) -> TestResponse | None:
-            return TestResponse(id=1, name="found")
+        async def mock_filter_one_or_none(**kwargs) -> RemoteSyncTestResponse | None:
+            return RemoteSyncTestResponse(id=1, name="found")
 
         mock_async_ops.filter_one_or_none = mock_filter_one_or_none
 
@@ -649,8 +646,8 @@ class TestFilterOneOperations:
         """Test that find_one_by returns a single result."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_find_one_by(**kwargs) -> TestResponse:
-            return TestResponse(id=1, name=kwargs.get("name", "test"))
+        async def mock_find_one_by(**kwargs) -> RemoteSyncTestResponse:
+            return RemoteSyncTestResponse(id=1, name=kwargs.get("name", "test"))
 
         mock_async_ops.find_one_by = mock_find_one_by
 
@@ -667,8 +664,8 @@ class TestCreateOperations:
         """Test that create_rows returns a list."""
         mock_async_ops = Mock(spec=AsyncRemoteOperations)
 
-        async def mock_create_rows(data, **kwargs) -> list[TestResponse]:
-            return [TestResponse(id=i, **row) for i, row in enumerate(data, 1)]
+        async def mock_create_rows(data, **kwargs) -> list[RemoteSyncTestResponse]:
+            return [RemoteSyncTestResponse(id=i, **row) for i, row in enumerate(data, 1)]
 
         mock_async_ops.create_rows = mock_create_rows
 
@@ -692,23 +689,25 @@ class TestIntegrationPatterns:
         storage = {}
         next_id = 1
 
-        async def mock_create_row(**kwargs) -> TestResponse:
+        async def mock_create_row(**kwargs) -> RemoteSyncTestResponse:
             nonlocal next_id
-            row = TestResponse(id=next_id, **kwargs)
+            row = RemoteSyncTestResponse(id=next_id, **kwargs)
             storage[next_id] = row
             next_id += 1
             return row
 
-        async def mock_get_row(row_id: int) -> TestResponse:
+        async def mock_get_row(row_id: int) -> RemoteSyncTestResponse:
             return storage[row_id]
 
-        async def mock_update_row(row_id: int, **kwargs) -> TestResponse:
+        async def mock_update_row(row_id: int, **kwargs) -> RemoteSyncTestResponse:
             row = storage[row_id]
-            updated = TestResponse(id=row_id, name=kwargs.get("name", row.name), value=kwargs.get("value", row.value))
+            updated = RemoteSyncTestResponse(
+                id=row_id, name=kwargs.get("name", row.name), value=kwargs.get("value", row.value)
+            )
             storage[row_id] = updated
             return updated
 
-        async def mock_delete_row(row_id: int, **kwargs) -> TestResponse | None:
+        async def mock_delete_row(row_id: int, **kwargs) -> RemoteSyncTestResponse | None:
             return storage.pop(row_id, None)
 
         mock_async_ops.create_row = mock_create_row

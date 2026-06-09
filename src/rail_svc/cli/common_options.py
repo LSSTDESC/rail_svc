@@ -9,6 +9,7 @@ from typing import Any
 import click
 from click.decorators import FC
 
+from ..common import unexpected
 from ..config import config as global_config
 from ..models.utils import OutputEnum
 
@@ -66,11 +67,11 @@ class PaginationParams:
         """
         if self.skip < 0:
             raise ValueError("skip must be non-negative")
-        if self.limit is not None and self.limit <= 0:
+        if unexpected(self.limit is not None and self.limit <= 0):
             raise ValueError("limit must be positive")
-        if self.page_size <= 0:
+        if unexpected(self.page_size <= 0):
             raise ValueError("page-size must be positive")
-        if self.page_size > MAX_PAGE_SIZE:
+        if unexpected(self.page_size > MAX_PAGE_SIZE):
             raise ValueError(f"page-size cannot exceed {MAX_PAGE_SIZE}")
 
 

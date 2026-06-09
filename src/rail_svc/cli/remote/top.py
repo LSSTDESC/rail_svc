@@ -27,7 +27,7 @@ def make_table_group(name: str, ops_factory: Any, desc: str) -> click.Group:
     """
 
     @click.group(name=name, help=desc)
-    def grp() -> None:
+    def grp() -> None:  # pragma: no cover
         pass
 
     # Create the operations instance

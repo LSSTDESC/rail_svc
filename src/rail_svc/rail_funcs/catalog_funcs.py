@@ -6,6 +6,7 @@ import qp
 import tables_io
 from rail.utils import catalog_utils
 
+from ..common import unexpected
 from ..models import BandCreate, CatalogBandAssocCreate, CatalogTagCreate
 
 logger = logging.getLogger(__name__)
@@ -124,8 +125,8 @@ def read_band_res_file(band_name: str, filter_dir: Path | str | None = None) -> 
     if filter_dir is None:
         try:
             filter_dir = Path(catalog_utils.find_rail_file("examples_data/estimation_data/data/FILTER"))
-        except Exception as e:
-            logger.error(f"Failed to find default filter directory: {e}")
+        except Exception as uexc:
+            logger.error(f"Failed to find default filter directory: {uexc}")
             raise
 
     if not isinstance(filter_dir, Path):
@@ -138,7 +139,7 @@ def read_band_res_file(band_name: str, filter_dir: Path | str | None = None) -> 
     # Construct file path
     file_path = filter_dir / f"{band_name}.res"
 
-    if not file_path.exists():
+    if unexpected(not file_path.exists()):
         logger.error(f"Band response file not found: {file_path}")
         raise FileNotFoundError(f"Band file not found: {file_path}")
 
@@ -200,8 +201,8 @@ def make_band_create_model(band_name: str, filter_dir: Path | str | None) -> Ban
             f"Creating band with empty data."
         )
         band_data = np.empty((0, 2))
-    except Exception as e:
-        logger.error(f"Unexpected error reading band '{band_name}': {e}")
+    except Exception as uexc:
+        logger.error(f"Unexpected error reading band '{band_name}': {uexc}")
         raise
 
     return BandCreate(
@@ -235,8 +236,8 @@ def make_band_create_models(filter_dir: Path | str | None = None) -> list[BandCr
 
     try:
         band_names = catalog_utils.BandFactory.get_bands()
-    except Exception as e:
-        logger.error(f"Failed to retrieve band names from BandFactory: {e}")
+    except Exception as uexc:
+        logger.error(f"Failed to retrieve band names from BandFactory: {uexc}")
         raise
 
     if not band_names:
@@ -303,8 +304,8 @@ def make_catalog_tag_create_models() -> list[CatalogTagCreate]:
 
     try:
         tag_dict = catalog_utils.CatalogTagFactory.get_catalog_tags()
-    except Exception as e:
-        logger.error(f"Failed to retrieve catalog tags from CatalogTagFactory: {e}")
+    except Exception as uexc:
+        logger.error(f"Failed to retrieve catalog tags from CatalogTagFactory: {uexc}")
         raise
 
     if not tag_dict:
@@ -317,8 +318,8 @@ def make_catalog_tag_create_models() -> list[CatalogTagCreate]:
         try:
             catalog_tag = make_catalog_tag_create_model(tag_name)
             catalog_tags.append(catalog_tag)
-        except Exception as e:
-            logger.error(f"Failed to create model for catalog tag '{tag_name}': {e}")
+        except Exception as uexc:
+            logger.error(f"Failed to create model for catalog tag '{tag_name}': {uexc}")
             continue
 
     logger.info(f"Successfully created {len(catalog_tags)} catalog tag models")
@@ -372,8 +373,8 @@ def make_catalog_band_assoc_create_models(
         band_list = ct.config.band_list
         bands = ct.config.bands
         catalog_name = ct.config.name
-    except AttributeError as e:
-        logger.error(f"CatalogTag config missing required attributes: {e}")
+    except AttributeError as uexc:
+        logger.error(f"CatalogTag config missing required attributes: {uexc}")
         raise
 
     if not band_list:
@@ -447,8 +448,8 @@ def make_all_catalog_band_assoc_create_models() -> list[CatalogBandAssocCreate]:
 
     try:
         catalog_tags = catalog_utils.CatalogTagFactory.get_catalog_tags()
-    except Exception as e:
-        logger.error(f"Failed to retrieve catalog tags from CatalogTagFactory: {e}")
+    except Exception as uexc:
+        logger.error(f"Failed to retrieve catalog tags from CatalogTagFactory: {uexc}")
         raise
 
     if not catalog_tags:
@@ -517,9 +518,9 @@ def load_catalog_yaml(
     if not isinstance(catalog_yaml, Path):
         try:
             catalog_yaml = Path(catalog_yaml)
-        except Exception as e:
-            logger.error(f"Failed to convert catalog_yaml to Path: {e}")
-            raise ValueError(f"Invalid catalog_yaml path: {catalog_yaml}") from e
+        except Exception as uexc:
+            logger.error(f"Failed to convert catalog_yaml to Path: {uexc}")
+            raise ValueError(f"Invalid catalog_yaml path: {catalog_yaml}") from uexc
 
     if not catalog_yaml.exists():
         logger.error(f"Catalog YAML file does not exist: {catalog_yaml}")
@@ -529,7 +530,7 @@ def load_catalog_yaml(
         logger.error(f"Catalog YAML path is not a file: {catalog_yaml}")
         raise ValueError(f"catalog_yaml must be a file, not a directory: {catalog_yaml}")
 
-    if catalog_yaml.suffix.lower() not in [".yaml", ".yml"]:
+    if unexpected(catalog_yaml.suffix.lower() not in [".yaml", ".yml"]):
         logger.warning(f"Catalog file '{catalog_yaml}' does not have .yaml or .yml extension")
 
     logger.info(f"Loading catalog configuration from: {catalog_yaml}")
@@ -554,16 +555,16 @@ def load_catalog_yaml(
     try:
         catalog_tags = make_catalog_tag_create_models()
         logger.info(f"Created {len(catalog_tags)} catalog tag models")
-    except Exception as e:
-        logger.error(f"Failed to create catalog tag models: {e}")
+    except Exception as uexc:
+        logger.error(f"Failed to create catalog tag models: {uexc}")
         raise
 
     # Create catalog-band association models
     try:
         catalog_band_assocs = make_all_catalog_band_assoc_create_models()
         logger.info(f"Created {len(catalog_band_assocs)} catalog-band association models")
-    except Exception as e:
-        logger.error(f"Failed to create catalog-band association models: {e}")
+    except Exception as uexc:
+        logger.error(f"Failed to create catalog-band association models: {uexc}")
         raise
 
     logger.info(
@@ -615,9 +616,9 @@ def get_catalog_row(catalog_path: Path | str, row: int) -> dict[str, np.ndarray]
     if not isinstance(catalog_path, Path):
         try:
             catalog_path = Path(catalog_path)
-        except Exception as e:
-            logger.error(f"Failed to convert catalog_path to Path: {e}")
-            raise ValueError(f"Invalid catalog_path: {catalog_path}") from e
+        except Exception as uexc:
+            logger.error(f"Failed to convert catalog_path to Path: {uexc}")
+            raise ValueError(f"Invalid catalog_path: {catalog_path}") from uexc
 
     if not catalog_path.exists():
         logger.error(f"Catalog file does not exist: {catalog_path}")
@@ -694,9 +695,9 @@ def get_estimates_row(estimates_path: Path | str, row: int) -> dict[str, np.ndar
     if not isinstance(estimates_path, Path):
         try:
             estimates_path = Path(estimates_path)
-        except Exception as e:
-            logger.error(f"Failed to convert estimates_path to Path: {e}")
-            raise ValueError(f"Invalid estimates_path: {estimates_path}") from e
+        except Exception as uexc:
+            logger.error(f"Failed to convert estimates_path to Path: {uexc}")
+            raise ValueError(f"Invalid estimates_path: {estimates_path}") from uexc
 
     if not estimates_path.exists():
         logger.error(f"Estimates file does not exist: {estimates_path}")

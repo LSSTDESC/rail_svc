@@ -7,6 +7,7 @@ from typing import TypeVar
 import click
 from pydantic import BaseModel, ValidationError
 
+from ...common import unexpected
 from ...models import Filter, FilterOp, OrderBy
 from ...models.utils import OutputEnum, output_pydantic
 from ...remote_sync.base import SyncRemoteOperations
@@ -56,7 +57,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
         # We'll need to get table name from the operations
         self.table_name = sync_oper.async_ops.table_name
         self.response_model = self.sync_oper.async_ops.response_model
-        self.col_names_for_table = self.response_model.col_names_for_table
+        self.col_names_for_table = self.response_model.col_names_for_table  # type: ignore
 
     # ========================================================================
     # UTILITY METHODS
@@ -83,7 +84,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
             click.echo(f"Error: Validation failed{context_msg}: {exc}", err=True)
         elif isinstance(exc, ValueError):
             click.echo(f"Error{context_msg}: {exc}", err=True)
-        else:
+        else:  # pragma: no cover
             logger.error(f"Unexpected error{context_msg}", exc_info=exc)
             click.echo(f"Error{context_msg}: {exc}", err=True)
 
@@ -132,8 +133,8 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 row = self.sync_oper.get_row_by_name(name=name)
                 print(output_pydantic([row], output, self.col_names_for_table))
 
-            except Exception as exc:
-                self._handle_error(exc, f"getting {self.table_name} with name '{name}'")
+            except Exception as uexc:
+                self._handle_error(uexc, f"getting {self.table_name} with name '{name}'")
 
     def register_get_rows(self) -> None:
         """Register the get-rows command to the group.
@@ -158,8 +159,8 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
             try:
                 params = common_options.PaginationParams(skip=skip, limit=limit, page_size=page_size)
                 params.validate()
-            except ValueError as exc:
-                click.echo(f"Error: {exc}", err=True)
+            except ValueError as uexc:
+                click.echo(f"Error: {uexc}", err=True)
                 raise click.Abort()
 
             # Retrieve and display rows
@@ -170,8 +171,8 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 )
                 print(output_pydantic(rows, output, self.col_names_for_table))
 
-            except Exception as exc:
-                self._handle_error(exc, f"listing {self.table_name} rows")
+            except Exception as uexc:
+                self._handle_error(uexc, f"listing {self.table_name} rows")
 
     def register_get_row_or_none(self) -> None:
         """Register the get-row-or-none command to the group.
@@ -199,8 +200,8 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 else:
                     print(output_pydantic([row], output, self.col_names_for_table))
 
-            except Exception as exc:
-                self._handle_error(exc, f"getting {self.table_name} with ID {row_id}")
+            except Exception as uexc:
+                self._handle_error(uexc, f"getting {self.table_name} with ID {row_id}")
 
     def register_count_rows(self) -> None:
         """Register the count-rows command to the group.
@@ -215,8 +216,8 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 count = self.sync_oper.count_rows()
                 click.echo(f"Total {self.table_name} rows: {count}")
 
-            except Exception as exc:
-                self._handle_error(exc, f"counting {self.table_name} rows")
+            except Exception as uexc:
+                self._handle_error(uexc, f"counting {self.table_name} rows")
 
     def register_lookup_by_id_or_name(self) -> None:
         """Register the lookup command to the group.
@@ -243,9 +244,9 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 _found_id, row = self.sync_oper.lookup_by_id_or_name(row_id=row_id, name=name)
                 print(output_pydantic([row], output, self.col_names_for_table))
 
-            except Exception as exc:
+            except Exception as uexc:
                 identifier = f"ID {row_id}" if row_id else f"name '{name}'"
-                self._handle_error(exc, f"looking up {self.table_name} with {identifier}")
+                self._handle_error(uexc, f"looking up {self.table_name} with {identifier}")
 
     def register_all_read_commands(self) -> None:
         """Register all read commands to the group.
@@ -297,17 +298,17 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 try:
                     with open(from_json, encoding="utf-8") as f:
                         row_data = json.load(f)
-                except json.JSONDecodeError as exc:
-                    click.echo(f"Error: Invalid JSON: {exc}", err=True)
+                except json.JSONDecodeError as uexc:
+                    click.echo(f"Error: Invalid JSON: {uexc}", err=True)
                     raise click.Abort()
-                except OSError as exc:
-                    click.echo(f"Error: Cannot read file: {exc}", err=True)
+                except OSError as uexc:
+                    click.echo(f"Error: Cannot read file: {uexc}", err=True)
                     raise click.Abort()
             else:
                 # Parse KEY=VALUE arguments
                 row_data = {}
                 for field in fields:
-                    if "=" not in field:
+                    if unexpected("=" not in field):
                         click.echo(f"Error: Invalid field format '{field}'. Use KEY=VALUE format.", err=True)
                         raise click.Abort()
 
@@ -319,7 +320,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                         # Keep as string if not valid JSON
                         row_data[key] = value
 
-            if not row_data:
+            if unexpected(not row_data):
                 click.echo("Error: No data provided. Use KEY=VALUE arguments or --from-json", err=True)
                 raise click.Abort()
 
@@ -328,8 +329,8 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 click.echo(f"Created {self.table_name} row successfully")
                 print(output_pydantic([row], output, self.col_names_for_table))
 
-            except Exception as exc:
-                self._handle_error(exc, f"creating {self.table_name} row")
+            except Exception as uexc:
+                self._handle_error(uexc, f"creating {self.table_name} row")
 
     def register_create_rows(self) -> None:
         """Register the create-rows command to the group.
@@ -357,18 +358,18 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
             try:
                 with open(json_file, encoding="utf-8") as f:
                     rows_data = json.load(f)
-            except json.JSONDecodeError as exc:
-                click.echo(f"Error: Invalid JSON: {exc}", err=True)
+            except json.JSONDecodeError as uexc:
+                click.echo(f"Error: Invalid JSON: {uexc}", err=True)
                 raise click.Abort()
-            except OSError as exc:
-                click.echo(f"Error: Cannot read file: {exc}", err=True)
+            except OSError as uexc:
+                click.echo(f"Error: Cannot read file: {uexc}", err=True)
                 raise click.Abort()
 
             if not isinstance(rows_data, list):
                 click.echo("Error: JSON file must contain an array", err=True)
                 raise click.Abort()
 
-            if not rows_data:
+            if unexpected(not rows_data):
                 click.echo("Error: Array is empty", err=True)
                 raise click.Abort()
 
@@ -377,8 +378,8 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 click.echo(f"Successfully created {len(rows)} {self.table_name} rows")
                 print(output_pydantic(rows, output, self.col_names_for_table))
 
-            except Exception as exc:
-                self._handle_error(exc, f"creating {self.table_name} rows")
+            except Exception as uexc:
+                self._handle_error(uexc, f"creating {self.table_name} rows")
 
     def register_create_rows_batched(self) -> None:
         """Register the create-rows-batched command to the group.
@@ -468,18 +469,18 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
             try:
                 with open(json_file, encoding="utf-8") as f:
                     rows_data = json.load(f)
-            except json.JSONDecodeError as exc:
-                click.echo(f"Error: Invalid JSON: {exc}", err=True)
+            except json.JSONDecodeError as uexc:
+                click.echo(f"Error: Invalid JSON: {uexc}", err=True)
                 raise click.Abort()
-            except OSError as exc:
-                click.echo(f"Error: Cannot read file: {exc}", err=True)
+            except OSError as uexc:
+                click.echo(f"Error: Cannot read file: {uexc}", err=True)
                 raise click.Abort()
 
-            if not isinstance(rows_data, list):
+            if unexpected(not isinstance(rows_data, list)):
                 click.echo("Error: JSON file must contain an array", err=True)
                 raise click.Abort()
 
-            if not rows_data:
+            if unexpected(not rows_data):
                 click.echo("Error: Array is empty", err=True)
                 raise click.Abort()
 
@@ -487,8 +488,8 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 count = self.sync_oper.bulk_insert_rows(rows_data=rows_data, validate=not no_validate)
                 click.echo(f"Successfully inserted {count} {self.table_name} rows")
 
-            except Exception as exc:
-                self._handle_error(exc, f"bulk inserting {self.table_name} rows")
+            except Exception as uexc:
+                self._handle_error(uexc, f"bulk inserting {self.table_name} rows")
 
     def register_all_create_commands(self) -> None:
         """Register all create commands to the group.
@@ -536,17 +537,17 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 try:
                     with open(from_json, encoding="utf-8") as f:
                         update_data = json.load(f)
-                except json.JSONDecodeError as exc:
-                    click.echo(f"Error: Invalid JSON: {exc}", err=True)
+                except json.JSONDecodeError as uexc:
+                    click.echo(f"Error: Invalid JSON: {uexc}", err=True)
                     raise click.Abort()
-                except OSError as exc:
-                    click.echo(f"Error: Cannot read file: {exc}", err=True)
+                except OSError as uexc:
+                    click.echo(f"Error: Cannot read file: {uexc}", err=True)
                     raise click.Abort()
             else:
                 # Parse KEY=VALUE arguments
                 update_data = {}
                 for field in fields:
-                    if "=" not in field:
+                    if unexpected("=" not in field):
                         click.echo(f"Error: Invalid field format '{field}'. Use KEY=VALUE format.", err=True)
                         raise click.Abort()
 
@@ -572,8 +573,8 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 click.echo(f"Successfully updated {self.table_name} row with ID {row_id}")
                 print(output_pydantic([row], output, self.col_names_for_table))
 
-            except Exception as exc:
-                self._handle_error(exc, f"updating {self.table_name} row with ID {row_id}")
+            except Exception as uexc:
+                self._handle_error(uexc, f"updating {self.table_name} row with ID {row_id}")
 
     def register_update_rows(self) -> None:
         """Register the update-rows command to the group.
@@ -690,8 +691,8 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                     click.echo("\nDeleted data:")
                     print(output_pydantic([deleted_data], output, self.col_names_for_table))
 
-            except Exception as exc:
-                self._handle_error(exc, f"deleting {self.table_name} row with ID {row_id}")
+            except Exception as uexc:
+                self._handle_error(uexc, f"deleting {self.table_name} row with ID {row_id}")
 
     def register_delete_rows(self) -> None:
         """Register the delete-rows command to the group.
@@ -740,19 +741,19 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                     # Try JSON first
                     try:
                         ids_list = json.loads(content)
-                        if not isinstance(ids_list, list):
+                        if unexpected(not isinstance(ids_list, list)):
                             raise ValueError("JSON must be an array")
                     except json.JSONDecodeError:
                         # Parse as line-separated IDs
                         ids_list = [int(line.strip()) for line in content.split("\n") if line.strip()]
 
-                except (OSError, ValueError) as exc:
-                    click.echo(f"Error reading file: {exc}", err=True)
+                except (OSError, ValueError) as uexc:
+                    click.echo(f"Error reading file: {uexc}", err=True)
                     raise click.Abort()
             else:
                 ids_list = list(row_ids)
 
-            if not ids_list:
+            if unexpected(not ids_list):
                 click.echo("Error: No IDs provided. Use arguments or --from-file", err=True)
                 raise click.Abort()
 
@@ -775,8 +776,8 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 else:
                     click.echo(f"Successfully deleted {deleted_data} {self.table_name} rows")
 
-            except Exception as exc:
-                self._handle_error(exc, f"deleting {len(ids_list)} {self.table_name} rows")
+            except Exception as uexc:
+                self._handle_error(uexc, f"deleting {len(ids_list)} {self.table_name} rows")
 
     def register_bulk_delete_rows(self) -> None:
         """Register the bulk-delete command to the group.
@@ -927,8 +928,8 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
             try:
                 params = common_options.PaginationParams(skip=skip, limit=limit, page_size=page_size)
                 params.validate()
-            except ValueError as exc:
-                click.echo(f"Error: {exc}", err=True)
+            except ValueError as uexc:
+                click.echo(f"Error: {uexc}", err=True)
                 raise click.Abort()
 
             # Parse filters
@@ -957,7 +958,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                     "not_in": FilterOp.NOT_IN,
                 }
 
-                if op_str not in op_map:
+                if unexpected(op_str not in op_map):
                     click.echo(
                         f"Error: Unknown operator '{op_str}'. Valid operators: {', '.join(op_map.keys())}",
                         err=True,
@@ -998,8 +999,8 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 click.echo(f"Found {len(rows)} matching {self.table_name} rows")
                 print(output_pydantic(rows, output, self.col_names_for_table))
 
-            except Exception as exc:
-                self._handle_error(exc, f"filtering {self.table_name} rows")
+            except Exception as uexc:
+                self._handle_error(uexc, f"filtering {self.table_name} rows")
 
     def register_count_filtered_rows(self) -> None:
         """Register the count-filtered command to the group.
@@ -1067,8 +1068,8 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 filter_desc = "all" if not filters else "matching"
                 click.echo(f"Total {filter_desc} {self.table_name} rows: {count}")
 
-            except Exception as exc:
-                self._handle_error(exc, f"counting filtered {self.table_name} rows")
+            except Exception as uexc:
+                self._handle_error(uexc, f"counting filtered {self.table_name} rows")
 
     def register_find_by(self) -> None:
         """Register the find-by command to the group.
@@ -1102,14 +1103,14 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
             try:
                 params = common_options.PaginationParams(skip=skip, limit=limit, page_size=page_size)
                 params.validate()
-            except ValueError as exc:
-                click.echo(f"Error: {exc}", err=True)
+            except ValueError as uexc:
+                click.echo(f"Error: {uexc}", err=True)
                 raise click.Abort()
 
             # Parse conditions
             kwargs = {}
             for condition in conditions:
-                if "=" not in condition:
+                if unexpected("=" not in condition):
                     click.echo(f"Error: Invalid condition format '{condition}'. Use KEY=VALUE", err=True)
                     raise click.Abort()
 
@@ -1119,7 +1120,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 except json.JSONDecodeError:
                     kwargs[key] = value
 
-            if not kwargs:
+            if unexpected(not kwargs):
                 click.echo("Error: No conditions provided. Use KEY=VALUE format", err=True)
                 raise click.Abort()
 
@@ -1142,8 +1143,8 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 click.echo(f"Found {len(rows)} matching {self.table_name} rows")
                 print(output_pydantic(rows, output, self.col_names_for_table))
 
-            except Exception as exc:
-                self._handle_error(exc, f"finding {self.table_name} rows")
+            except Exception as uexc:
+                self._handle_error(uexc, f"finding {self.table_name} rows")
 
     def register_find_one_by(self) -> None:
         """Register the find-one-by command to the group.

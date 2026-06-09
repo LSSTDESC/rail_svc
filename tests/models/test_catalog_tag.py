@@ -3,7 +3,8 @@
 import pytest
 from pydantic import ValidationError
 
-from rail_svc.models.catalog_tag import CatalogTag, CatalogTagBase, CatalogTagCreate
+from rail_svc.models.catalog_tag import (CatalogTag, CatalogTagBase,
+                                         CatalogTagCreate)
 
 
 class TestCatalogTagBase:

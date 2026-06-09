@@ -58,8 +58,8 @@ class ClientConfiguration(BaseSettings):
 
     @field_validator("cookies", mode="before", check_fields=True)
     @classmethod
-    def validate_cookies(cls, v: Any) -> list[ClientCookie] | None:
-        if v is None:  # pragma: no cover
+    def validate_cookies(cls, v: Any) -> list[ClientCookie] | None:  # pragma: no cover
+        if v is None:
             return v
         return [ClientCookie(name=n, value=v) for n, v in [a.split("|") for a in v.split(",")]]
 

@@ -7,6 +7,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
+import anyio
 import click
 import pytest
 from click.testing import CliRunner
@@ -112,7 +113,7 @@ class TestUtilityMethods:
             data = await cli_ops._load_json_file(temp_path)
             assert data == [{"name": "test", "value": 1}]
         finally:
-            Path(temp_path).unlink()
+            await anyio.Path(temp_path).unlink()
 
     @pytest.mark.asyncio
     async def test_load_json_file_invalid_json(self, cli_ops: CliOperations) -> None:
@@ -125,7 +126,7 @@ class TestUtilityMethods:
             with pytest.raises(click.Abort):
                 await cli_ops._load_json_file(temp_path)
         finally:
-            Path(temp_path).unlink()
+            await anyio.Path(temp_path).unlink()
 
     @pytest.mark.asyncio
     async def test_load_json_file_not_array(self, cli_ops: CliOperations) -> None:
@@ -138,7 +139,7 @@ class TestUtilityMethods:
             with pytest.raises(click.Abort):
                 await cli_ops._load_json_file(temp_path)
         finally:
-            Path(temp_path).unlink()
+            await anyio.Path(temp_path).unlink()
 
     @pytest.mark.asyncio
     async def test_load_json_file_empty_array(self, cli_ops: CliOperations) -> None:
@@ -151,7 +152,7 @@ class TestUtilityMethods:
             with pytest.raises(click.Abort):
                 await cli_ops._load_json_file(temp_path)
         finally:
-            Path(temp_path).unlink()
+            await anyio.Path(temp_path).unlink()
 
     @pytest.mark.asyncio
     async def test_load_json_file_not_exists(self, cli_ops: CliOperations) -> None:
@@ -1429,10 +1430,9 @@ class TestOutputFormats:
         assert result.exit_code == 0
         assert mock_output.call_args[0][1] == OutputEnum.table
 
-
     @patch("rail_svc.db.session.init_db")
     @patch("rail_svc.cli.local.base.output_pydantic")
-    def test_get_rows_table_output(
+    def test_get_rows_yaml_output(
         self,
         mock_output: MagicMock,
         mock_init_db: MagicMock,

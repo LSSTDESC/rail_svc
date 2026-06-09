@@ -20,6 +20,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rail_svc.db.base import T, ensure_base_inheritance
 
+from ..common import unexpected
+
 logger = structlog.get_logger(__name__)
 
 
@@ -110,7 +112,7 @@ async def get_row_by_name(
     """
     ensure_base_inheritance(the_class)
 
-    if not hasattr(the_class, "name"):
+    if unexpected(not hasattr(the_class, "name")):
         raise AttributeError(f"{the_class.__name__} does not have a 'name' attribute")
 
     logger.debug("Getting row by name", table=the_class.__name__, name=name)
@@ -410,11 +412,12 @@ async def lookup_by_id_or_name(
                 id=the_object.id_,
             )
             return the_object.id_, the_object  # type: ignore
-        except NoResultFound:
+        except NoResultFound as uexc:
             logger.error(
                 "Record not found by name",
                 table=the_class.__name__,
                 name=name,
+                error=uexc,
             )
             raise ValueError(f"{the_class.__name__} with name '{name}' not found") from None
     else:
@@ -428,11 +431,12 @@ async def lookup_by_id_or_name(
                     id=row_id,
                 )
                 return row_id, the_object
-            except NoResultFound:
+            except NoResultFound as uexc:
                 logger.error(
                     "Record not found by ID",
                     table=the_class.__name__,
                     id=row_id,
+                    error=uexc,
                 )
                 raise ValueError(f"{the_class.__name__} with ID {row_id} not found") from None
         else:

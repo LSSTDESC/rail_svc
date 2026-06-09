@@ -103,23 +103,23 @@ async def delete_row(
         # Commit the transaction
         await session.commit()
 
-    except IntegrityError as err:
+    except IntegrityError as uexc:
         await session.rollback()
         logger.error(
             "Integrity error during delete",
             table=the_class.__name__,
             row_id=row_id,
-            error=str(err),
+            error=str(uexc),
         )
         raise
-    except Exception as e:
+    except Exception as uexc:
         # Catch any errors from hooks or other operations
         await session.rollback()
         logger.error(
             "Error during delete operation",
             table=the_class.__name__,
             row_id=row_id,
-            error=str(e),
+            error=str(uexc),
         )
         raise
 
@@ -227,13 +227,13 @@ async def delete_rows(
 
         return all_data if capture_data else None
 
-    except IntegrityError as err:
+    except IntegrityError as uexc:
         await session.rollback()
         logger.error(
             "Integrity error during bulk delete",
             table=the_class.__name__,
             row_count=len(row_ids),
-            error=str(err),
+            error=str(uexc),
         )
         raise
     except Exception as e:
@@ -317,11 +317,11 @@ async def bulk_delete_rows(
 
         return deleted_count
 
-    except IntegrityError as err:
+    except IntegrityError as uexc:
         await session.rollback()
         logger.error(
             "Integrity error during bulk delete",
             table=the_class.__name__,
-            error=str(err),
+            error=str(uexc),
         )
         raise

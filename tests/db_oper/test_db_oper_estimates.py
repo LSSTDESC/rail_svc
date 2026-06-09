@@ -10,7 +10,6 @@ from rail_svc.db_oper.base import FileValidatedOperations, TableContext
 from rail_svc.db_oper.estimates import EstimatesOperations, estimates
 from rail_svc.models import Estimates as EstimatesModel
 
-
 # ============================================================================
 # EstimatesOperations class tests
 # ============================================================================

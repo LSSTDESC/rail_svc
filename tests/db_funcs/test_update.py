@@ -8,7 +8,6 @@ from rail_svc.db import Algorithm, Band, CatalogTag, Dataset
 from rail_svc.db_funcs.read import get_row, get_row_by_name
 from rail_svc.db_funcs.update import update_row, update_rows
 
-
 # ============================================================================
 # update_row tests
 # ============================================================================

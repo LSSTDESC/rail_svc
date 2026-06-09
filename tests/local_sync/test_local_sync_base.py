@@ -5,10 +5,7 @@ from unittest.mock import AsyncMock, Mock
 
 from pydantic import BaseModel
 
-from rail_svc.local_sync.base import (
-    SyncOperations,
-    sync_wrapper,
-)
+from rail_svc.local_sync.base import SyncOperations, sync_wrapper
 
 # ============================================================================
 # Mock classes for testing

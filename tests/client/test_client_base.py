@@ -8,8 +8,8 @@ import httpx
 import pytest
 from pydantic import BaseModel
 
-from rail_svc.models import Filter, OrderBy, RemoteAPIError
 from rail_svc.client.base import RemoteAPI, RemoteTableOperations
+from rail_svc.models import Filter, OrderBy, RemoteAPIError
 
 
 # Test models
@@ -56,7 +56,10 @@ class TestRemoteTableOperations:
         return AsyncMock(spec=httpx.AsyncClient)
 
     @pytest.fixture
-    def operations(self, mock_client: AsyncMock) -> RemoteTableOperations[ClientTestResponse, ClientTestCreate]:
+    def operations(
+        self,
+        mock_client: AsyncMock,
+    ) -> RemoteTableOperations[ClientTestResponse, ClientTestCreate]:
         """Create a RemoteTableOperations instance with mocked client."""
         return RemoteTableOperations(
             client=mock_client,
@@ -225,12 +228,14 @@ class TestRemoteTableOperations:
     ) -> None:
         """Test streaming row retrieval."""
         # Create async iterator
-        async_iter = AsyncIterator([
-            '{"id": 1, "name": "item1"}',
-            '{"id": 2, "name": "item2"}',
-            "",  # Empty line should be skipped
-            '{"id": 3, "name": "item3"}',
-        ])
+        async_iter = AsyncIterator(
+            [
+                '{"id": 1, "name": "item1"}',
+                '{"id": 2, "name": "item2"}',
+                "",  # Empty line should be skipped
+                '{"id": 3, "name": "item3"}',
+            ]
+        )
 
         # Mock streaming response
         mock_stream = AsyncMock()
@@ -273,10 +278,7 @@ class TestRemoteTableOperations:
         mock_response = Mock(spec=httpx.Response)
         mock_response.status_code = 200
         # Create a proper LookupResponse structure
-        mock_response.json.return_value = {
-            "id": 42,
-            "data": {"id": 42, "name": "test", "value": 0}
-        }
+        mock_response.json.return_value = {"id": 42, "data": {"id": 42, "name": "test", "value": 0}}
         mock_client.get.return_value = mock_response
 
         resolved_id, row = await operations.lookup_by_id_or_name(id_=42)
@@ -290,10 +292,7 @@ class TestRemoteTableOperations:
         """Test lookup by name."""
         mock_response = Mock(spec=httpx.Response)
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "id": 10,
-            "data": {"id": 10, "name": "found", "value": 0}
-        }
+        mock_response.json.return_value = {"id": 10, "data": {"id": 10, "name": "found", "value": 0}}
         mock_client.get.return_value = mock_response
 
         resolved_id, row = await operations.lookup_by_id_or_name(name="found")
@@ -461,7 +460,7 @@ class TestRemoteTableOperations:
         mock_response.json.return_value = [{"id": i, "name": f"item{i}"} for i in range(10, 20)]
         mock_client.post.return_value = mock_response
 
-        results = await operations.filter_rows(skip=10, limit=10)
+        _results = await operations.filter_rows(skip=10, limit=10)
 
         call_args = mock_client.post.call_args
         request_data = call_args.kwargs["json"]
@@ -671,9 +670,11 @@ class TestRemoteTableOperations:
         """Test streaming handles validation errors."""
         mock_stream = AsyncMock()
         mock_stream.status_code = 200
-        mock_stream.aiter_lines.return_value = AsyncIterator([
-            '{"invalid": "data"}',  # Missing required fields
-        ])
+        mock_stream.aiter_lines.return_value = AsyncIterator(
+            [
+                '{"invalid": "data"}',  # Missing required fields
+            ]
+        )
 
         mock_client.stream.return_value.__aenter__.return_value = mock_stream
 
@@ -883,16 +884,12 @@ class TestIntegrationScenarios:
         assert total == 1000
 
         # Filter with conditions
-        mock_response.json.return_value = [
-            {"id": i, "name": f"active{i}", "value": 50} for i in range(1, 11)
-        ]
+        mock_response.json.return_value = [{"id": i, "name": f"active{i}", "value": 50} for i in range(1, 11)]
         mock_client.post.return_value = mock_response
 
         filters = [Filter(field="value", op="ge", value=50)]
         results = await operations.filter_rows(
-            filters=filters,
-            order_by={"field": "id", "direction": "asc"},
-            limit=10
+            filters=filters, order_by={"field": "id", "direction": "asc"}, limit=10
         )
         assert len(results) == 10
 
@@ -980,10 +977,7 @@ class TestIntegrationScenarios:
         mock_response.status_code = 200
 
         # Lookup by ID
-        mock_response.json.return_value = {
-            "id": 42,
-            "data": {"id": 42, "name": "by_id", "value": 1}
-        }
+        mock_response.json.return_value = {"id": 42, "data": {"id": 42, "name": "by_id", "value": 1}}
         mock_client.get.return_value = mock_response
 
         resolved_id, row = await operations.lookup_by_id_or_name(id_=42)
@@ -991,10 +985,7 @@ class TestIntegrationScenarios:
         assert row.name == "by_id"
 
         # Lookup by name
-        mock_response.json.return_value = {
-            "id": 100,
-            "data": {"id": 100, "name": "by_name", "value": 2}
-        }
+        mock_response.json.return_value = {"id": 100, "data": {"id": 100, "name": "by_name", "value": 2}}
 
         resolved_id, row = await operations.lookup_by_id_or_name(name="by_name")
         assert resolved_id == 100

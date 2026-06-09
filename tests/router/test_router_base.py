@@ -13,12 +13,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from rail_svc.db.base import Base
 from rail_svc.local_async import LocalOperations
-from rail_svc.router.base import (
-    create_table_router,
-    require_auth,
-    validate_batch_size,
-    validate_pagination_params,
-)
+from rail_svc.router.base import (create_table_router, require_auth,
+                                  validate_batch_size,
+                                  validate_pagination_params)
 
 
 # Test Models
@@ -58,8 +55,8 @@ def mock_operations() -> MagicMock:
     mock_table_ops = MagicMock()
     mock_ctx = MagicMock()
     mock_ctx.response_class = RouterTestResponse
-    operations._table_ops = mock_table_ops
-    operations._table_ops.ctx = mock_ctx
+    operations.table_ops = mock_table_ops
+    operations.table_ops.ctx = mock_ctx
 
     # Set up async mock methods
     operations.create_row = AsyncMock()
@@ -386,7 +383,7 @@ class TestUpdateEndpoints:
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_update_row_validation_error(self, client: RouterTestClient, mock_operations: MagicMock) -> None:
+    def test_update_row_validation_error(self, client: TestClient, mock_operations: MagicMock) -> None:
         """Test update with validation error."""
         mock_operations.update_row.side_effect = ValidationError.from_exception_data(
             "TestResponse",

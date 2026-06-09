@@ -2,14 +2,8 @@
 
 from __future__ import annotations
 
-
 from rail_svc import models
-from rail_svc.remote_async import (
-    algorithm,
-    band,
-    dataset,
-    model,
-)
+from rail_svc.remote_async import algorithm, band, dataset, model
 from rail_svc.remote_async.base import AsyncRemoteOperations
 
 
@@ -18,8 +12,8 @@ class TestModuleBasics:
 
     def test_all_exports_are_async_remote_operations(self) -> None:
         """Test that all exported instances are AsyncRemoteOperations."""
-        from rail_svc.remote_async import __all__
         import rail_svc.remote_async as remote_async
+        from rail_svc.remote_async import __all__
 
         for export_name in __all__:
             obj = getattr(remote_async, export_name)

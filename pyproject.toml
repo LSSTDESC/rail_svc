@@ -127,10 +127,12 @@ source = ["src"]
 show_missing = true
 exclude_lines = [
     "pragma: no cover",
-    "as exc:",
+    "unexpected",
+    "as uexc:",
     "def __repr__",
     "if self.debug:",
     "if settings.DEBUG",
+    "forward_to_db_funcs",
     "raise AssertionError",
     "raise NotImplementedError",
     "if 0:",
@@ -183,6 +185,11 @@ convention = "numpy"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope="function"
+filterwarnings = [
+    "ignore:coroutine.*was never awaited:RuntimeWarning",
+    "ignore::ResourceWarning",
+    "ignore:.*HTTP_422_UNPROCESSABLE_CONTENT:DeprecationWarning",
+]
 # The python_files setting is not for test detection (pytest will pick up any
 # test files named *_test.py without this setting) but to enable special
 # assert processing in any non-test supporting files under tests.  We

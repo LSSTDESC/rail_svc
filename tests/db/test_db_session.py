@@ -475,12 +475,14 @@ class TestGlobalState:
 
         init_db(db_url)
 
-        from rail_svc.db.session import _async_session_factory as factory_after_init
+        from rail_svc.db.session import \
+            _async_session_factory as factory_after_init
 
         assert factory_after_init is not None
 
         # Session factory should still exist
-        from rail_svc.db.session import _async_session_factory as factory_still_there
+        from rail_svc.db.session import \
+            _async_session_factory as factory_still_there
 
         assert factory_still_there is not None
 

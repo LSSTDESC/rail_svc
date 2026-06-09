@@ -9,6 +9,7 @@ from typing import Any, cast
 import httpx
 from pydantic import BaseModel, ValidationError
 
+from ..common import unexpected
 from ..models import (CountResponse, Filter, FilterRequest, LookupResponse,
                       OrderBy, RemoteAPIError)
 
@@ -375,13 +376,13 @@ class RemoteTableOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                     try:
                         data = self.response_model.model_validate_json(line)
                         yield data
-                    except ValidationError as e:
-                        logger.error(f"Failed to parse streaming response: {e}")
+                    except ValidationError as uexc:
+                        logger.error(f"Failed to parse streaming response: {uexc}")
                         # Check if it's an error message
                         try:
                             error_data = json.loads(line)
                             if "error" in error_data:
-                                raise RemoteAPIError(f"Stream error: {error_data['error']}") from e
+                                raise RemoteAPIError(f"Stream error: {error_data['error']}") from uexc
                         except json.JSONDecodeError:
                             pass
                         raise
@@ -697,7 +698,7 @@ class RemoteTableOperations[ResponseT: BaseModel, CreateT: BaseModel]:
             f"{self.endpoint}/filter_rows_streaming",
             json=request_data.model_dump(mode="json"),
         ) as response:
-            if response.status_code != 200:
+            if unexpected(response.status_code != 200):
                 content = await response.aread()
                 raise RemoteAPIError(
                     f"API request failed with status {response.status_code}: {content.decode()}"
@@ -708,13 +709,13 @@ class RemoteTableOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                     try:
                         data = self.response_model.model_validate_json(line)
                         yield data
-                    except ValidationError as e:
-                        logger.error(f"Failed to parse streaming response: {e}")
+                    except ValidationError as uexc:
+                        logger.error(f"Failed to parse streaming response: {uexc}")
                         # Check if it's an error message
                         try:
                             error_data = json.loads(line)
                             if "error" in error_data:
-                                raise RemoteAPIError(f"Stream error: {error_data['error']}") from e
+                                raise RemoteAPIError(f"Stream error: {error_data['error']}") from uexc
                         except json.JSONDecodeError:
                             pass
                         raise
@@ -873,7 +874,7 @@ class RemoteTableOperations[ResponseT: BaseModel, CreateT: BaseModel]:
         """
         request_body = {**query_params}
         if order_by is not None:
-            if isinstance(order_by, list):
+            if isinstance(order_by, list):  # pragma: no cover
                 request_body["order_by"] = [o.model_dump() for o in order_by]
             else:
                 request_body["order_by"] = order_by.model_dump()

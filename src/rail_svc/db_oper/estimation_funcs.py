@@ -176,8 +176,8 @@ async def _build_estimation_wrapper(
 
     except (ValueError, FileNotFoundError):
         raise
-    except Exception as e:
-        logger.error(f"Failed to build {wrapper_type.value} wrapper: {e}")
+    except Exception as uexc:
+        logger.error(f"Failed to build {wrapper_type.value} wrapper: {uexc}")
         raise
 
 
@@ -324,8 +324,8 @@ async def estimate_pdf(
 
     except (OSError, ValueError, FileNotFoundError):
         raise
-    except Exception as e:
-        logger.error(f"Failed to estimate PDF: {e}")
+    except Exception as uexc:
+        logger.error(f"Failed to estimate PDF: {uexc}")
         raise
 
 
@@ -449,8 +449,8 @@ async def estimate_ensemble(
 
     except (OSError, ValueError, FileNotFoundError):
         raise
-    except Exception as e:
-        logger.error(f"Failed to estimate ensemble: {e}")
+    except Exception as uexc:
+        logger.error(f"Failed to estimate ensemble: {uexc}")
         raise
 
 
@@ -479,8 +479,8 @@ async def get_estimators_for_dataest(
 
     except ValueError:
         raise
-    except Exception as e:
-        logger.error(f"Failed to get estimators: {e}")
+    except Exception as uexc:
+        logger.error(f"Failed to get estimators: {uexc}")
         raise
 
 
@@ -508,7 +508,7 @@ async def build_cat_estimator_ensemble_wrappers_for_dataset(
     for estimator_ in the_estimators:
         try:
             ret_list.append(await build_ensemble_estimation_wrapper(session, estimator_.id_))
-        except Exception as exc:
-            logger.warning(f"Failed to build estimator {estimator} because {exc}")
+        except Exception as uexc:
+            logger.warning(f"Failed to build estimator {estimator} because {uexc}")
 
     return ret_list

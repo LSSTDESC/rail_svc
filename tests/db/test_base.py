@@ -193,8 +193,8 @@ class TestCustomHooks:
     async def test_get_hooks_with_custom_implementation(self):
         """Test get_hooks detects custom hook implementations"""
 
-        class CustomModel(Base):
-            __tablename__ = "custom"
+        class CustomModelHooks(Base):
+            __tablename__ = "custom_hooks"
             id_: Mapped[int] = mapped_column(primary_key=True)
             name: Mapped[str] = mapped_column(String(255))
 
@@ -217,7 +217,7 @@ class TestCustomHooks:
                 # Custom implementation
                 pass
 
-        hooks = CustomModel.get_hooks()
+        hooks = CustomModelHooks.get_hooks()
         assert hooks["pre_create"] is True
         assert hooks["after_delete"] is True
         assert hooks["after_create"] is True

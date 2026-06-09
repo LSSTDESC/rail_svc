@@ -7,7 +7,6 @@ from rail_svc.db_oper.band import BandOperations, band
 from rail_svc.db_oper.base import TableContext
 from rail_svc.models import Band as BandModel
 
-
 # ============================================================================
 # BandOperations class tests
 # ============================================================================

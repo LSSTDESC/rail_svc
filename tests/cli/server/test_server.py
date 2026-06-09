@@ -108,9 +108,7 @@ class TestServeCommand:
         call_kwargs = mock_create_app.call_args[1]
         assert call_kwargs["api_prefix"] == "/api/v2"
 
-    def test_serve_with_debug(
-        self, runner: CliRunner, mock_uvicorn_run: Mock, mock_create_app: Mock
-    ) -> None:
+    def test_serve_with_debug(self, runner: CliRunner, mock_uvicorn_run: Mock, mock_create_app: Mock) -> None:
         """Test serve command with debug mode."""
         result = runner.invoke(serve, ["--debug"])
 
@@ -125,11 +123,7 @@ class TestServeCommand:
     ) -> None:
         """Test serve command with rate limiting enabled."""
         result = runner.invoke(
-            serve,
-            [
-                "--enable-rate-limiting",
-                "--rate-limit-storage", "redis://localhost:6379"
-            ]
+            serve, ["--enable-rate-limiting", "--rate-limit-storage", "redis://localhost:6379"]
         )
 
         assert result.exit_code == 0
@@ -139,16 +133,10 @@ class TestServeCommand:
         assert call_kwargs["enable_rate_limiting"] is True
         assert call_kwargs["rate_limit_storage"] == "redis://localhost:6379"
 
-    def test_serve_with_cors(
-        self, runner: CliRunner, mock_uvicorn_run: Mock, mock_create_app: Mock
-    ) -> None:
+    def test_serve_with_cors(self, runner: CliRunner, mock_uvicorn_run: Mock, mock_create_app: Mock) -> None:
         """Test serve command with CORS enabled."""
         result = runner.invoke(
-            serve,
-            [
-                "--enable-cors",
-                "--cors-origins", "http://localhost:3000,https://example.com"
-            ]
+            serve, ["--enable-cors", "--cors-origins", "http://localhost:3000,https://example.com"]
         )
 
         assert result.exit_code == 0
@@ -163,10 +151,7 @@ class TestServeCommand:
         self, runner: CliRunner, mock_uvicorn_run: Mock, mock_create_app: Mock
     ) -> None:
         """Test that CORS origins are correctly parsed from comma-separated string."""
-        result = runner.invoke(
-            serve,
-            ["--cors-origins", "http://a.com, http://b.com , http://c.com"]
-        )
+        result = runner.invoke(serve, ["--cors-origins", "http://a.com, http://b.com , http://c.com"])
 
         assert result.exit_code == 0
 
@@ -179,9 +164,7 @@ class TestServeCommand:
         # No whitespace
         assert all(not origin.startswith(" ") for origin in cors_origins)
 
-    def test_serve_log_level(
-        self, runner: CliRunner, mock_uvicorn_run: Mock, mock_create_app: Mock
-    ) -> None:
+    def test_serve_log_level(self, runner: CliRunner, mock_uvicorn_run: Mock, mock_create_app: Mock) -> None:
         """Test serve command with custom log level."""
         result = runner.invoke(serve, ["--log-level", "debug"])
 
@@ -287,16 +270,23 @@ class TestServeCommandEdgeCases:
         result = runner.invoke(
             serve,
             [
-                "--host", "0.0.0.0",
-                "--port", "9000",
-                "--workers", "2",
-                "--log-level", "info",
-                "--api-prefix", "/api/v3",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "9000",
+                "--workers",
+                "2",
+                "--log-level",
+                "info",
+                "--api-prefix",
+                "/api/v3",
                 "--enable-rate-limiting",
-                "--rate-limit-storage", "memory://",
+                "--rate-limit-storage",
+                "memory://",
                 "--enable-cors",
-                "--cors-origins", "http://localhost:3000",
-            ]
+                "--cors-origins",
+                "http://localhost:3000",
+            ],
         )
 
         assert result.exit_code == 0

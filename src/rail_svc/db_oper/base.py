@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from structlog import get_logger
 
 from .. import db_funcs
+from ..common import unexpected
 from ..config import config as global_config
 from ..db.base import Base, ensure_base_inheritance
 
@@ -173,9 +174,9 @@ class TableContext[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         # Validate required methods exist
         if not hasattr(db_class, "pydantic_model_class"):
             raise AttributeError(f"{db_class.__name__} must implement pydantic_model_class() method")
-        if not hasattr(db_class, "pydantic_create_class"):
+        if unexpected(not hasattr(db_class, "pydantic_create_class")):
             raise AttributeError(f"{db_class.__name__} must implement pydantic_create_class() method")
-        if not hasattr(db_class, "class_string"):
+        if unexpected(not hasattr(db_class, "class_string")):
             raise AttributeError(f"{db_class.__name__} must implement class_string() method")
 
         # Get the classes
@@ -650,9 +651,10 @@ class TableOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 batch_rows: list = await self.create_rows(session, batch_data, validate=validate)
                 all_rows.extend(batch_rows)
 
-            except Exception:
+            except Exception as uexc:
                 logger.error(
                     f"Batch failed {batch_start} {batch_end}",
+                    error=uexc,
                 )
                 raise
 
@@ -738,9 +740,12 @@ class TableOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
             logger.info(f"Bulk insert completed {len(rows_data)}")
             return len(rows_data)
 
-        except IntegrityError:
+        except IntegrityError as uexc:
             await session.rollback()
-            logger.error(f"Integrity error during bulk insert {len(rows_data)}")
+            logger.error(
+                f"Integrity error during bulk insert {len(rows_data)}",
+                error=uexc,
+            )
             raise
 
     def _validate_path_security(self, path: str) -> Path:
@@ -810,7 +815,7 @@ class TableOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
 
         try:
             fullpath.relative_to(archive_path)
-        except ValueError:
+        except ValueError as uexc:
             if FORBID_TRAVERSAL:
                 logger.error(
                     "Path traversal attempt detected",
@@ -818,6 +823,7 @@ class TableOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                     attempted_path=str(path),
                     archive_path=str(archive_path),
                     resolved_path=str(fullpath),
+                    error=uexc,
                 )
                 raise ValueError(f"Path {path} would escape archive directory") from None
 

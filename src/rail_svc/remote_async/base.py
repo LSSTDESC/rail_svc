@@ -40,7 +40,7 @@ def with_client[F: Callable[..., Any]](func: F) -> F:
 
     @wraps(func)
     async def wrapper(self: AsyncRemoteOperations, *args: Any, **kwargs: Any) -> Any:
-        client = await self._get_client()
+        client = await self.get_client()
         return await func(self, client, *args, **kwargs)
 
     return wrapper  # type: ignore
@@ -161,7 +161,7 @@ class AsyncRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
             self._client = None
             self._owns_api = False
 
-    async def _get_client(self) -> RemoteTableOperations[ResponseT, CreateT]:
+    async def get_client(self) -> RemoteTableOperations[ResponseT, CreateT]:
         """Get or create the table operations client.
 
         If used within a context manager, returns the existing client.

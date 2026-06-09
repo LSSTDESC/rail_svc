@@ -1,6 +1,5 @@
 """Unit tests for database deletion functions."""
 
-
 import pytest
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -9,7 +8,6 @@ from rail_svc.db import Algorithm, Band, CatalogTag, Dataset, Estimator, Model
 from rail_svc.db_funcs.delete import bulk_delete_rows, delete_row, delete_rows
 from rail_svc.db_funcs.read import count_rows, get_row
 from rail_svc.db_funcs.update import update_row
-
 
 # ============================================================================
 # delete_row tests

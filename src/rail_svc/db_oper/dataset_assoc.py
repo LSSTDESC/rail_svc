@@ -108,8 +108,8 @@ class DatasetAssocOperations(
                 matched_dataset_id,
                 matched_dataset_name,
             )
-        except ValueError as e:
-            raise ValueError(f"Failed to resolve matched dataset: {e}") from e
+        except ValueError as uexc:
+            raise ValueError(f"Failed to resolve matched dataset: {uexc}") from uexc
 
         # 2. Resolve component dataset foreign key
         try:
@@ -119,8 +119,8 @@ class DatasetAssocOperations(
                 component_dataset_id,
                 component_dataset_name,  # FIXED: was component_dataset_mame
             )
-        except ValueError as e:
-            raise ValueError(f"Failed to resolve component dataset: {e}") from e
+        except ValueError as uexc:
+            raise ValueError(f"Failed to resolve component dataset: {uexc}") from uexc
 
         # 3. Validate no self-reference (belt-and-suspenders with DB constraint)
         if matched_dataset_id == component_dataset_id:

@@ -78,12 +78,10 @@ class TestCliBasics:
         """Test that configuration is stored in context."""
         # We can't easily add a command to test this, so just verify
         # the CLI accepts the options without error
-        result = runner.invoke(
-            cli,
-            ["--base-url", "http://test.com", "--timeout", "60", "--help"]
-        )
+        result = runner.invoke(cli, ["--base-url", "http://test.com", "--timeout", "60", "--help"])
 
         assert result.exit_code == 0
+
 
 class TestEnvironmentVariables:
     """Tests for environment variable support."""
@@ -96,21 +94,13 @@ class TestEnvironmentVariables:
     def test_base_url_from_env(self, runner: CliRunner) -> None:
         """Test that base URL can be set via env var."""
         # Just verify the option can be set via env without error
-        result = runner.invoke(
-            cli,
-            ["--help"],
-            env={"RAIL_SVC_BASE_URL": "http://env-url.com"}
-        )
+        result = runner.invoke(cli, ["--help"], env={"RAIL_SVC_BASE_URL": "http://env-url.com"})
 
         assert result.exit_code == 0
 
     def test_auth_token_from_env(self, runner: CliRunner) -> None:
         """Test that auth token can be set via env var."""
         # Just verify the option can be set via env without error
-        result = runner.invoke(
-            cli,
-            ["--help"],
-            env={"RAIL_SVC_AUTH_TOKEN": "env-token"}
-        )
+        result = runner.invoke(cli, ["--help"], env={"RAIL_SVC_AUTH_TOKEN": "env-token"})
 
         assert result.exit_code == 0

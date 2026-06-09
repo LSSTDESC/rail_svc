@@ -7,7 +7,6 @@ from rail_svc.db_oper.base import TableContext
 from rail_svc.db_oper.estimator import EstimatorOperations, estimator
 from rail_svc.models import Estimator as EstimatorModel
 
-
 # ============================================================================
 # EstimatorOperations class tests
 # ============================================================================

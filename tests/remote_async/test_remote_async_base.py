@@ -219,10 +219,10 @@ class TestAsyncRemoteOperationsContextManager:
 
 
 class TestGetClient:
-    """Tests for _get_client method."""
+    """Tests for get_client method."""
 
     async def test_get_client_with_context_manager(self) -> None:
-        """Test _get_client returns existing client when in context manager."""
+        """Test get_client returns existing client when in context manager."""
         ops = AsyncRemoteOperations(
             base_url="http://api.example.com",
             table_name="test",
@@ -231,15 +231,15 @@ class TestGetClient:
         )
 
         async with ops:
-            client1 = await ops._get_client()
-            client2 = await ops._get_client()
+            client1 = await ops.get_client()
+            client2 = await ops.get_client()
 
             # Should return the same client
             assert client1 is client2
             assert client1 is ops._client
 
     async def test_get_client_without_context_manager_warns(self) -> None:
-        """Test _get_client warns when not using context manager."""
+        """Test get_client warns when not using context manager."""
         ops = AsyncRemoteOperations(
             base_url="http://api.example.com",
             table_name="test",
@@ -250,10 +250,10 @@ class TestGetClient:
         # Mock the actual operation to avoid needing real API initialization
         mock_client = AsyncMock(spec=RemoteTableOperations)
 
-        with patch.object(RemoteAPI, 'table', return_value=mock_client):
+        with patch.object(RemoteAPI, "table", return_value=mock_client):
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
-                client = await ops._get_client()
+                _client = await ops.get_client()
 
                 assert len(w) == 1
                 assert issubclass(w[0].category, ResourceWarning)
@@ -271,12 +271,12 @@ class TestGetClient:
 
         mock_client = AsyncMock(spec=RemoteTableOperations)
 
-        with patch.object(RemoteAPI, 'table', return_value=mock_client):
+        with patch.object(RemoteAPI, "table", return_value=mock_client):
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
-                await ops._get_client()
-                await ops._get_client()
-                await ops._get_client()
+                await ops.get_client()
+                await ops.get_client()
+                await ops.get_client()
 
                 # Should only warn once
                 warning_count = sum(1 for warning in w if issubclass(warning.category, ResourceWarning))
@@ -294,13 +294,14 @@ class TestGetClient:
         mock_client = AsyncMock(spec=RemoteTableOperations)
         mock_client.endpoint = "http://api.example.com/api/v1/test"
 
-        with patch.object(RemoteAPI, 'table', return_value=mock_client):
+        with patch.object(RemoteAPI, "table", return_value=mock_client):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                client = await ops._get_client()
+                client = await ops.get_client()
 
             assert isinstance(client, AsyncMock)
             assert client.endpoint == "http://api.example.com/api/v1/test"
+
 
 class TestCRUDOperations:
     """Tests for CRUD operation methods."""
@@ -634,10 +635,10 @@ class TestIntegrationPatterns:
             ops._client = mock_client
 
             # Multiple operations
-            created = await ops.create_row(name="created")
-            retrieved = await ops.get_row(1)
-            updated = await ops.update_row(1, name="updated")
-            deleted = await ops.delete_row(1)
+            _created = await ops.create_row(name="created")
+            _retrieved = await ops.get_row(1)
+            _updated = await ops.update_row(1, name="updated")
+            _deleted = await ops.delete_row(1)
 
             # All operations should have used the same client
             assert mock_client.create_row.call_count == 1
@@ -658,7 +659,7 @@ class TestIntegrationPatterns:
         mock_client = AsyncMock(spec=RemoteTableOperations)
         mock_client.get_row.return_value = RemoteAsyncTestResponse(id=1, name="test")
 
-        with patch.object(ops, '_get_client', return_value=mock_client):
+        with patch.object(ops, "get_client", return_value=mock_client):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 result = await ops.get_row(1)
@@ -755,14 +756,14 @@ class TestEdgeCases:
         )
 
         call_count = 0
-        original_get_client = ops._get_client
+        original_get_client = ops.get_client
 
         async def counting_get_client():
             nonlocal call_count
             call_count += 1
             return await original_get_client()
 
-        ops._get_client = counting_get_client
+        ops.get_client = counting_get_client
 
         async with ops:
             mock_client = AsyncMock(spec=RemoteTableOperations)
@@ -855,10 +856,10 @@ class TestWarningBehavior:
 
         mock_client = AsyncMock(spec=RemoteTableOperations)
 
-        with patch.object(RemoteAPI, 'table', return_value=mock_client):
+        with patch.object(RemoteAPI, "table", return_value=mock_client):
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
-                await ops._get_client()
+                await ops.get_client()
 
                 assert len(w) == 1
                 message = str(w[0].message)
@@ -879,9 +880,9 @@ class TestWarningBehavior:
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             async with ops:
-                await ops._get_client()
-                await ops._get_client()
-                await ops._get_client()
+                await ops.get_client()
+                await ops.get_client()
+                await ops.get_client()
 
             # Should have no ResourceWarnings
             resource_warnings = [warning for warning in w if issubclass(warning.category, ResourceWarning)]
@@ -898,21 +899,24 @@ class TestWarningBehavior:
 
         mock_client = AsyncMock(spec=RemoteTableOperations)
 
-        with patch.object(RemoteAPI, 'table', return_value=mock_client):
+        with patch.object(RemoteAPI, "table", return_value=mock_client):
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
 
                 # First call - should warn
-                await ops._get_client()
+                await ops.get_client()
                 first_count = len(w)
 
                 # Subsequent calls - should not warn
-                await ops._get_client()
-                await ops._get_client()
+                await ops.get_client()
+                await ops.get_client()
 
-                resource_warnings = [warning for warning in w if issubclass(warning.category, ResourceWarning)]
+                resource_warnings = [
+                    warning for warning in w if issubclass(warning.category, ResourceWarning)
+                ]
                 assert len(resource_warnings) == 1
                 assert first_count == 1
+
 
 class TestTypeCorrectness:
     """Tests to verify type correctness and generics."""
@@ -935,9 +939,9 @@ class TestTypeCorrectness:
 
         # Should be the correct type
         assert isinstance(result, RemoteAsyncTestResponse)
-        assert hasattr(result, 'id')
-        assert hasattr(result, 'name')
-        assert hasattr(result, 'value')
+        assert hasattr(result, "id")
+        assert hasattr(result, "name")
+        assert hasattr(result, "value")
 
     async def test_list_operations_return_list(self) -> None:
         """Test that list operations return lists of correct type."""

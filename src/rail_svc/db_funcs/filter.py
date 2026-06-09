@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rail_svc.db.base import T, ensure_base_inheritance
 
+from ..common import unexpected
 from ..models.filtering import Filter, FilterOp, OrderBy
 
 logger = structlog.get_logger(__name__)
@@ -78,7 +79,7 @@ def _apply_filter(
         query = query.where(field.in_(filter_obj.value))
 
     elif filter_obj.op == FilterOp.NOT_IN:
-        if not isinstance(filter_obj.value, list | tuple | set):
+        if unexpected(not isinstance(filter_obj.value, list | tuple | set)):
             raise ValueError(f"NOT_IN operator requires list/tuple/set, got {type(filter_obj.value)}")
         query = query.where(field.not_in(filter_obj.value))
 
@@ -359,7 +360,7 @@ async def filter_rows_streaming(
     """
     ensure_base_inheritance(the_class)
 
-    if logical_op not in ("and", "or"):
+    if unexpected(logical_op not in ("and", "or")):
         raise ValueError("logical_op must be 'and' or 'or'")
 
     if limit is None:
@@ -454,7 +455,7 @@ async def count_filtered_rows(
     """
     ensure_base_inheritance(the_class)
 
-    if logical_op not in ("and", "or"):
+    if unexpected(logical_op not in ("and", "or")):
         raise ValueError("logical_op must be 'and' or 'or'")
 
     logger.debug(

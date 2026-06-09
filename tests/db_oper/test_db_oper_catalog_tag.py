@@ -7,7 +7,6 @@ from rail_svc.db_oper.base import TableContext
 from rail_svc.db_oper.catalog_tag import CatalogTagOperations, catalog_tag
 from rail_svc.models import CatalogTag as CatalogTagModel
 
-
 # ============================================================================
 # CatalogTagOperations class tests
 # ============================================================================

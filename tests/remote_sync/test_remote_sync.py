@@ -2,31 +2,20 @@
 
 from __future__ import annotations
 
-
 from rail_svc import remote_async
-from rail_svc.remote_sync import (
-    algorithm,
-    band,
-    catalog_band_assoc,
-    catalog_tag,
-    dataset,
-    dataset_assoc,
-    estimates,
-    estimator,
-    model,
-)
-from rail_svc.remote_sync.base import (
-    AlgorithmSyncRemoteOperations,
-    BandSyncRemoteOperations,
-    CatalogBandAssocSyncRemoteOperations,
-    CatalogTagSyncRemoteOperations,
-    DatasetAssocSyncRemoteOperations,
-    DatasetSyncRemoteOperations,
-    EstimatesSyncRemoteOperations,
-    EstimatorSyncRemoteOperations,
-    ModelSyncRemoteOperations,
-    SyncRemoteOperations,
-)
+from rail_svc.remote_sync import (algorithm, band, catalog_band_assoc,
+                                  catalog_tag, dataset, dataset_assoc,
+                                  estimates, estimator, model)
+from rail_svc.remote_sync.base import (AlgorithmSyncRemoteOperations,
+                                       BandSyncRemoteOperations,
+                                       CatalogBandAssocSyncRemoteOperations,
+                                       CatalogTagSyncRemoteOperations,
+                                       DatasetAssocSyncRemoteOperations,
+                                       DatasetSyncRemoteOperations,
+                                       EstimatesSyncRemoteOperations,
+                                       EstimatorSyncRemoteOperations,
+                                       ModelSyncRemoteOperations,
+                                       SyncRemoteOperations)
 
 
 class TestFactoryFunctions:
@@ -166,8 +155,8 @@ class TestModuleExports:
 
     def test_all_exports_are_callable(self) -> None:
         """Test that all exports are callable factory functions."""
-        from rail_svc.remote_sync import __all__
         import rail_svc.remote_sync as remote_sync
+        from rail_svc.remote_sync import __all__
 
         for export_name in __all__:
             factory = getattr(remote_sync, export_name)
