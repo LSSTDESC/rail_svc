@@ -1,5 +1,5 @@
-# This workflow will install Python dependencies, run tests and report code coverage with a variety of Python versions
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+# This workflow will install Python dependencies, run tests and report
+# code coverage with a variety of Python versions
 
 name: Unit test and code coverage
 
@@ -7,33 +7,33 @@ on:
   schedule:
     - cron: 45 7 * * 1
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build:
 
-    runs-on: ubuntu-latest 
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ['3.13']
     steps:
-    - uses: actions/checkout@v3
-      with:
-        fetch-tags: true
-        fetch-depth: 0
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        python -m pip install --upgrade pip
-        pip install .
-        pip install .[dev]
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-    - name: Run unit tests with pytest
-      run: |
-        python -m pytest tests
+      - uses: actions/checkout@v3
+        with:
+          fetch-tags: true
+          fetch-depth: 0
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          python -m pip install --upgrade pip
+          pip install .
+          pip install .[dev]
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Run unit tests with pytest
+        run: |
+          python -m pytest tests
