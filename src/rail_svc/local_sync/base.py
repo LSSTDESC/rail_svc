@@ -50,7 +50,6 @@ def sync_wrapper(async_method: Callable[..., Any]) -> Callable[[F], F]:
     >>>
     >>> sync_ops = SyncOps(AsyncOps())
     >>> sync_ops.get_data(5)  # Automatically runs in asyncio.run()
-    10
     """
 
     def decorator(func: F) -> F:
