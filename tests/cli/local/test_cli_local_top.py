@@ -286,13 +286,13 @@ class TestCommandInvocation:
     ) -> None:
         """Test that init can be invoked as standalone command."""
         mock_config.db.url = "sqlite+aiosqlite:///test.db"
-        
+
         # Capture and close the coroutine to prevent warning
         def close_coro(coro):
             coro.close()
             return None
 
-        mock_asyncio_run.side_effect = close_coro        
+        mock_asyncio_run.side_effect = close_coro
 
         result = runner.invoke(cli, ["init"])
 
@@ -315,13 +315,13 @@ class TestAsyncExecution:
     ) -> None:
         """Test that init uses asyncio.run."""
         mock_config.db.url = "sqlite+aiosqlite:///test.db"
-        
+
         # Capture and close the coroutine to prevent warning
         def close_coro(coro):
             coro.close()
             return None
 
-        mock_asyncio_run.side_effect = close_coro        
+        mock_asyncio_run.side_effect = close_coro
 
         runner.invoke(cli, ["init"])
 
