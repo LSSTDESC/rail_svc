@@ -36,35 +36,35 @@ def create_all_routers() -> list[APIRouter]:
 
     routers = [
         create_table_router(
-            "algorithms",
+            "algorithm",
             local_async.algorithm,
         ),
         create_table_router(
-            "bands",
+            "band",
             local_async.band,
         ),
         create_table_router(
-            "catalog_band_assocs",
+            "catalog_band_assoc",
             local_async.catalog_band_assoc,
         ),
         create_table_router(
-            "catalog_tags",
+            "catalog_tag",
             local_async.catalog_tag,
         ),
         create_table_router(
-            "datasets",
+            "dataset",
             local_async.dataset,
         ),
         create_table_router(
-            "estimates",
+            "estimate",
             local_async.estimates,
         ),
         create_table_router(
-            "estimators",
+            "estimator",
             local_async.estimator,
         ),
         create_table_router(
-            "models",
+            "model",
             local_async.model,
         ),
     ]

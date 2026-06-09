@@ -55,11 +55,14 @@ def forward_to_db_funcs(module: Any, func_name: str) -> Callable[[F], F]:
 
     def decorator(func: F) -> F:
         db_func = getattr(module, func_name)
+
         @wraps(func)
         async def wrapper(self: Any, session: AsyncSession, *args: Any, **kwargs: Any) -> Any:
             return await db_func(self.ctx.db_class, session, *args, **kwargs)
+
         wrapper.__doc__ = db_func.__doc__
         return wrapper  # type: ignore
+
     return decorator
 
 
@@ -83,10 +86,12 @@ def forward_to_db_funcs_streaming(module: Any, func_name: str) -> Callable[[F], 
 
     def decorator(func: F) -> F:
         db_func = getattr(module, func_name)
+
         @wraps(func)
         async def wrapper(self: Any, session: AsyncSession, *args: Any, **kwargs: Any) -> AsyncIterator[Any]:
             async for row in db_func(self.ctx.db_class, session, *args, **kwargs):
                 yield row
+
         wrapper.__doc__ = db_func.__doc__
         return wrapper  # type: ignore
 

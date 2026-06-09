@@ -10,17 +10,11 @@ from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 
-from rail_svc.router.app import (
-    add_cors_middleware,
-    add_error_handlers,
-    add_health_check,
-    add_rate_limiting,
-    create_all_routers,
-    create_fastapi_app,
-    lifespan,
-    register_all_routers,
-    setup_fastapi_app,
-)
+from rail_svc.router.app import (add_cors_middleware, add_error_handlers,
+                                 add_health_check, add_rate_limiting,
+                                 create_all_routers, create_fastapi_app,
+                                 lifespan, register_all_routers,
+                                 setup_fastapi_app)
 
 
 # Test create_all_routers
@@ -52,14 +46,14 @@ class TestCreateAllRouters:
 
         # Verify each router was created with correct name
         expected_calls = [
-            call("algorithms", mock_local_async.algorithm),
-            call("bands", mock_local_async.band),
-            call("catalog_band_assocs", mock_local_async.catalog_band_assoc),
-            call("catalog_tags", mock_local_async.catalog_tag),
-            call("datasets", mock_local_async.dataset),
-            call("estimates", mock_local_async.estimates),
-            call("estimators", mock_local_async.estimator),
-            call("models", mock_local_async.model),
+            call("algorithm", mock_local_async.algorithm),
+            call("band", mock_local_async.band),
+            call("catalog_band_assoc", mock_local_async.catalog_band_assoc),
+            call("catalog_tag", mock_local_async.catalog_tag),
+            call("dataset", mock_local_async.dataset),
+            call("estimate", mock_local_async.estimates),
+            call("estimator", mock_local_async.estimator),
+            call("model", mock_local_async.model),
         ]
         mock_create_router.assert_has_calls(expected_calls, any_order=False)
 

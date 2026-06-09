@@ -3,7 +3,8 @@
 import pytest
 from pydantic import ValidationError
 
-from rail_svc.models.dataset_assoc import DatasetAssoc, DatasetAssocBase, DatasetAssocCreate
+from rail_svc.models.dataset_assoc import (DatasetAssoc, DatasetAssocBase,
+                                           DatasetAssocCreate)
 
 
 class TestDatasetAssocBase:

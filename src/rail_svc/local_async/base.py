@@ -35,6 +35,7 @@ def with_session[F: Callable[..., Any]](func: F) -> F:
     async def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
         async with get_session() as session:
             return await func(self, session, *args, **kwargs)
+
     return wrapper  # type: ignore
 
 
@@ -60,6 +61,7 @@ def with_session_transaction[F: Callable[..., Any]](func: F) -> F:
         async with get_session() as session:
             async with session.begin():
                 return await func(self, session, *args, **kwargs)
+
     return wrapper  # type: ignore
 
 
@@ -83,6 +85,7 @@ def to_pydantic[F: Callable[..., Any]](func: F) -> F:
     async def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
         result = await func(self, *args, **kwargs)
         return self.table_ops.to_pydantic(result)
+
     return wrapper  # type: ignore
 
 
@@ -106,6 +109,7 @@ def to_pydantic_list[F: Callable[..., Any]](func: F) -> F:
     async def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
         result = await func(self, *args, **kwargs)
         return self.table_ops.to_pydantic_list(list(result))
+
     return wrapper  # type: ignore
 
 
@@ -130,6 +134,7 @@ def to_pydantic_or_none[F: Callable[..., Any]](func: F) -> F:
     async def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
         result = await func(self, *args, **kwargs)
         return self.table_ops.to_pydantic(result) if result is not None else None
+
     return wrapper  # type: ignore
 
 

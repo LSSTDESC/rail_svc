@@ -1,7 +1,7 @@
+from collections.abc import Callable
 from functools import wraps
 from pathlib import Path
 from typing import Any
-from collections.abc import Callable
 
 import numpy as np
 import qp
@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import db_oper, models
 from ..db.session import get_session
-from ..rail_funcs.estimation_funcs import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
+from ..rail_funcs.estimation_funcs import (CatEstimatorEnsembleWrapper,
+                                           CatEstimatorPdfWrapper)
 
 
 def with_transaction(func: Callable) -> Callable:

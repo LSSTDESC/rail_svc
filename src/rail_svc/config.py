@@ -7,6 +7,7 @@ from typing import Any
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
 from .common import unexpected
 
 __all__ = ["Configuration", "config"]
@@ -24,10 +25,10 @@ class ClientCookie(BaseModel):
 class ClientConfiguration(BaseSettings):
     """Configuration for cm-client."""
 
-    model_config = SettingsConfigDict(env_file="~/.pz-rail-service", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(env_file="~/.rail-svc", env_file_encoding="utf-8")
 
     service_url: str = Field(
-        default="http://localhost:8080/pz-rail-service/v1",
+        default="http://0.0.0.0:8000",
         validation_alias="PZ_RAIL_SERVICE",
     )
 

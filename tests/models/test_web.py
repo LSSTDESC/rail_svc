@@ -4,15 +4,9 @@ import pytest
 from pydantic import BaseModel, ValidationError
 
 from rail_svc.models.filtering import Filter, FilterOp, OrderBy
-from rail_svc.models.web import (
-    AsyncRouteError,
-    CountResponse,
-    DeleteResponse,
-    FilterRequest,
-    FindRequest,
-    LookupResponse,
-    RemoteAPIError,
-)
+from rail_svc.models.web import (AsyncRouteError, CountResponse,
+                                 DeleteResponse, FilterRequest, FindRequest,
+                                 LookupResponse, RemoteAPIError)
 
 
 class TestCustomExceptions:

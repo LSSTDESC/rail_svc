@@ -3,15 +3,9 @@
 import pytest
 
 from rail_svc.db import Algorithm, Band, CatalogTag
-from rail_svc.db_funcs.read import (
-    count_rows,
-    get_row,
-    get_row_by_name,
-    get_row_or_none,
-    get_rows,
-    get_rows_streaming,
-    lookup_by_id_or_name,
-)
+from rail_svc.db_funcs.read import (count_rows, get_row, get_row_by_name,
+                                    get_row_or_none, get_rows,
+                                    get_rows_streaming, lookup_by_id_or_name)
 
 # ============================================================================
 # get_row tests

@@ -4,17 +4,8 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from rail_svc.db import (
-    Algorithm,
-    Band,
-    CatalogBandAssoc,
-    CatalogTag,
-    Dataset,
-    DatasetAssoc,
-    Estimates,
-    Estimator,
-    Model,
-)
+from rail_svc.db import (Algorithm, Band, CatalogBandAssoc, CatalogTag,
+                         Dataset, DatasetAssoc, Estimates, Estimator, Model)
 from rail_svc.db.base import Base
 
 # ============================================================================

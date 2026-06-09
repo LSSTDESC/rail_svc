@@ -4,17 +4,10 @@ import pytest
 
 from rail_svc.db import Algorithm, Band, Dataset
 from rail_svc.db_funcs.delete import delete_row
-from rail_svc.db_funcs.filter import (
-    and_filters,
-    count_filtered_rows,
-    filter_one,
-    filter_one_or_none,
-    filter_rows,
-    filter_rows_streaming,
-    find_by,
-    find_one_by,
-    or_filters,
-)
+from rail_svc.db_funcs.filter import (and_filters, count_filtered_rows,
+                                      filter_one, filter_one_or_none,
+                                      filter_rows, filter_rows_streaming,
+                                      find_by, find_one_by, or_filters)
 from rail_svc.db_funcs.update import update_row
 from rail_svc.models.filtering import Filter, FilterOp, OrderBy
 

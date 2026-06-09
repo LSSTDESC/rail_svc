@@ -3,29 +3,19 @@
 from __future__ import annotations
 
 from rail_svc import remote_async
-from rail_svc.remote_sync import (
-    algorithm,
-    band,
-    catalog_band_assoc,
-    catalog_tag,
-    dataset,
-    dataset_assoc,
-    estimates,
-    estimator,
-    model,
-)
-from rail_svc.remote_sync.base import (
-    AlgorithmSyncRemoteOperations,
-    BandSyncRemoteOperations,
-    CatalogBandAssocSyncRemoteOperations,
-    CatalogTagSyncRemoteOperations,
-    DatasetAssocSyncRemoteOperations,
-    DatasetSyncRemoteOperations,
-    EstimatesSyncRemoteOperations,
-    EstimatorSyncRemoteOperations,
-    ModelSyncRemoteOperations,
-    SyncRemoteOperations,
-)
+from rail_svc.remote_sync import (algorithm, band, catalog_band_assoc,
+                                  catalog_tag, dataset, dataset_assoc,
+                                  estimates, estimator, model)
+from rail_svc.remote_sync.base import (AlgorithmSyncRemoteOperations,
+                                       BandSyncRemoteOperations,
+                                       CatalogBandAssocSyncRemoteOperations,
+                                       CatalogTagSyncRemoteOperations,
+                                       DatasetAssocSyncRemoteOperations,
+                                       DatasetSyncRemoteOperations,
+                                       EstimatesSyncRemoteOperations,
+                                       EstimatorSyncRemoteOperations,
+                                       ModelSyncRemoteOperations,
+                                       SyncRemoteOperations)
 
 
 class TestFactoryFunctions:
