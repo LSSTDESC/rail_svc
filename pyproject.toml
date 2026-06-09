@@ -57,6 +57,9 @@ client = [
 ]
 
 dev = [
+    "pz-rail-svc[db]",
+    "pz-rail-svc[server]",
+    "pz-rail-svc[client]",
     "pytest-async",
     "pytest-asyncio",
     "pytest-cov>=6.0.0",
