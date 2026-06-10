@@ -730,3 +730,72 @@ def get_estimates_row(estimates_path: Path | str, row: int) -> dict[str, np.ndar
 
     logger.debug(f"Successfully read estimate for row {row}")
     return estimate_data
+
+
+def get_multi_catalog_row(
+    matched_dataset_path: Path | str,
+    component_dataset_paths: dict[str, Path | str],
+    row: int,
+) -> dict[str, np.ndarray]:
+    """
+    Read and merge data from multiple matched catalog datasets.
+    
+    This function reads a matched dataset containing cross-references to multiple
+    component datasets, then retrieves and merges the corresponding rows from each
+    component dataset into a single dictionary.
+    
+    Parameters
+    ----------
+    matched_dataset_path
+        Path to file containing match indices/keys that reference rows in component datasets
+    component_dataset_paths
+        Dictionary mapping keys to paths to datasets. The keys must correspond to
+        columns in the matched_dataset that contain indices into each component.
+    row : int
+        Zero-based index of the row to read.
+    
+    Returns
+    -------
+        Dictionary containing merged data from the matched dataset and all
+        component datasets. Includes all columns from the match dataset plus
+        the columns from component datasets for the matched rows.
+    
+    Raises
+    ------
+    FileNotFoundError
+        If any dataset file does not exist in the archive directory
+    KeyError
+        If a component dataset key does not exist in the matched dataset
+    
+    Examples
+    --------
+    >>> matched = Dataset(path="matches.hdf5")
+    >>> components = {
+    ...     "spec_idx": Dataset(path="spectroscopy.hdf5"),
+    ...     "phot_idx": Dataset(path="photometry.hdf5")
+    ... }
+    >>> data = get_multi_catalog_row(matched, components, 4)
+    """
+    archive_dir = Path(global_config.storage.archive)
+    matched_path = archive_dir / matched_dataset_path
+    
+    if not matched_path.exists():
+        raise FileNotFoundError(f"Matched dataset not found: {matched_path}")
+    
+    match_set = tables_io.read(matched_path, slice_dict=row)
+    full_set = match_set.copy()
+    
+    for key, ds_path in component_dataset_paths.items():
+        component_path = archive_dir / ds_path
+        
+        if not component_path.exists():
+            raise FileNotFoundError(f"Component dataset not found: {component_path}")
+        
+        if key not in match_set:
+            raise KeyError(f"Match key '{key}' not found in matched dataset")
+        
+        component_data = tables_io.read(component_path)
+        indexed_data = component_data[match_set[key]]
+        full_set.update(indexed_data)
+    
+    return full_set

@@ -15,6 +15,7 @@ import anyio
 from rail.core.model import Model as RailModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..common import LoadType, handle_file
 from .. import db, db_funcs, models
 from .base import TableContext, TableOperations
 
@@ -283,6 +284,152 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
             f"Class name should end with 'Informer' or be in INFORMER_TO_ESTIMATOR_MAP."
         )
 
+    async def load(
+        self,
+        name: str,
+        orig_path: Path | str,
+        algo_name: str,
+        catalog_tag_name: str,
+        load_type: LoadType = LoadType.in_place,
+        *,
+        validate_file: bool = True,
+    ) -> models.Model:
+        """Load a model file into the system.
+
+        Creates a Model database record and handles the model file according to
+        the specified load type (in-place, symlink, or copy). Automatically looks
+        up the Algorithm and CatalogTag by name and optionally validates that the
+        model file is compatible with them BEFORE any file operations or database
+        modifications occur.
+
+        Parameters
+        ----------
+        name
+            Name for the model record
+        orig_path
+            Path to the original model file (can be absolute or relative)
+        algo_name
+            Name of the Algorithm this model uses
+        catalog_tag_name
+            Name of the CatalogTag this model is trained on
+        load_type
+            How to handle the file:
+            - LoadType.in_place: Use file at its current location
+            - LoadType.link: Create symbolic link in archive
+            - LoadType.copy: Copy file to archive
+        validate_file
+            Whether to validate the model file by loading it and checking
+            compatibility with the algorithm and catalog tag before any
+            file operations or database changes
+
+        Returns
+        -------
+        models.Model
+            The created Model pydantic model
+
+        Raises
+        ------
+        FileNotFoundError
+            If the original file doesn't exist
+        ValueError
+            If the model validation fails (when validate_file=True), or if
+            the Algorithm or CatalogTag names are not found in the database
+        PermissionError
+            If there are insufficient permissions for file operations
+        OSError
+            If there are filesystem errors during copy/link operations
+
+        Examples
+        --------
+        Load a model by copying to archive with validation:
+
+        >>> model_obj = await model.load(
+        ...     "my_rf_model",
+        ...     "/data/models/random_forest_v1.pkl",
+        ...     "RandomForestEstimator",
+        ...     "SDSS_DR16",
+        ...     load_type=LoadType.copy,
+        ...     validate_file=True
+        ... )
+        >>> print(f"Created model {model_obj.id} at {model_obj.path}")
+        Created model 123 at models/my_rf_model_random_forest_v1.pkl
+
+        Load a model in-place without validation:
+
+        >>> model_obj = await model.load(
+        ...     "quick_model",
+        ...     "/scratch/temp_model.pkl",
+        ...     "SimpleEstimator",
+        ...     "test_catalog",
+        ...     load_type=LoadType.in_place,
+        ...     validate_file=False
+        ... )
+
+        Load a model with a symbolic link:
+
+        >>> model_obj = await model.load(
+        ...     "shared_model",
+        ...     "/shared/models/production.pkl",
+        ...     "DeepLearningEstimator",
+        ...     "LSST_Y1",
+        ...     load_type=LoadType.link
+        ... )
+
+        Notes
+        -----
+        - Validation occurs BEFORE any file operations (copy/link) or database
+          records are created, so invalid models will not pollute the filesystem
+          or database
+        - When using LoadType.copy or LoadType.link, the file is placed in the
+          'models/' subdirectory of the archive with the pattern:
+          'models/{name}_{basename}'
+        - When validate_file=True, the model file is loaded using RailModel.read()
+          and checked against the Algorithm and CatalogTag
+        - The function manages its own database transaction
+        """
+        # Validate FIRST, before any file operations or database changes
+        if validate_file:
+            # Need to look up Algorithm and CatalogTag for validation
+            async with get_session() as session:
+                # Look up algorithm
+                algo_id, algo_obj = await db_funcs.read.lookup_by_id_or_name(
+                    db.Algorithm, session, None, algo_name, need_object=True
+                )
+                if algo_obj is None:
+                    raise ValueError(f"Algorithm '{algo_name}' not found in database")
+
+                # Look up catalog tag
+                catalog_tag_id, catalog_tag_obj = await db_funcs.read.lookup_by_id_or_name(
+                    db.CatalogTag, session, None, catalog_tag_name, need_object=True
+                )
+                if catalog_tag_obj is None:
+                    raise ValueError(f"CatalogTag '{catalog_tag_name}' not found in database")
+
+                # Validate the original model file before any operations
+                validation_path = Path(orig_path).resolve()
+                logger.info(f"Validating model file before loading: {validation_path}")
+                await self.validate_model(validation_path, algo_obj, catalog_tag_obj)
+                logger.info(f"Model validation successful, proceeding with load")
+
+        # Generate archive path based on original filename
+        basename = os.path.basename(orig_path)
+        archive_path = Path("models") / f"{name}_{basename}"
+
+        # Handle the file according to load_type (only after validation passes)
+        output_path = handle_file(orig_path, archive_path, load_type)
+
+        # Create the database record (validation passed or was skipped)
+        async with get_session() as session:
+            async with session.begin():
+                new_model = await self.create_row(
+                    session,
+                    name=name,
+                    path=str(output_path),
+                    algo_name=algo_name,
+                    catalog_tag_name=catalog_tag_name,
+                    validate_file=False,  # Already validated above
+                )
+                return self.to_pydantic(new_model)    
 
 # Module-level singleton
 model: ModelOperations = ModelOperations(TableContext.from_db_class(db.Model))

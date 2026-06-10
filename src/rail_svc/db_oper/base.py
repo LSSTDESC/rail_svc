@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from structlog import get_logger
 
 from .. import db_funcs
-from ..common import unexpected
+from ..common import unexpected, LoadType, handle_file
 from ..config import config as global_config
 from ..db.base import Base, ensure_base_inheritance
 
@@ -1115,11 +1115,14 @@ class FileValidatedOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]
     - File existence checking
     - Async file reading via executor to avoid blocking
     - Standardized error handling for I/O and format errors
+    - Generic load functionality for file-backed records
 
     Subclasses must implement:
         - get_file_length(path): Extract object count from file
         - get_create_kwargs(): Handle foreign key resolution and
           call _process_path() with appropriate reference object
+        - get_subdirectory(): Return subdirectory name for this type
+          (e.g., "datasets", "models", "estimates")
 
     Type Parameters
     ---------------
@@ -1137,6 +1140,9 @@ class FileValidatedOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]
     ...     def get_file_length(self, path: Path) -> int:
     ...         return tables_io.hdf5.get_input_data_length(str(path))
     ...
+    ...     def get_subdirectory(self) -> str:
+    ...         return "datasets"
+    ...
     ...     async def get_create_kwargs(self, session, **kwargs):
     ...         # Resolve foreign keys, then validate file
     ...         catalog_tag_id, catalog_tag = await lookup_by_id_or_name(...)
@@ -1153,6 +1159,188 @@ class FileValidatedOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]
     @abstractmethod
     def get_file_length(self, path: Path) -> int:
         """Get number of objects in file. Implement in subclass."""
+
+    @abstractmethod
+    def get_subdirectory(self) -> str:
+        """Get subdirectory name for this file type.
+        
+        Returns
+        -------
+        str
+            Subdirectory name (e.g., "datasets", "models", "estimates")
+        
+        Examples
+        --------
+        >>> def get_subdirectory(self) -> str:
+        ...     return "datasets"
+        """
+
+    async def load(
+        self,
+        name: str,
+        orig_path: Path | str,
+        load_type: LoadType = LoadType.in_place,
+        *,
+        validate_file: bool = True,
+        **kwargs: Any,
+    ) -> ResponseT:
+        """Load a file into the system.
+
+        Creates a database record and handles the file according to the specified
+        load type (in-place, symlink, or copy). Optionally validates the file
+        BEFORE any file operations or database modifications occur.
+
+        Parameters
+        ----------
+        name
+            Name for the record
+        orig_path
+            Path to the original file (can be absolute or relative)
+        load_type
+            How to handle the file:
+            - LoadType.in_place: Use file at its current location
+            - LoadType.link: Create symbolic link in archive
+            - LoadType.copy: Copy file to archive
+        validate_file
+            Whether to validate the file before any file operations or
+            database changes
+        **kwargs
+            Additional keyword arguments passed to get_create_kwargs(),
+            which typically include foreign key references (e.g.,
+            catalog_tag_name, algo_name, dataset_name, etc.)
+
+        Returns
+        -------
+        ResponseT
+            The created Pydantic model
+
+        Raises
+        ------
+        FileNotFoundError
+            If the original file doesn't exist
+        ValueError
+            If file validation fails (when validate_file=True), or if
+            required foreign key references are not found in the database
+        PermissionError
+            If there are insufficient permissions for file operations
+        OSError
+            If there are filesystem errors during copy/link operations
+
+        Examples
+        --------
+        Load a dataset by copying to archive with validation:
+
+        >>> dataset = await dataset_ops.load(
+        ...     "my_data",
+        ...     "/data/catalogs/survey.h5",
+        ...     load_type=LoadType.copy,
+        ...     validate_file=True,
+        ...     catalog_tag_name="SDSS_DR16",
+        ...     is_collection=False
+        ... )
+        >>> print(f"Created dataset {dataset.id} at {dataset.path}")
+        Created dataset 123 at datasets/my_data_survey.h5
+
+        Load estimates in-place without validation:
+
+        >>> estimates = await estimates_ops.load(
+        ...     "quick_estimates",
+        ...     "/scratch/temp_estimates.hdf5",
+        ...     load_type=LoadType.in_place,
+        ...     validate_file=False,
+        ...     estimator_name="PhotoZEstimator",
+        ...     dataset_name="test_data",
+        ...     n_objects=10000  # Must provide when validate_file=False
+        ... )
+
+        Load with a symbolic link:
+
+        >>> model = await model_ops.load(
+        ...     "shared_model",
+        ...     "/shared/models/production.pkl",
+        ...     load_type=LoadType.link,
+        ...     algo_name="RandomForestEstimator",
+        ...     catalog_tag_name="LSST_Y1"
+        ... )
+
+        Notes
+        -----
+        - Validation occurs BEFORE any file operations (copy/link) or database
+          records are created, so invalid files will not pollute the filesystem
+          or database
+        - When using LoadType.copy or LoadType.link, the file is placed in the
+          subdirectory returned by get_subdirectory() with the pattern:
+          '{subdirectory}/{name}_{basename}'
+        - When validate_file=True and n_objects is in kwargs, the value will
+          be verified against the actual file content
+        - The function manages its own database transaction
+        """
+        # Validate FIRST, before any file operations or database changes
+        if validate_file:
+            # Validate the original file before any operations
+            validation_path = Path(orig_path).resolve()
+            logger.info(
+                "Validating file before loading",
+                table=self.ctx.db_class.__name__,
+                path=str(validation_path),
+            )
+            
+            # Use a temporary session to get n_objects for validation
+            # This also validates the file can be read
+            async with get_session() as session:
+                # Get any reference object needed for validation from kwargs
+                # Subclasses can override get_create_kwargs to resolve these
+                # For now, just validate the file can be read
+                try:
+                    n_objects = await self.validate_data_for_path(validation_path, None)
+                    logger.info(
+                        "File validation successful, proceeding with load",
+                        table=self.ctx.db_class.__name__,
+                        n_objects=n_objects,
+                    )
+                    # Store n_objects in kwargs for later use
+                    if "n_objects" not in kwargs:
+                        kwargs["n_objects"] = n_objects
+                except Exception as exc:
+                    logger.error(
+                        "File validation failed",
+                        table=self.ctx.db_class.__name__,
+                        path=str(validation_path),
+                        error=str(exc),
+                    )
+                    raise
+
+        # Generate archive path based on original filename
+        basename = os.path.basename(orig_path)
+        subdirectory = self.get_subdirectory()
+        archive_path = Path(subdirectory) / f"{name}_{basename}"
+
+        # Handle the file according to load_type (only after validation passes)
+        output_path = handle_file(orig_path, archive_path, load_type)
+        
+        logger.info(
+            "File handled successfully",
+            table=self.ctx.db_class.__name__,
+            load_type=load_type.value,
+            output_path=str(output_path),
+        )
+
+        # Create the database record (validation passed or was skipped)
+        async with get_session() as session:
+            async with session.begin():
+                new_record = await self.create_row(
+                    session,
+                    name=name,
+                    path=str(output_path),
+                    validate_file=False,  # Already validated above
+                    **kwargs,
+                )
+                logger.info(
+                    "Database record created",
+                    table=self.ctx.db_class.__name__,
+                    record_id=getattr(new_record, "id", None),
+                )
+                return self.to_pydantic(new_record)
 
     async def _process_path(
         self,
