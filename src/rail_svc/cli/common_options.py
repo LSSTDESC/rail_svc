@@ -9,7 +9,7 @@ from typing import Any
 import click
 from click.decorators import FC
 
-from ..common import LoadType, unexpected
+from ..common import LoadType, unexpected, str_to_slice
 from ..config import config as global_config
 from ..models.utils import OutputEnum
 
@@ -61,28 +61,9 @@ def parse_slice(ctx: click.Context, param: click.Parameter, value: str | None) -
     - "5:" -> slice(5, None, None)
     - "::2" -> slice(None, None, 2)
     """
-    if value is None:
-        return None
 
     try:
-        parts = value.split(":")
-
-        if len(parts) == 1:
-            # Single number: treat as stop value
-            return slice(int(parts[0]) if parts[0] else None, None, None)
-        elif len(parts) == 2:
-            # start:stop
-            start = int(parts[0]) if parts[0] else None
-            stop = int(parts[1]) if parts[1] else None
-            return slice(start, stop, None)
-        elif len(parts) == 3:
-            # start:stop:step
-            start = int(parts[0]) if parts[0] else None
-            stop = int(parts[1]) if parts[1] else None
-            step = int(parts[2]) if parts[2] else None
-            return slice(start, stop, step)
-        else:
-            raise click.BadParameter(f"Invalid slice format: {value}")
+        return str_to_slice(value)
     except ValueError as e:
         raise click.BadParameter(f"Invalid slice format: {value}. Error: {e}")
 

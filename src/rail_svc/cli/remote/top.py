@@ -1,64 +1,14 @@
 """CLI entry point for rail-svc-client remote operations."""
 
-from typing import Any
-
 import click
 
-from ... import __version__, remote_sync
-from .base import CliRemoteOperations
-
-
-def make_table_group(name: str, ops_factory: Any, desc: str) -> click.Group:
-    """Create table CLI group with all commands.
-
-    Parameters
-    ----------
-    name : str
-        Name of the CLI group
-    ops_factory : callable
-        Factory function that creates a SyncRemoteOperations instance
-    desc : str
-        Description for the CLI group
-
-    Returns
-    -------
-    click.Group
-        Configured Click group with all table commands
-    """
-
-    @click.group(name=name, help=desc)
-    def grp() -> None:  # pragma: no cover
-        pass
-
-    # Create the operations instance
-    ops = ops_factory()
-
-    cli_ops = CliRemoteOperations(ops, grp)
-    cli_ops.register_all_create_commands()
-    cli_ops.register_all_read_commands()
-    cli_ops.register_all_update_commands()
-    cli_ops.register_all_delete_commands()
-    cli_ops.register_all_filter_commands()
-    return grp
-
-
-# One-line per table
-TABLES = [
-    ("algorithm", remote_sync.algorithm, "Manage Algorithm table"),
-    ("band", remote_sync.band, "Manage Band table"),
-    ("catalog-band-assoc", remote_sync.catalog_band_assoc, "Manage CatalogBandAssoc table"),
-    ("catalog-tag", remote_sync.catalog_tag, "Manage CatalogTag table"),
-    ("dataset", remote_sync.dataset, "Manage Dataset table"),
-    ("dataset-assoc", remote_sync.dataset_assoc, "Manage DatasetAssoc table"),
-    ("estimates", remote_sync.estimates, "Manage Estimates table"),
-    ("estimator", remote_sync.estimator, "Manage Estimator table"),
-    ("model", remote_sync.model, "Manage Model table"),
-]
+from ... import __version__
+from .base import all_table_groups
 
 
 @click.group(
     name="rail-svc-client-remote",
-    commands=[make_table_group(t[0], t[1], t[2]) for t in TABLES],
+    commands=all_table_groups,
 )
 @click.version_option(version=__version__)
 @click.option(

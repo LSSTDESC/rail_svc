@@ -6,10 +6,11 @@ from pathlib import Path
 
 from fastapi import APIRouter, Body, Header, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
+import tables_io
 from pydantic import BaseModel, ValidationError
 
 from .. import local_async, models
-from ..common import LoadType, unexpected
+from ..common import LoadType, unexpected, str_to_slice
 from ..db.base import Base
 from ..local_async import LocalOperations
 from ..models import CountResponse, DeleteResponse, FilterRequest, LookupResponse, OrderBy
@@ -947,7 +948,7 @@ catalog_tag_router = create_table_router("catalog_tag", local_async.catalog_tag)
 
 dataset_router = create_table_router("dataset", local_async.dataset)
 
-estimate_router = create_table_router("estimate", local_async.estimates)
+estimates_router = create_table_router("estimates", local_async.estimates)
 
 estimator_router = create_table_router("estimator", local_async.estimator)
 
@@ -1002,9 +1003,7 @@ async def dataset_load(
 @dataset_router.get("/read_slice/{row_id}")
 async def dataset_read_slice(
     row_id: int,
-    start: int | None = Query(default=None, description="Slice start index"),
-    stop: int | None = Query(default=None, description="Slice stop index"),
-    step: int | None = Query(default=None, description="Slice step"),
+    read_slice: str | None = Query(default=None, description="Slice"),
 ) -> dict:
     """Read a slice of data from a dataset.
 
@@ -1012,9 +1011,7 @@ async def dataset_read_slice(
         row_id (int): Dataset row ID
 
     Query Parameters:
-        start (int): Slice start index (optional)
-        stop (int): Slice stop index (optional)
-        step (int): Slice step (optional)
+        read_slice (str): Slice parameters (optional)
 
     Returns:
         200: Sliced data
@@ -1026,15 +1023,17 @@ async def dataset_read_slice(
     """
     try:
         # Create slice object from parameters
-        slice_obj = slice(start, stop, step) if any(x is not None for x in (start, stop, step)) else None
+        slice_obj = str_to_slice(read_slice)
         data = await local_async.dataset.read_slice(row=row_id, the_slice=slice_obj)  # type: ignore[call-arg]
-        return {"data": data}
+        json_table = tables_io.convert(data, tables_io.types.JSON_STRING)
+        return {"data":json_table}
+
     except Exception as exc:
         logger.exception(f"Error reading slice from dataset {row_id}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 
-@estimate_router.post("/load", response_model=models.Estimates, status_code=status.HTTP_201_CREATED)
+@estimates_router.post("/load", response_model=models.Estimates, status_code=status.HTTP_201_CREATED)
 async def estimates_load(
     path: Path | str = Body(...),
     load_type: LoadType = Body(default=LoadType.in_place),
@@ -1079,12 +1078,10 @@ async def estimates_load(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 
-@estimate_router.get("/read_slice/{row_id}")
+@estimates_router.get("/read_slice/{row_id}")
 async def estimates_read_slice(
     row_id: int,
-    start: int | None = Query(default=None, description="Slice start index"),
-    stop: int | None = Query(default=None, description="Slice stop index"),
-    step: int | None = Query(default=None, description="Slice step"),
+    read_slice: str | None = Query(default=None, description="Slice"),
 ) -> dict:
     """Read a slice of data from estimates.
 
@@ -1092,9 +1089,7 @@ async def estimates_read_slice(
         row_id (int): Estimates row ID
 
     Query Parameters:
-        start (int): Slice start index (optional)
-        stop (int): Slice stop index (optional)
-        step (int): Slice step (optional)
+        read_slice (str): Slice parameters (optional)
 
     Returns:
         200: Sliced data
@@ -1106,10 +1101,10 @@ async def estimates_read_slice(
     """
     try:
         # Create slice object from parameters
-        slice_obj = slice(start, stop, step) if any(x is not None for x in (start, stop, step)) else None
-
+        slice_obj = str_to_slice(read_slice)
         data = await local_async.estimates.read_slice(row=row_id, the_slice=slice_obj)  # type: ignore[call-arg]
-        return {"data": data}
+        json_tables = data.to_json()
+        return json_tables
     except Exception as exc:
         logger.exception(f"Error reading slice from estimates {row_id}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
@@ -1166,7 +1161,7 @@ all_routers = [
     catalog_band_assoc_router,
     catalog_tag_router,
     dataset_router,
-    estimate_router,
+    estimates_router,
     estimator_router,
     model_router,
 ]

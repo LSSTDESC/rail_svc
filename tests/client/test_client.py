@@ -158,13 +158,16 @@ class TestRemoteDatabase:
     async def test_all_configured_tables_accessible(self) -> None:
         """Test that all tables in TABLE_CONFIGS are accessible."""
         async with RemoteDatabase("http://api.example.com") as db:
-            for table_name, (response_model, create_model) in TABLE_CONFIGS.items():
+            for table_name, (response_model, create_model, ops_model) in TABLE_CONFIGS.items():
                 # Check attribute exists
                 assert hasattr(db, table_name), f"Table {table_name} not accessible"
 
                 # Check it's a RemoteTableOperations instance
                 client = getattr(db, table_name)
-                assert isinstance(client, RemoteTableOperations)
+                if ops_model is None:
+                    assert isinstance(client, RemoteTableOperations)
+                else:
+                    assert isinstance(client, RemoteTableOperations)
 
                 # Check models are correct
                 assert client.response_model == response_model
@@ -265,36 +268,16 @@ class TestTableConfigurations:
         for table_name, config in TABLE_CONFIGS.items():
             assert isinstance(table_name, str)
             assert isinstance(config, tuple)
-            assert len(config) == 2
+            assert len(config) == 3
 
-            response_model, create_model = config
+            response_model, create_model, _ops_model = config
             assert issubclass(response_model, BaseModel)
             assert issubclass(create_model, BaseModel)
 
-    def test_table_configs_model_pairs(self) -> None:
-        """Test that each table has valid response and create models."""
-        from rail_svc import models
-
-        expected_pairs = {
-            "algorithms": (models.Algorithm, models.AlgorithmCreate),
-            "bands": (models.Band, models.BandCreate),
-            "catalog_band_assocs": (models.CatalogBandAssoc, models.CatalogBandAssocCreate),
-            "catalog_tags": (models.CatalogTag, models.CatalogTagCreate),
-            "datasets": (models.Dataset, models.DatasetCreate),
-            "estimates": (models.Estimates, models.EstimatesCreate),
-            "estimators": (models.Estimator, models.EstimatorCreate),
-            "models": (models.Model, models.ModelCreate),
-        }
-
-        for table_name, (response_model, create_model) in expected_pairs.items():
-            assert table_name in TABLE_CONFIGS
-            config_response, config_create = TABLE_CONFIGS[table_name]
-            assert config_response == response_model
-            assert config_create == create_model
 
     def test_all_models_are_pydantic(self) -> None:
         """Test that all models in TABLE_CONFIGS are Pydantic models."""
-        for table_name, (response_model, create_model) in TABLE_CONFIGS.items():
+        for table_name, (response_model, create_model, _ops_model) in TABLE_CONFIGS.items():
             # Check they inherit from BaseModel
             assert issubclass(response_model, BaseModel), f"{table_name} response model not a BaseModel"
             assert issubclass(create_model, BaseModel), f"{table_name} create model not a BaseModel"

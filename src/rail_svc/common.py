@@ -118,3 +118,63 @@ def handle_file(
     elif load_type == LoadType.copy:
         return copy_file_to_archive(orig_path, relative_path)
     raise AssertionError(f"Unknown load_type {load_type}")
+
+
+def str_to_slice(value: str | None) -> slice | None:
+    """Parse a string into a Python slice object.
+
+    Accepts formats like:
+    - "5" -> slice(5, None, None)
+    - "1:5" -> slice(1, 5, None)
+    - "1:10:2" -> slice(1, 10, 2)
+    - ":5" -> slice(None, 5, None)
+    - "5:" -> slice(5, None, None)
+    - "::2" -> slice(None, None, 2)
+    """
+    if value is None:
+        return None
+
+    parts = value.split(":")
+
+    if len(parts) == 1:
+        # Single number: treat as stop value
+        return slice(int(parts[0]) if parts[0] else None, None, None)
+    elif len(parts) == 2:
+        # start:stop
+        start = int(parts[0]) if parts[0] else None
+        stop = int(parts[1]) if parts[1] else None
+        return slice(start, stop, None)
+    elif len(parts) == 3:
+        # start:stop:step
+        start = int(parts[0]) if parts[0] else None
+        stop = int(parts[1]) if parts[1] else None
+        step = int(parts[2]) if parts[2] else None
+        return slice(start, stop, step)
+    raise ValueError(f"Invalid slice format: {value}")
+
+
+def slice_to_str(value: slice | int | None) -> str | None:
+    """Parse a Python slice object into string.
+
+    Returns formats like:
+    - "1:5" -> slice(1, 5, None)
+    - "1:10:2" -> slice(1, 10, 2)
+    - ":5" -> slice(None, 5, None)
+    - "5:" -> slice(5, None, None)
+    - "::2" -> slice(None, None, 2)
+    """
+    if value is None:
+        return None
+    if isinstance(value, int):
+        return str(int)
+
+    s = ""
+    if value.start is not None:
+        s += f"{value.start}:"
+    else:
+        s += ":"
+    if value.stop is not None:
+        s += f"{value.stop}"
+    if value.step is not None:
+        s += f":{value.step}"
+    return s
