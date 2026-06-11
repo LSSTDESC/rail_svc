@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from abc import abstractmethod
 from collections.abc import AsyncIterator, Callable, Sequence
 from dataclasses import dataclass
@@ -16,9 +17,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from structlog import get_logger
 
 from .. import db_funcs
-from ..common import unexpected, LoadType, handle_file
+from ..common import LoadType, handle_file, unexpected
 from ..config import config as global_config
 from ..db.base import Base, ensure_base_inheritance
+from ..db.session import get_session
 
 logger = get_logger(__name__)
 
@@ -1163,12 +1165,12 @@ class FileValidatedOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]
     @abstractmethod
     def get_subdirectory(self) -> str:
         """Get subdirectory name for this file type.
-        
+
         Returns
         -------
         str
             Subdirectory name (e.g., "datasets", "models", "estimates")
-        
+
         Examples
         --------
         >>> def get_subdirectory(self) -> str:
@@ -1278,13 +1280,13 @@ class FileValidatedOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]
         # Validate FIRST, before any file operations or database changes
         if validate_file:
             # Validate the original file before any operations
-            validation_path = Path(orig_path).resolve()
+            validation_path = Path(await anyio.Path(orig_path).resolve())
             logger.info(
                 "Validating file before loading",
                 table=self.ctx.db_class.__name__,
                 path=str(validation_path),
             )
-            
+
             # Use a temporary session to get n_objects for validation
             # This also validates the file can be read
             async with get_session() as session:
@@ -1317,7 +1319,7 @@ class FileValidatedOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]
 
         # Handle the file according to load_type (only after validation passes)
         output_path = handle_file(orig_path, archive_path, load_type)
-        
+
         logger.info(
             "File handled successfully",
             table=self.ctx.db_class.__name__,

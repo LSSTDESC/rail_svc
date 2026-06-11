@@ -5,13 +5,20 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 from functools import wraps
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
+import numpy as np
+import qp
 from pydantic import BaseModel
 
 from .. import db, models
 from ..db.base import Base
-from ..local_async.base import LocalOperations
+from ..local_async.base import (
+    DatasetLocalOperations,
+    EstimatesLocalOperations,
+    LocalOperations,
+    ModelLocalOperations,
+)
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -202,6 +209,14 @@ class CatalogTagSyncOperations(SyncOperations[db.CatalogTag, models.CatalogTag, 
 class DatasetSyncOperations(SyncOperations[db.Dataset, models.Dataset, models.DatasetCreate]):
     """Operations on local DB for Dataset table."""
 
+    @sync_wrapper(DatasetLocalOperations.load)
+    def load(self, *args: Any, **kwargs: Any) -> models.Dataset:
+        return cast(DatasetLocalOperations, self.async_ops).load(*args, **kwargs)  # type: ignore
+
+    @sync_wrapper(DatasetLocalOperations.read_slice)
+    def read_slice(self, *args: Any, **kwargs: Any) -> dict[str, np.ndarray]:
+        return cast(DatasetLocalOperations, self.async_ops).read_slice(*args, **kwargs)  # type: ignore
+
 
 class DatasetAssocSyncOperations(
     SyncOperations[db.DatasetAssoc, models.DatasetAssoc, models.DatasetAssocCreate]
@@ -212,6 +227,14 @@ class DatasetAssocSyncOperations(
 class EstimatesSyncOperations(SyncOperations[db.Estimates, models.Estimates, models.EstimatesCreate]):
     """Operations on local DB for Estimates table."""
 
+    @sync_wrapper(EstimatesLocalOperations.load)
+    def load(self, *args: Any, **kwargs: Any) -> models.Estimates:
+        return cast(EstimatesLocalOperations, self.async_ops).load(*args, **kwargs)  # type: ignore
+
+    @sync_wrapper(EstimatesLocalOperations.read_slice)
+    def read_slice(self, *args: Any, **kwargs: Any) -> qp.Ensemble:
+        return cast(EstimatesLocalOperations, self.async_ops).read_slice(*args, **kwargs)
+
 
 class EstimatorSyncOperations(SyncOperations[db.Estimator, models.Estimator, models.EstimatorCreate]):
     """Operations on local DB for Estimator table."""
@@ -219,3 +242,7 @@ class EstimatorSyncOperations(SyncOperations[db.Estimator, models.Estimator, mod
 
 class ModelSyncOperations(SyncOperations[db.Model, models.Model, models.ModelCreate]):
     """Operations on local DB for Model table."""
+
+    @sync_wrapper(ModelLocalOperations.load)
+    def load(self, *args: Any, **kwargs: Any) -> models.Model:
+        return cast(ModelLocalOperations, self.async_ops).load(*args, **kwargs)  # type: ignore

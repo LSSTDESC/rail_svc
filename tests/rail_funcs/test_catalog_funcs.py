@@ -7,8 +7,7 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 
-from rail_svc.models import (BandCreate, CatalogBandAssocCreate,
-                             CatalogTagCreate)
+from rail_svc.models import BandCreate, CatalogBandAssocCreate, CatalogTagCreate
 from rail_svc.rail_funcs import catalog_funcs
 
 

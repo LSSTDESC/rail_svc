@@ -8,6 +8,7 @@ model file validation.
 
 import asyncio
 import logging
+import os
 from pathlib import Path
 from typing import Any, override
 
@@ -15,8 +16,9 @@ import anyio
 from rail.core.model import Model as RailModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..common import LoadType, handle_file
 from .. import db, db_funcs, models
+from ..common import LoadType, handle_file
+from ..db.session import get_session
 from .base import TableContext, TableOperations
 
 logger = logging.getLogger(__name__)
@@ -406,10 +408,10 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
                     raise ValueError(f"CatalogTag '{catalog_tag_name}' not found in database")
 
                 # Validate the original model file before any operations
-                validation_path = Path(orig_path).resolve()
+                validation_path = Path(await anyio.Path(orig_path).resolve())
                 logger.info(f"Validating model file before loading: {validation_path}")
                 await self.validate_model(validation_path, algo_obj, catalog_tag_obj)
-                logger.info(f"Model validation successful, proceeding with load")
+                logger.info("Model validation successful, proceeding with load")
 
         # Generate archive path based on original filename
         basename = os.path.basename(orig_path)
@@ -429,7 +431,8 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
                     catalog_tag_name=catalog_tag_name,
                     validate_file=False,  # Already validated above
                 )
-                return self.to_pydantic(new_model)    
+                return self.to_pydantic(new_model)
+
 
 # Module-level singleton
 model: ModelOperations = ModelOperations(TableContext.from_db_class(db.Model))

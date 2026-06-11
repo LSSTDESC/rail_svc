@@ -16,6 +16,7 @@ File validation includes:
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import qp
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -169,19 +170,18 @@ class EstimatesOperations(FileValidatedOperations[db.Estimates, models.Estimates
 
     def get_subdirectory(self) -> str:
         """Get the subdirectory to store files in"""
-        return "estimates"        
+        return "estimates"
 
     async def read_slice(
-        self, 
+        self,
         session: AsyncSession,
-        row: int, 
+        row: int,
         the_slice: slice | int | None = None,
     ) -> dict[str, np.ndarray]:
 
         the_estimates = await self.get_row(session, row)
-        return read_estimate_slice(the_estimates, the_slice)
-   
-    
+        return read_estimates_slice(the_estimates.path, the_slice)
+
 
 # Module-level singleton
 estimates: EstimatesOperations = EstimatesOperations(TableContext.from_db_class(db.Estimates))

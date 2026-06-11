@@ -8,8 +8,15 @@ from .estimates import Estimates, EstimatesCreate
 from .estimator import Estimator, EstimatorCreate
 from .filtering import Filter, FilterOp, OrderBy
 from .model import Model, ModelCreate
-from .web import (AsyncRouteError, CountResponse, DeleteResponse,
-                  FilterRequest, FindRequest, LookupResponse, RemoteAPIError)
+from .web import (
+    AsyncRouteError,
+    CountResponse,
+    DeleteResponse,
+    FilterRequest,
+    FindRequest,
+    LookupResponse,
+    RemoteAPIError,
+)
 
 __all__ = [
     "Algorithm",

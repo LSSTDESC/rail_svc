@@ -16,12 +16,14 @@ import logging
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import tables_io
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import db, db_funcs, models
 from ..rail_funcs.catalog_funcs import read_multi_catalog_slice, read_single_catalog_slice
 from .base import FileValidatedOperations, TableContext
+from .dataset_assoc import dataset_assoc
 
 logger = logging.getLogger(__name__)
 
@@ -155,25 +157,25 @@ class DatasetOperations(FileValidatedOperations[db.Dataset, models.Dataset, mode
 
     def get_subdirectory(self) -> str:
         """Get the subdirectory to store files in"""
-        return "datasets"    
+        return "datasets"
 
     async def read_slice(
-        self, 
+        self,
         session: AsyncSession,
-        row: int, 
+        row: int,
         the_slice: slice | int | None = None,
     ) -> dict[str, np.ndarray]:
 
         the_dataset = await self.get_row(session, row)
         the_compontent_paths: dict[str, str | Path] = {}
-        if the_datasset.is_collection:
+        if the_dataset.is_collection:
             dataset_assocs = await dataset_assoc.find_by(session, matched_dataset_id=the_dataset.id_)
-            for dataset_assoc in dataset_assocs:
-                component_dataset = await dataset.get(session, row=dataset_assoc.component_dataset_id)
+            for dataset_assoc_ in dataset_assocs:
+                component_dataset = await dataset.get_row(session, row=dataset_assoc_.component_dataset_id)
                 the_compontent_paths[component_dataset.name] = component_dataset.path
             return read_multi_catalog_slice(the_dataset.path, the_compontent_paths, the_slice)
         return read_single_catalog_slice(the_dataset.path, the_slice)
 
-    
+
 # Module-level singleton
 dataset: DatasetOperations = DatasetOperations(TableContext.from_db_class(db.Dataset))

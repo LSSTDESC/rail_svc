@@ -13,9 +13,12 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from rail_svc.db.base import Base
 from rail_svc.local_async import LocalOperations
-from rail_svc.router.base import (create_table_router, require_auth,
-                                  validate_batch_size,
-                                  validate_pagination_params)
+from rail_svc.router.base import (
+    create_table_router,
+    require_auth,
+    validate_batch_size,
+    validate_pagination_params,
+)
 
 
 # Test Models

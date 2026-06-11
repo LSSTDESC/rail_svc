@@ -4,8 +4,7 @@ import pytest
 
 from rail_svc.db import CatalogBandAssoc
 from rail_svc.db_oper.base import TableContext
-from rail_svc.db_oper.catalog_band_assoc import (CatalogBandAssocOperations,
-                                                 catalog_band_assoc)
+from rail_svc.db_oper.catalog_band_assoc import CatalogBandAssocOperations, catalog_band_assoc
 from rail_svc.models import CatalogBandAssoc as CatalogBandAssocModel
 
 # ============================================================================
@@ -38,8 +37,7 @@ def test_module_singleton_is_catalog_band_assoc_operations():
 
 def test_module_singleton_is_singleton():
     """Test that module exports the same instance."""
-    from rail_svc.db_oper.catalog_band_assoc import \
-        catalog_band_assoc as assoc2
+    from rail_svc.db_oper.catalog_band_assoc import catalog_band_assoc as assoc2
 
     # Should be the exact same object
     assert catalog_band_assoc is assoc2

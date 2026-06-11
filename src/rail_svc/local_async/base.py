@@ -4,14 +4,19 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Callable
 from functools import wraps
-from typing import Any
+from typing import Any, cast
 
+import numpy as np
+import qp
 from pydantic import BaseModel
 
 from .. import db, models
 from ..db.base import Base
 from ..db.session import get_session
 from ..db_oper.base import TableOperations
+from ..db_oper.dataset import DatasetOperations
+from ..db_oper.estimates import EstimatesOperations
+from ..db_oper.model import ModelOperations
 
 
 def with_session[F: Callable[..., Any]](func: F) -> F:
@@ -311,6 +316,15 @@ class CatalogTagLocalOperations(LocalOperations[db.CatalogTag, models.CatalogTag
 class DatasetLocalOperations(LocalOperations[db.Dataset, models.Dataset, models.DatasetCreate]):
     """Operations on local DB for Dataset table."""
 
+    @with_session_transaction
+    @to_pydantic
+    async def load(self, session: Any, *args: Any, **kwargs: Any) -> Any:
+        return await cast(DatasetOperations, self._table_ops).load(session, *args, **kwargs)
+
+    @with_session
+    async def read_slice(self, session: Any, *args: Any, **kwargs: Any) -> dict[str, np.ndarray]:
+        return await cast(DatasetOperations, self._table_ops).read_slice(session, *args, **kwargs)
+
 
 class DatasetAssocLocalOperations(
     LocalOperations[db.DatasetAssoc, models.DatasetAssoc, models.DatasetAssocCreate]
@@ -321,6 +335,15 @@ class DatasetAssocLocalOperations(
 class EstimatesLocalOperations(LocalOperations[db.Estimates, models.Estimates, models.EstimatesCreate]):
     """Operations on local DB for Estimates table."""
 
+    @with_session_transaction
+    @to_pydantic
+    async def load(self, session: Any, *args: Any, **kwargs: Any) -> Any:
+        return await cast(EstimatesOperations, self._table_ops).load(session, *args, **kwargs)
+
+    @with_session
+    async def read_slice(self, session: Any, *args: Any, **kwargs: Any) -> qp.Ensemble:
+        return await cast(EstimatesOperations, self._table_ops).read_slice(session, *args, **kwargs)
+
 
 class EstimatorLocalOperations(LocalOperations[db.Estimator, models.Estimator, models.EstimatorCreate]):
     """Operations on local DB for Estimator table."""
@@ -328,3 +351,8 @@ class EstimatorLocalOperations(LocalOperations[db.Estimator, models.Estimator, m
 
 class ModelLocalOperations(LocalOperations[db.Model, models.Model, models.ModelCreate]):
     """Operations on local DB for Model table."""
+
+    @with_session_transaction
+    @to_pydantic
+    async def load(self, session: Any, *args: Any, **kwargs: Any) -> Any:
+        return await cast(ModelOperations, self._table_ops).load(session, *args, **kwargs)

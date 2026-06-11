@@ -9,7 +9,7 @@ from typing import Any
 import click
 from click.decorators import FC
 
-from ..common import unexpected
+from ..common import LoadType, unexpected
 from ..config import config as global_config
 from ..models.utils import OutputEnum
 
@@ -48,6 +48,43 @@ def validate_non_empty(_ctx: click.Context, param: click.Parameter, value: str) 
     if not value or not value.strip():
         raise click.BadParameter(f"{param.name} cannot be empty")
     return value
+
+
+def parse_slice(ctx: click.Context, param: click.Parameter, value: str | None) -> slice | None:
+    """Parse a string into a Python slice object.
+
+    Accepts formats like:
+    - "5" -> slice(5, None, None)
+    - "1:5" -> slice(1, 5, None)
+    - "1:10:2" -> slice(1, 10, 2)
+    - ":5" -> slice(None, 5, None)
+    - "5:" -> slice(5, None, None)
+    - "::2" -> slice(None, None, 2)
+    """
+    if value is None:
+        return None
+
+    try:
+        parts = value.split(":")
+
+        if len(parts) == 1:
+            # Single number: treat as stop value
+            return slice(int(parts[0]) if parts[0] else None, None, None)
+        elif len(parts) == 2:
+            # start:stop
+            start = int(parts[0]) if parts[0] else None
+            stop = int(parts[1]) if parts[1] else None
+            return slice(start, stop, None)
+        elif len(parts) == 3:
+            # start:stop:step
+            start = int(parts[0]) if parts[0] else None
+            stop = int(parts[1]) if parts[1] else None
+            step = int(parts[2]) if parts[2] else None
+            return slice(start, stop, step)
+        else:
+            raise click.BadParameter(f"Invalid slice format: {value}")
+    except ValueError as e:
+        raise click.BadParameter(f"Invalid slice format: {value}. Error: {e}")
 
 
 @dataclass
@@ -233,4 +270,26 @@ confirm = PartialOption(
     "--confirm",
     is_flag=True,
     help="Skip confirmation prompt",
+)
+
+
+path = PartialOption(
+    "--path",
+    type=click.Path(exists=True, dir_okay=False, readable=True),
+    required=True,
+    help="Input file path",
+)
+
+
+slice_option = PartialOption(
+    "--slice", type=str, default=None, callback=parse_slice, help="Slice notation (e.g., '1:5', '::2', ':10')"
+)
+
+
+load_type = PartialOption(
+    "--load-type",
+    type=click.Choice([e.value for e in LoadType], case_sensitive=False),
+    default=LoadType.in_place.value,
+    callback=lambda ctx, param, value: LoadType(value) if value else None,
+    help="How to load the file: in_place (use file as-is), link (symlink), or copy (duplicate file)",
 )

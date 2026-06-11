@@ -8,8 +8,6 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from .common import unexpected
-
 __all__ = ["Configuration", "config"]
 
 load_dotenv()
@@ -248,9 +246,9 @@ class StorageConfiguration(BaseModel):
         path = Path(v)
         if not path.exists():
             raise ValueError(f"Path {path} does not exist")
-        if unexpected(not path.is_dir()):
+        if not path.is_dir():  # pragma: no cover
             raise ValueError(f"Path {path} is not a directory")
-        if unexpected(not os.access(path, os.W_OK)):
+        if not os.access(path, os.W_OK):  # pragma: no cover
             raise ValueError(f"Path {path} is not writeable")
         return v
 

@@ -6,9 +6,14 @@ from unittest.mock import patch
 import pytest
 from pydantic import SecretStr, ValidationError
 
-from rail_svc.config import (AsgiConfiguration, Configuration,
-                             DaemonConfiguration, DatabaseConfiguration,
-                             LoggingConfiguration, StorageConfiguration)
+from rail_svc.config import (
+    AsgiConfiguration,
+    Configuration,
+    DaemonConfiguration,
+    DatabaseConfiguration,
+    LoggingConfiguration,
+    StorageConfiguration,
+)
 
 
 class TestAsgiConfiguration:

@@ -1,17 +1,17 @@
 """CLI entry point for rail-svc-client."""
 
 import asyncio
-from typing import Any, TypeVar
+from typing import TypeVar
 
 import click
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.schema import CreateSchema
 
-from ... import __version__, db, local_sync
+from ... import __version__, db
 from ...config import config
 from ...db.base import Base
-from .base import CliOperations
+from .base import all_table_groups
 
 T = TypeVar("T", bound=Base)
 ResponseT = TypeVar("ResponseT", bound=BaseModel)
@@ -55,40 +55,7 @@ def init(*, reset: bool) -> None:
     _init_db_sync()
 
 
-def make_table_group(name: str, ops: Any, desc: str) -> click.Group:
-    """Create table CLI group with all commands."""
-
-    @click.group(name=name, help=desc)
-    def grp() -> None:  # pragma: no cover
-        pass
-
-    cli_ops = CliOperations(ops, grp)
-    cli_ops.register_all_create_commands()
-    cli_ops.register_all_read_commands()
-    cli_ops.register_all_update_commands()
-    cli_ops.register_all_delete_commands()
-    cli_ops.register_all_filter_commands()
-    return grp
-
-
-# One-line per table
-TABLES = [
-    ("algorithm", local_sync.algorithm, "Manage Algorithm table"),
-    ("band", local_sync.band, "Manage Band table"),
-    ("catalog-band-assoc", local_sync.catalog_band_assoc, "Manage CatalogBandAssoc table"),
-    ("catalog-tag", local_sync.catalog_tag, "Manage CatalogTag table"),
-    ("dataset", local_sync.dataset, "Manage Dataset table"),
-    ("dataset-assoc", local_sync.dataset_assoc, "Manage DatasetAssoc table"),
-    ("estimates", local_sync.estimates, "Manage Estimates table"),
-    ("estimator", local_sync.estimator, "Manage Estimator table"),
-    ("model", local_sync.model, "Manage Model table"),
-]
-
-
-@click.group(
-    name="rail-svc-client",
-    commands=[init] + [make_table_group(t[0], t[1], t[2]) for t in TABLES],
-)
+@click.group(name="rail-svc-client", commands=[init] + all_table_groups)
 @click.version_option(version=__version__)
 def cli() -> None:
     """Administrative CLI for rail-svc."""

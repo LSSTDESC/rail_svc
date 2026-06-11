@@ -6,9 +6,14 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from pydantic import BaseModel
 
-from rail_svc.local_async.base import (LocalOperations, to_pydantic,
-                                       to_pydantic_list, to_pydantic_or_none,
-                                       with_session, with_session_transaction)
+from rail_svc.local_async.base import (
+    LocalOperations,
+    to_pydantic,
+    to_pydantic_list,
+    to_pydantic_or_none,
+    with_session,
+    with_session_transaction,
+)
 
 # ============================================================================
 # Mock classes for testing

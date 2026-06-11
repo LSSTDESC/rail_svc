@@ -2,16 +2,17 @@ from __future__ import annotations
 
 import logging
 from collections.abc import AsyncGenerator
+from pathlib import Path
 
 from fastapi import APIRouter, Body, Header, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ValidationError
 
-from ..common import unexpected
+from .. import local_async, models
+from ..common import LoadType, unexpected
 from ..db.base import Base
 from ..local_async import LocalOperations
-from ..models import (CountResponse, DeleteResponse, FilterRequest,
-                      LookupResponse, OrderBy)
+from ..models import CountResponse, DeleteResponse, FilterRequest, LookupResponse, OrderBy
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -934,3 +935,238 @@ def create_table_router[T: Base, ResponseT: BaseModel, CreateT: BaseModel](
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     return router
+
+
+algo_router = create_table_router("algorithm", local_async.algorithm)
+
+band_router = create_table_router("band", local_async.band)
+
+catalog_band_assoc_router = create_table_router("catalog_band_assoc", local_async.catalog_band_assoc)
+
+catalog_tag_router = create_table_router("catalog_tag", local_async.catalog_tag)
+
+dataset_router = create_table_router("dataset", local_async.dataset)
+
+estimate_router = create_table_router("estimate", local_async.estimates)
+
+estimator_router = create_table_router("estimator", local_async.estimator)
+
+model_router = create_table_router("model", local_async.model)
+
+
+@dataset_router.post("/load", response_model=models.Dataset, status_code=status.HTTP_201_CREATED)
+async def dataset_load(
+    path: Path | str = Body(...),
+    load_type: LoadType = Body(default=LoadType.in_place),
+    data: dict = Body(default_factory=dict),
+    *,
+    validate: bool = Query(default=True, description="Whether to validate data"),
+) -> models.Dataset:
+    """Load a dataset from a file.
+
+    Request Body:
+        {
+            "path": "/path/to/data/file",
+            "load_type": "in_place",  // "in_place", "link", or "copy"
+            "data": {
+                // Additional fields for the dataset record
+                "name": "my_dataset",
+                "description": "..."
+            },
+            "validate": true
+        }
+
+    Returns:
+        201: Created dataset row
+        400: Validation error
+        500: Internal server error
+    """
+    try:
+        result = await local_async.dataset.load(
+            path=path,
+            load_type=load_type,
+            validate=validate,
+            **data,
+        )
+        return result
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "Validation error", "details": exc.errors()},
+        ) from exc
+    except Exception as exc:
+        logger.exception("Error loading dataset")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+
+@dataset_router.get("/read_slice/{row_id}")
+async def dataset_read_slice(
+    row_id: int,
+    start: int | None = Query(default=None, description="Slice start index"),
+    stop: int | None = Query(default=None, description="Slice stop index"),
+    step: int | None = Query(default=None, description="Slice step"),
+) -> dict:
+    """Read a slice of data from a dataset.
+
+    Path Parameters:
+        row_id (int): Dataset row ID
+
+    Query Parameters:
+        start (int): Slice start index (optional)
+        stop (int): Slice stop index (optional)
+        step (int): Slice step (optional)
+
+    Returns:
+        200: Sliced data
+        404: Dataset not found
+        500: Internal server error
+
+    Note:
+        If no slice parameters are provided, returns the entire dataset.
+    """
+    try:
+        # Create slice object from parameters
+        slice_obj = slice(start, stop, step) if any(x is not None for x in (start, stop, step)) else None
+        data = await local_async.dataset.read_slice(row=row_id, the_slice=slice_obj)  # type: ignore[call-arg]
+        return {"data": data}
+    except Exception as exc:
+        logger.exception(f"Error reading slice from dataset {row_id}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+
+@estimate_router.post("/load", response_model=models.Estimates, status_code=status.HTTP_201_CREATED)
+async def estimates_load(
+    path: Path | str = Body(...),
+    load_type: LoadType = Body(default=LoadType.in_place),
+    data: dict = Body(default_factory=dict),
+    *,
+    validate: bool = Query(default=True, description="Whether to validate data"),
+) -> models.Estimates:
+    """Load estimates from a file.
+
+    Request Body:
+        {
+            "path": "/path/to/estimates/file",
+            "load_type": "in_place",  // "in_place", "link", or "copy"
+            "data": {
+                // Additional fields for the estimates record
+                "name": "my_estimates",
+                "description": "..."
+            },
+            "validate": true
+        }
+
+    Returns:
+        201: Created estimates row
+        400: Validation error
+        500: Internal server error
+    """
+    try:
+        result = await local_async.estimates.load(
+            path=path,
+            load_type=load_type,
+            validate=validate,
+            **data,
+        )
+        return result
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "Validation error", "details": exc.errors()},
+        ) from exc
+    except Exception as exc:
+        logger.exception("Error loading estimates")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+
+@estimate_router.get("/read_slice/{row_id}")
+async def estimates_read_slice(
+    row_id: int,
+    start: int | None = Query(default=None, description="Slice start index"),
+    stop: int | None = Query(default=None, description="Slice stop index"),
+    step: int | None = Query(default=None, description="Slice step"),
+) -> dict:
+    """Read a slice of data from estimates.
+
+    Path Parameters:
+        row_id (int): Estimates row ID
+
+    Query Parameters:
+        start (int): Slice start index (optional)
+        stop (int): Slice stop index (optional)
+        step (int): Slice step (optional)
+
+    Returns:
+        200: Sliced data
+        404: Estimates not found
+        500: Internal server error
+
+    Note:
+        If no slice parameters are provided, returns the entire estimates data.
+    """
+    try:
+        # Create slice object from parameters
+        slice_obj = slice(start, stop, step) if any(x is not None for x in (start, stop, step)) else None
+
+        data = await local_async.estimates.read_slice(row=row_id, the_slice=slice_obj)  # type: ignore[call-arg]
+        return {"data": data}
+    except Exception as exc:
+        logger.exception(f"Error reading slice from estimates {row_id}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+
+@model_router.post("/load", response_model=models.Model, status_code=status.HTTP_201_CREATED)
+async def model_load(
+    path: Path | str = Body(...),
+    load_type: LoadType = Body(default=LoadType.in_place),
+    data: dict = Body(default_factory=dict),
+    *,
+    validate: bool = Query(default=True, description="Whether to validate data"),
+) -> models.Model:
+    """Load a model from a file.
+
+    Request Body:
+        {
+            "path": "/path/to/model/file",
+            "load_type": "in_place",  // "in_place", "link", or "copy"
+            "data": {
+                // Additional fields for the model record
+                "name": "my_model",
+                "description": "..."
+            },
+            "validate": true
+        }
+
+    Returns:
+        201: Created model row
+        400: Validation error
+        500: Internal server error
+    """
+    try:
+        result = await local_async.model.load(
+            path=path,
+            load_type=load_type,
+            validate=validate,
+            **data,
+        )
+        return result
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "Validation error", "details": exc.errors()},
+        ) from exc
+    except Exception as exc:
+        logger.exception("Error loading model")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+
+all_routers = [
+    algo_router,
+    band_router,
+    catalog_band_assoc_router,
+    catalog_tag_router,
+    dataset_router,
+    estimate_router,
+    estimator_router,
+    model_router,
+]
