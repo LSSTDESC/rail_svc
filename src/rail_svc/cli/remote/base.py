@@ -2,15 +2,17 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TypeVar
+from pathlib import Path
+from typing import TypeVar, Any
 
 import click
 from pydantic import BaseModel, ValidationError
 
-from ...common import unexpected
+from ...common import unexpected, LoadType
 from ...models import Filter, FilterOp, OrderBy
 from ...models.utils import OutputEnum, output_pydantic
 from ...remote_sync.base import SyncRemoteOperations
+from ... import remote_sync
 from .. import common_options
 
 logger = logging.getLogger(__name__)
@@ -1202,3 +1204,324 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
         self.register_count_filtered_rows()
         self.register_find_by()
         self.register_find_one_by()
+
+
+def make_table_group(name: str, ops_factory: Any, desc: str) -> click.Group:
+    """Create table CLI group with all commands.
+
+    Parameters
+    ----------
+    name : str
+        Name of the CLI group
+    ops_factory : callable
+        Factory function that creates a SyncRemoteOperations instance
+    desc : str
+        Description for the CLI group
+
+    Returns
+    -------
+    click.Group
+        Configured Click group with all table commands
+    """
+
+    @click.group(name=name, help=desc)
+    def grp() -> None:  # pragma: no cover
+        pass
+
+    # Create the operations instance
+    ops = ops_factory()
+
+    cli_ops = CliRemoteOperations(ops, grp)
+    cli_ops.register_all_create_commands()
+    cli_ops.register_all_read_commands()
+    cli_ops.register_all_update_commands()
+    cli_ops.register_all_delete_commands()
+    cli_ops.register_all_filter_commands()
+    return grp
+
+
+algo_group = make_table_group("algorithm", remote_sync.algorithm, "Manage Algorithm table")
+
+band_group = make_table_group("band", remote_sync.band, "Manage Band table")
+
+catalog_band_assoc_group = make_table_group(
+    "catalog-band-assoc", remote_sync.catalog_band_assoc, "Manage CatalogBandAssoc table"
+)
+
+catalog_tag_group = make_table_group("catalog-tag", remote_sync.catalog_tag, "Manage CatalogTag table")
+
+dataset_group = make_table_group("dataset", remote_sync.dataset, "Manage Dataset table")
+
+dataset_assoc_group = make_table_group(
+    "dataset-assoc", remote_sync.dataset_assoc, "Manage DatasetAssoc table"
+)
+
+estimates_group = make_table_group("estimates", remote_sync.estimates, "Manage Estimates table")
+
+estimator_group = make_table_group("estimator", remote_sync.estimator, "Manage Estimator table")
+
+model_group = make_table_group("model", remote_sync.model, "Manage Model table")
+
+# ============================================================================
+# CUSTOM COMMANDS FOR SPECIFIC TABLES
+# ============================================================================
+
+
+# Dataset custom commands
+@dataset_group.command(name="load")
+@common_options.path()
+@common_options.load_type()
+@common_options.output()
+@click.option("--from-json", type=click.Path(exists=True), help="Path to JSON file containing row data")
+@click.option("--no-validate", is_flag=True, help="Skip Pydantic validation")
+@click.argument("fields", nargs=-1)
+def dataset_load(
+    path: Path | str,
+    load_type: LoadType,
+    output: OutputEnum,
+    from_json: str | None,
+    *,
+    no_validate: bool,
+    fields: tuple[str, ...],
+) -> None:
+    """Load a dataset from a file.
+
+    Provide fields as KEY=VALUE pairs, or use --from-json to load from a file.
+    The --path option specifies the data file to load.
+    The --load-type option specifies how to handle the file (in_place, link, or copy).
+    """
+    # Parse input
+    if from_json:
+        try:
+            with open(from_json, encoding="utf-8") as f:
+                row_data = json.load(f)
+        except json.JSONDecodeError as exc:
+            click.echo(f"Error: Invalid JSON: {exc}", err=True)
+            raise click.Abort()
+        except OSError as exc:
+            click.echo(f"Error: Cannot read file: {exc}", err=True)
+            raise click.Abort()
+    else:
+        row_data = {}
+        for field in fields:
+            if "=" not in field:
+                click.echo(f"Error: Invalid field format '{field}'. Use KEY=VALUE format.", err=True)
+                raise click.Abort()
+
+            key, value = field.split("=", 1)
+            try:
+                row_data[key] = json.loads(value)
+            except json.JSONDecodeError:
+                row_data[key] = value
+
+    remote_sync_ops = remote_sync.dataset()
+    try:
+        row = remote_sync_ops.load(
+            path=path,
+            load_type=load_type,
+            validate=not no_validate,
+            **row_data,
+        )
+        click.echo(f"Successfully loaded dataset from {path}")
+        print(output_pydantic([row], output, remote_sync_ops.ctx.response_class.col_names_for_table))  # type: ignore
+
+    except Exception as exc:
+        logger.error("Error loading dataset", exc_info=True)
+        click.echo(f"Error loading dataset: {exc}", err=True)
+        raise click.Abort()
+
+
+@dataset_group.command(name="read-slice")
+@common_options.slice_option()
+@common_options.output()
+@click.argument("row_id", type=int)
+def dataset_read_slice(
+    row_id: int,
+    output: OutputEnum,
+    slice: slice | None,
+) -> None:
+    """Read a slice of data from a dataset.
+
+    Use --slice to specify a Python slice notation (e.g., '1:5', '::2', ':10').
+    If no slice is provided, reads the entire dataset.
+    """
+    remote_sync_ops = remote_sync.dataset()
+    try:
+        data = remote_sync_ops.read_slice(row_id=row_id, the_slice=slice)
+
+        if output == OutputEnum.json:
+            click.echo(json.dumps(data, indent=2, default=str))
+        else:
+            click.echo(data)
+
+    except Exception as exc:
+        logger.error(f"Error reading slice from dataset {row_id}", exc_info=True)
+        click.echo(f"Error reading slice from dataset: {exc}", err=True)
+        raise click.Abort()
+
+
+# Estimates custom commands
+@estimates_group.command(name="load")
+@common_options.path()
+@common_options.load_type()
+@common_options.output()
+@click.option("--from-json", type=click.Path(exists=True), help="Path to JSON file containing row data")
+@click.option("--no-validate", is_flag=True, help="Skip Pydantic validation")
+@click.argument("fields", nargs=-1)
+def estimates_load(
+    path: Path | str,
+    load_type: LoadType,
+    output: OutputEnum,
+    from_json: str | None,
+    *,
+    no_validate: bool,
+    fields: tuple[str, ...],
+) -> None:
+    """Load estimates from a file.
+
+    Provide fields as KEY=VALUE pairs, or use --from-json to load from a file.
+    The --path option specifies the data file to load.
+    The --load-type option specifies how to handle the file (in_place, link, or copy).
+    """
+    # Parse input
+    if from_json:
+        try:
+            with open(from_json, encoding="utf-8") as f:
+                row_data = json.load(f)
+        except json.JSONDecodeError as exc:
+            click.echo(f"Error: Invalid JSON: {exc}", err=True)
+            raise click.Abort()
+        except OSError as exc:
+            click.echo(f"Error: Cannot read file: {exc}", err=True)
+            raise click.Abort()
+    else:
+        row_data = {}
+        for field in fields:
+            if "=" not in field:
+                click.echo(f"Error: Invalid field format '{field}'. Use KEY=VALUE format.", err=True)
+                raise click.Abort()
+
+            key, value = field.split("=", 1)
+            try:
+                row_data[key] = json.loads(value)
+            except json.JSONDecodeError:
+                row_data[key] = value
+
+    remote_sync_ops = remote_sync.estimates()
+    try:
+        row = remote_sync_ops.load(
+            path=path,
+            load_type=load_type,
+            validate=not no_validate,
+            **row_data,
+        )
+        click.echo(f"Successfully loaded estimates from {path}")
+        print(output_pydantic([row], output, remote_sync_ops.ctx.response_class.col_names_for_table))  # type: ignore
+
+    except Exception as exc:
+        logger.error("Error loading estimates", exc_info=True)
+        click.echo(f"Error loading estimates: {exc}", err=True)
+        raise click.Abort()
+
+
+@estimates_group.command(name="read-slice")
+@common_options.output()
+@common_options.slice_option()
+@click.argument("row_id", type=int)
+def estimates_read_slice(
+    row_id: int,
+    output: OutputEnum,
+    slice: slice | None,
+) -> None:
+    """Read a slice of data from estimates.
+
+    Use --slice to specify a Python slice notation (e.g., '1:5', '::2', ':10').
+    If no slice is provided, reads the entire estimates data.
+    """
+    remote_sync_ops = remote_sync.estimates()
+    try:
+        data = remote_sync_ops.read_slice(row_id=row_id, the_slice=slice)
+        click.echo(data.to_json())
+
+    except Exception as exc:
+        logger.error(f"Error reading slice from estimates {row_id}", exc_info=True)
+        click.echo(f"Error reading slice from estimates: {exc}", err=True)
+        raise click.Abort()
+
+
+# Model custom commands
+@model_group.command(name="load")
+@common_options.path()
+@common_options.load_type()
+@common_options.output()
+@click.option("--from-json", type=click.Path(exists=True), help="Path to JSON file containing row data")
+@click.option("--no-validate", is_flag=True, help="Skip Pydantic validation")
+@click.argument("fields", nargs=-1)
+def model_load(
+    path: Path | str,
+    load_type: LoadType,
+    output: OutputEnum,
+    from_json: str | None,
+    *,
+    no_validate: bool,
+    fields: tuple[str, ...],
+) -> None:
+    """Load a model from a file.
+
+    Provide fields as KEY=VALUE pairs, or use --from-json to load from a file.
+    The --path option specifies the data file to load.
+    The --load-type option specifies how to handle the file (in_place, link, or copy).
+    """
+    # Parse input
+    if from_json:
+        try:
+            with open(from_json, encoding="utf-8") as f:
+                row_data = json.load(f)
+        except json.JSONDecodeError as exc:
+            click.echo(f"Error: Invalid JSON: {exc}", err=True)
+            raise click.Abort()
+        except OSError as exc:
+            click.echo(f"Error: Cannot read file: {exc}", err=True)
+            raise click.Abort()
+    else:
+        row_data = {}
+        for field in fields:
+            if "=" not in field:
+                click.echo(f"Error: Invalid field format '{field}'. Use KEY=VALUE format.", err=True)
+                raise click.Abort()
+
+            key, value = field.split("=", 1)
+            try:
+                row_data[key] = json.loads(value)
+            except json.JSONDecodeError:
+                row_data[key] = value
+
+
+    remote_sync_ops = remote_sync.model()
+    try:
+        row = remote_sync_ops.load(
+            path=path,
+            load_type=load_type,
+            validate=not no_validate,
+            **row_data,
+        )
+        click.echo(f"Successfully loaded model from {path}")
+        print(output_pydantic([row], output, remote_sync_ops.ctx.response_class.col_names_for_table))  # type: ignore
+
+    except Exception as exc:
+        logger.error("Error loading model", exc_info=True)
+        click.echo(f"Error loading model: {exc}", err=True)
+        raise click.Abort()
+
+
+all_table_groups = [
+    algo_group,
+    band_group,
+    catalog_band_assoc_group,
+    catalog_tag_group,
+    dataset_group,
+    dataset_assoc_group,
+    estimates_group,
+    estimator_group,
+    model_group,
+]

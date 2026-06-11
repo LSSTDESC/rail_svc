@@ -3,9 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from rail_svc.models.catalog_band_assoc import (CatalogBandAssoc,
-                                                CatalogBandAssocBase,
-                                                CatalogBandAssocCreate)
+from rail_svc.models.catalog_band_assoc import CatalogBandAssoc, CatalogBandAssocBase, CatalogBandAssocCreate
 
 
 class TestCatalogBandAssocBase:

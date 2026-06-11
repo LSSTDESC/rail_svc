@@ -3,15 +3,18 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import AsyncGenerator
+from pathlib import Path
 from types import TracebackType
 from typing import Any, cast
 
 import httpx
+import numpy as np
 from pydantic import BaseModel, ValidationError
+import qp
 
-from ..common import unexpected
-from ..models import (CountResponse, Filter, FilterRequest, LookupResponse,
-                      OrderBy, RemoteAPIError)
+from ..common import unexpected, LoadType, slice_to_str
+from ..models import CountResponse, Filter, FilterRequest, LookupResponse, OrderBy, RemoteAPIError
+from .. import models
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -1059,3 +1062,219 @@ class RemoteAPI:
             response_model=response_model,
             create_model=create_model,
         )
+
+
+class RemoteDatasetOperations(RemoteTableOperations[models.Dataset, models.DatasetCreate]):
+    """Extended remote client for Dataset table with custom operations."""
+
+    async def load(
+        self,
+        path: Path | str,
+        load_type: LoadType = LoadType.in_place,
+        *,
+        validate: bool = True,
+        **data: Any,
+    ) -> models.Dataset:
+        """Load a dataset from a file.
+
+        Parameters
+        ----------
+        path : Path | str
+            Path to the data file
+        load_type : LoadType
+            How to handle the file (in_place, link, or copy)
+        validate : bool
+            Whether to validate data on the server (default: True)
+        **data
+            Additional fields for the dataset record
+
+        Returns
+        -------
+        models.Dataset
+            Created dataset row
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+        """
+        request_body = {
+            "path": str(path),
+            "load_type": load_type.value,
+            "data": data,
+        }
+
+        response = await self.client.post(
+            f"{self.endpoint}/load",
+            json=request_body,
+            params={"validate": validate},
+        )
+
+        result = cast(dict[str, Any], self._handle_response(response, expected_status=201))
+        return models.Dataset(**result)
+
+    async def read_slice(
+        self,
+        row_id: int,
+        the_slice: slice | int | None = None,
+    ) -> dict[str, np.ndarray]:
+        """Read a slice of data from a dataset.
+
+        Parameters
+        ----------
+        row_id : int
+            Dataset row ID
+        the_slice : slice |int | None
+            Slice to read
+
+        Returns
+        -------
+        Any
+            Sliced data
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+        """
+        params = dict(read_slice=slice_to_str(the_slice))
+        response = await self.client.get(
+            f"{self.endpoint}/read_slice/{row_id}",
+            params=params,
+        )
+        result = cast(dict[str, Any], self._handle_response(response, expected_status=200))
+        out_data = json.loads(result['data'])
+        return out_data
+
+
+class RemoteEstimatesOperations(RemoteTableOperations[models.Estimates, models.EstimatesCreate]):
+    """Extended remote client for Estimates table with custom operations."""
+
+    async def load(
+        self,
+        path: Path | str,
+        load_type: LoadType = LoadType.in_place,
+        *,
+        validate: bool = True,
+        **data: Any,
+    ) -> models.Estimates:
+        """Load estimates from a file.
+
+        Parameters
+        ----------
+        path : Path | str
+            Path to the estimates file
+        load_type : LoadType
+            How to handle the file (in_place, link, or copy)
+        validate : bool
+            Whether to validate data on the server (default: True)
+        **data
+            Additional fields for the estimates record
+
+        Returns
+        -------
+        models.Estimates
+            Created estimates row
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+        """
+        request_body = {
+            "path": str(path),
+            "load_type": load_type.value,
+            "data": data,
+        }
+
+        response = await self.client.post(
+            f"{self.endpoint}/load",
+            json=request_body,
+            params={"validate": validate},
+        )
+
+        result = cast(dict[str, Any], self._handle_response(response, expected_status=201))
+        return models.Estimates(**result)
+
+    async def read_slice(
+        self,
+        row_id: int,
+        the_slice: slice | int | None = None,
+    ) -> dict[str, np.ndarray]:
+        """Read a slice of data from estimates.
+
+        Parameters
+        ----------
+        row_id : int
+            Estimates row ID
+        the_slice : slice |int | None
+            Slice to read
+
+        Returns
+        -------
+        Any
+            Sliced data
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+        """
+        params = dict(read_slice=slice_to_str(the_slice))
+        response = await self.client.get(
+            f"{self.endpoint}/read_slice/{row_id}",
+            params=params,
+        )
+
+        result = cast(dict[str, Any], self._handle_response(response))
+        return qp.from_json(result)
+
+
+class RemoteModelOperations(RemoteTableOperations[models.Model, models.ModelCreate]):
+    """Extended remote client for Model table with custom operations."""
+
+    async def load(
+        self,
+        path: Path | str,
+        load_type: LoadType = LoadType.in_place,
+        *,
+        validate: bool = True,
+        **data: Any,
+    ) -> models.Model:
+        """Load a model from a file.
+
+        Parameters
+        ----------
+        path : Path | str
+            Path to the model file
+        load_type : LoadType
+            How to handle the file (in_place, link, or copy)
+        validate : bool
+            Whether to validate data on the server (default: True)
+        **data
+            Additional fields for the model record
+
+        Returns
+        -------
+        models.Model
+            Created model row
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+        """
+        request_body = {
+            "path": str(path),
+            "load_type": load_type.value,
+            "data": data,
+        }
+
+        response = await self.client.post(
+            f"{self.endpoint}/load",
+            json=request_body,
+            params={"validate": validate},
+        )
+
+        result = cast(dict[str, Any], self._handle_response(response, expected_status=201))
+        return models.Model(**result)

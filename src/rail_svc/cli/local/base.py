@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 from typing import Any, TypeVar, cast
 
 import aiofiles
@@ -9,7 +10,8 @@ import click
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.exc import IntegrityError
 
-from ...common import unexpected
+from ... import local_sync
+from ...common import LoadType, unexpected
 from ...db.base import Base
 from ...db.session import init_db
 from ...local_sync.base import SyncOperations
@@ -1352,3 +1354,327 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
         self.register_count_filtered_rows()
         self.register_find_by()
         self.register_find_one_by()
+
+
+def make_table_group(name: str, ops: Any, desc: str) -> click.Group:
+    """Create table CLI group with all commands."""
+
+    @click.group(name=name, help=desc)
+    def grp() -> None:  # pragma: no cover
+        pass
+
+    cli_ops = CliOperations(ops, grp)
+    cli_ops.register_all_create_commands()
+    cli_ops.register_all_read_commands()
+    cli_ops.register_all_update_commands()
+    cli_ops.register_all_delete_commands()
+    cli_ops.register_all_filter_commands()
+    return grp
+
+
+algo_group = make_table_group("algorithm", local_sync.algorithm, "Manage Algorithm table")
+
+band_group = make_table_group("band", local_sync.band, "Manage Band table")
+
+catalog_band_assoc_group = make_table_group(
+    "catalog-band-assoc", local_sync.catalog_band_assoc, "Manage CatalogBandAssoc table"
+)
+
+catalog_tag_group = make_table_group("catalog-tag", local_sync.catalog_tag, "Manage CatalogTag table")
+
+dataset_group = make_table_group("dataset", local_sync.dataset, "Manage Dataset table")
+
+dataset_assoc_group = make_table_group("dataset-assoc", local_sync.dataset_assoc, "Manage DatasetAssoc table")
+
+estimates_group = make_table_group("estimates", local_sync.estimates, "Manage Estimates table")
+
+estimator_group = make_table_group("estimator", local_sync.estimator, "Manage Estimator table")
+
+model_group = make_table_group("model", local_sync.model, "Manage Model table")
+
+
+@dataset_group.command(
+    name="load",
+)
+@common_options.path()
+@common_options.load_type()
+@common_options.output()
+@click.option("--from-json", type=click.Path(exists=True), help="Path to JSON file containing row data")
+@click.option("--no-validate", is_flag=True, help="Skip Pydantic validation")
+@click.argument("fields", nargs=-1)
+def dataset_load(
+    path: Path | str,
+    load_type: LoadType,
+    output: OutputEnum,
+    from_json: str | None,
+    *,
+    no_validate: bool,
+    fields: tuple[str, ...],
+) -> None:
+    """Load a dataset from a file.
+
+    Provide fields as KEY=VALUE pairs, or use --from-json to load from a file.
+    The --path option specifies the data file to load.
+    The --load-type option specifies how to handle the file (in_place, link, or copy).
+    """
+    # Ensure database engine is initialized
+    init_db()
+
+    # Parse input (same pattern as create_row)
+    if from_json:
+        try:
+            with open(from_json, encoding="utf-8") as f:
+                row_data = json.load(f)
+        except json.JSONDecodeError as exc:
+            click.echo(f"Error: Invalid JSON: {exc}", err=True)
+            raise click.Abort()
+        except OSError as exc:
+            click.echo(f"Error: Cannot read file: {exc}", err=True)
+            raise click.Abort()
+    else:
+        # Parse KEY=VALUE arguments
+        row_data = {}
+        for field in fields:
+            if "=" not in field:
+                click.echo(f"Error: Invalid field format '{field}'. Use KEY=VALUE format.", err=True)
+                raise click.Abort()
+
+            key, value = field.split("=", 1)
+            # Try to parse as JSON for complex types
+            try:
+                row_data[key] = json.loads(value)
+            except json.JSONDecodeError:
+                # Keep as string if not valid JSON
+                row_data[key] = value
+
+    try:
+        row = local_sync.dataset.load(
+            path=path,
+            load_type=load_type,
+            validate=not no_validate,
+            **row_data,
+        )
+        click.echo(f"Successfully loaded dataset from {path}")
+        print(output_pydantic([row], output, local_sync.dataset.ctx.response_class.col_names_for_table))  # type: ignore
+
+    except Exception as exc:
+        logger.error("Error loading dataset", exc_info=True)
+        click.echo(f"Error loading dataset: {exc}", err=True)
+        raise click.Abort()
+
+
+@dataset_group.command(
+    name="read-slice",
+)
+@common_options.slice_option()
+@common_options.output()
+@click.argument("row_id", type=int)
+def dataset_read_slice(
+    row_id: int,
+    output: OutputEnum,
+    slice: slice | None,
+) -> None:
+    """Read a slice of data from a dataset.
+
+    Use --slice to specify a Python slice notation (e.g., '1:5', '::2', ':10').
+    If no slice is provided, reads the entire dataset.
+    """
+    # Ensure database engine is initialized
+    init_db()
+
+    try:
+        data = local_sync.dataset.read_slice(row=row_id, the_slice=slice)
+
+        # Output the data (this will depend on what format read_slice returns)
+        # Assuming it returns something that can be displayed
+        if output == OutputEnum.json:
+            click.echo(json.dumps(data, indent=2, default=str))
+        else:
+            click.echo(data)
+
+    except Exception as exc:
+        logger.error(f"Error reading slice from dataset {row_id}", exc_info=True)
+        click.echo(f"Error reading slice from dataset: {exc}", err=True)
+        raise click.Abort()
+
+
+@estimates_group.command(
+    name="load",
+)
+@common_options.path()
+@common_options.load_type()
+@common_options.output()
+@click.option("--from-json", type=click.Path(exists=True), help="Path to JSON file containing row data")
+@click.option("--no-validate", is_flag=True, help="Skip Pydantic validation")
+@click.argument("fields", nargs=-1)
+def estimates_load(
+    path: Path | str,
+    load_type: LoadType,
+    output: OutputEnum,
+    from_json: str | None,
+    *,
+    no_validate: bool,
+    fields: tuple[str, ...],
+) -> None:
+    """Load estimates from a file.
+
+    Provide fields as KEY=VALUE pairs, or use --from-json to load from a file.
+    The --path option specifies the data file to load.
+    The --load-type option specifies how to handle the file (in_place, link, or copy).
+    """
+    # Ensure database engine is initialized
+    init_db()
+
+    # Parse input
+    if from_json:
+        try:
+            with open(from_json, encoding="utf-8") as f:
+                row_data = json.load(f)
+        except json.JSONDecodeError as exc:
+            click.echo(f"Error: Invalid JSON: {exc}", err=True)
+            raise click.Abort()
+        except OSError as exc:
+            click.echo(f"Error: Cannot read file: {exc}", err=True)
+            raise click.Abort()
+    else:
+        # Parse KEY=VALUE arguments
+        row_data = {}
+        for field in fields:
+            if "=" not in field:
+                click.echo(f"Error: Invalid field format '{field}'. Use KEY=VALUE format.", err=True)
+                raise click.Abort()
+
+            key, value = field.split("=", 1)
+            try:
+                row_data[key] = json.loads(value)
+            except json.JSONDecodeError:
+                row_data[key] = value
+
+    try:
+        row = local_sync.estimates.load(
+            path=path,
+            load_type=load_type,
+            validate=not no_validate,
+            **row_data,
+        )
+        click.echo(f"Successfully loaded estimates from {path}")
+        print(output_pydantic([row], output, local_sync.estimates.ctx.response_class.col_names_for_table))  # type: ignore
+
+    except Exception as exc:
+        logger.error("Error loading estimates", exc_info=True)
+        click.echo(f"Error loading estimates: {exc}", err=True)
+        raise click.Abort()
+
+
+@estimates_group.command(
+    name="read-slice",
+)
+@common_options.output()
+@common_options.slice_option()
+@click.argument("row_id", type=int)
+def estimates_read_slice(
+    row_id: int,
+    output: OutputEnum,
+    slice: slice | None,
+) -> None:
+    """Read a slice of data from estimates.
+
+    Use --slice to specify a Python slice notation (e.g., '1:5', '::2', ':10').
+    If no slice is provided, reads the entire estimates data.
+    """
+    # Ensure database engine is initialized
+    init_db()
+
+    try:
+        data = local_sync.estimates.read_slice(row=row_id, the_slice=slice)
+        # Output the data
+        if output == OutputEnum.json:
+            click.echo(json.dumps(data, indent=2, default=str))
+        else:
+            click.echo(data)
+
+    except Exception as exc:
+        logger.error(f"Error reading slice from estimates {row_id}", exc_info=True)
+        click.echo(f"Error reading slice from estimates: {exc}", err=True)
+        raise click.Abort()
+
+
+@model_group.command(
+    name="load",
+)
+@common_options.path()
+@common_options.load_type()
+@common_options.output()
+@click.option("--from-json", type=click.Path(exists=True), help="Path to JSON file containing row data")
+@click.option("--no-validate", is_flag=True, help="Skip Pydantic validation")
+@click.argument("fields", nargs=-1)
+def model_load(
+    path: Path | str,
+    load_type: LoadType,
+    output: OutputEnum,
+    from_json: str | None,
+    *,
+    no_validate: bool,
+    fields: tuple[str, ...],
+) -> None:
+    """Load a model from a file.
+
+    Provide fields as KEY=VALUE pairs, or use --from-json to load from a file.
+    The --path option specifies the data file to load.
+    The --load-type option specifies how to handle the file (in_place, link, or copy).
+    """
+    # Ensure database engine is initialized
+    init_db()
+
+    # Parse input
+    if from_json:
+        try:
+            with open(from_json, encoding="utf-8") as f:
+                row_data = json.load(f)
+        except json.JSONDecodeError as exc:
+            click.echo(f"Error: Invalid JSON: {exc}", err=True)
+            raise click.Abort()
+        except OSError as exc:
+            click.echo(f"Error: Cannot read file: {exc}", err=True)
+            raise click.Abort()
+    else:
+        # Parse KEY=VALUE arguments
+        row_data = {}
+        for field in fields:
+            if "=" not in field:
+                click.echo(f"Error: Invalid field format '{field}'. Use KEY=VALUE format.", err=True)
+                raise click.Abort()
+
+            key, value = field.split("=", 1)
+            try:
+                row_data[key] = json.loads(value)
+            except json.JSONDecodeError:
+                row_data[key] = value
+
+    try:
+        row = local_sync.model.load(
+            path=path,
+            load_type=load_type,
+            validate=not no_validate,
+            **row_data,
+        )
+        click.echo(f"Successfully loaded model from {path}")
+        print(output_pydantic([row], output, local_sync.model.ctx.response_class.col_names_for_table))  # type: ignore
+
+    except Exception as exc:
+        logger.error("Error loading model", exc_info=True)
+        click.echo(f"Error loading model: {exc}", err=True)
+        raise click.Abort()
+
+
+all_table_groups = [
+    algo_group,
+    band_group,
+    catalog_band_assoc_group,
+    catalog_tag_group,
+    dataset_group,
+    dataset_assoc_group,
+    estimates_group,
+    estimator_group,
+    model_group,
+]

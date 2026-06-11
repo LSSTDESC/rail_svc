@@ -3,7 +3,7 @@ from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import APIRouter, FastAPI, Request, status
+from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -11,65 +11,11 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from .. import local_async
 from ..db.session import init_db
-from .base import create_table_router
+from .base import all_routers
 
 # Configure logging
 logger = logging.getLogger(__name__)
-
-
-# Create routers for each table
-def create_all_routers() -> list[APIRouter]:
-    """Create all table routers.
-
-    Returns
-    -------
-    list[APIRouter]
-        List of all FastAPI routers to include in the app
-
-    Note
-    ----
-    Each router is created with its corresponding operations instance from local_async.
-    The type parameters (T, ResponseT, CreateT) are inferred from the operations instance.
-    """
-
-    routers = [
-        create_table_router(
-            "algorithm",
-            local_async.algorithm,
-        ),
-        create_table_router(
-            "band",
-            local_async.band,
-        ),
-        create_table_router(
-            "catalog_band_assoc",
-            local_async.catalog_band_assoc,
-        ),
-        create_table_router(
-            "catalog_tag",
-            local_async.catalog_tag,
-        ),
-        create_table_router(
-            "dataset",
-            local_async.dataset,
-        ),
-        create_table_router(
-            "estimate",
-            local_async.estimates,
-        ),
-        create_table_router(
-            "estimator",
-            local_async.estimator,
-        ),
-        create_table_router(
-            "model",
-            local_async.model,
-        ),
-    ]
-
-    return routers
 
 
 def register_all_routers(app: FastAPI, prefix: str = "/api/v1") -> None:
@@ -88,7 +34,7 @@ def register_all_routers(app: FastAPI, prefix: str = "/api/v1") -> None:
     >>> app = FastAPI()
     >>> register_all_routers(app, prefix="/api/v2")
     """
-    for router in create_all_routers():
+    for router in all_routers:
         # Include router with the API version prefix
         app.include_router(router, prefix=prefix)
         logger.info(f"Registered router: {router.prefix} at {prefix}{router.prefix}")

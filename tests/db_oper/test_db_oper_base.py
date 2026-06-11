@@ -10,10 +10,14 @@ from pydantic import BaseModel, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from rail_svc.db import Algorithm
-from rail_svc.db_oper.base import (FileValidatedOperations, TableContext,
-                                   TableOperations, create_operations,
-                                   forward_to_db_funcs,
-                                   forward_to_db_funcs_streaming)
+from rail_svc.db_oper.base import (
+    FileValidatedOperations,
+    TableContext,
+    TableOperations,
+    create_operations,
+    forward_to_db_funcs,
+    forward_to_db_funcs_streaming,
+)
 from rail_svc.models.filtering import Filter, FilterOp
 
 # ============================================================================

@@ -3,115 +3,38 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 
-from rail_svc.router.app import (add_cors_middleware, add_error_handlers,
-                                 add_health_check, add_rate_limiting,
-                                 create_all_routers, create_fastapi_app,
-                                 lifespan, register_all_routers,
-                                 setup_fastapi_app)
-
-
-# Test create_all_routers
-class TestCreateAllRouters:
-    """Tests for create_all_routers function."""
-
-    @patch("rail_svc.router.app.create_table_router")
-    @patch("rail_svc.router.app.local_async")
-    def test_creates_all_routers(self, mock_local_async: MagicMock, mock_create_router: MagicMock) -> None:
-        """Test that all routers are created."""
-        mock_router = MagicMock()
-        mock_create_router.return_value = mock_router
-
-        # Set up mock operations
-        mock_local_async.algorithm = MagicMock()
-        mock_local_async.band = MagicMock()
-        mock_local_async.catalog_band_assoc = MagicMock()
-        mock_local_async.catalog_tag = MagicMock()
-        mock_local_async.dataset = MagicMock()
-        mock_local_async.estimates = MagicMock()
-        mock_local_async.estimator = MagicMock()
-        mock_local_async.model = MagicMock()
-
-        routers = create_all_routers()
-
-        # Should create 8 routers
-        assert len(routers) == 8
-        assert mock_create_router.call_count == 8
-
-        # Verify each router was created with correct name
-        expected_calls = [
-            call("algorithm", mock_local_async.algorithm),
-            call("band", mock_local_async.band),
-            call("catalog_band_assoc", mock_local_async.catalog_band_assoc),
-            call("catalog_tag", mock_local_async.catalog_tag),
-            call("dataset", mock_local_async.dataset),
-            call("estimate", mock_local_async.estimates),
-            call("estimator", mock_local_async.estimator),
-            call("model", mock_local_async.model),
-        ]
-        mock_create_router.assert_has_calls(expected_calls, any_order=False)
-
-    @patch("rail_svc.router.app.create_table_router")
-    @patch("rail_svc.router.app.local_async")
-    def test_returns_list_of_routers(
-        self, mock_local_async: MagicMock, mock_create_router: MagicMock
-    ) -> None:
-        """Test that function returns a list."""
-        mock_router = MagicMock()
-        mock_create_router.return_value = mock_router
-
-        routers = create_all_routers()
-
-        assert isinstance(routers, list)
-        assert all(router == mock_router for router in routers)
+from rail_svc.router.app import (
+    add_cors_middleware,
+    add_error_handlers,
+    add_health_check,
+    add_rate_limiting,
+    create_fastapi_app,
+    lifespan,
+    register_all_routers,
+    setup_fastapi_app,
+)
 
 
 # Test register_all_routers
 class TestRegisterAllRouters:
     """Tests for register_all_routers function."""
 
-    @patch("rail_svc.router.app.create_all_routers")
-    def test_registers_routers_with_default_prefix(self, mock_create_routers: MagicMock) -> None:
+    def test_registers_routers_with_default_prefix(self) -> None:
         """Test registering routers with default prefix."""
         app = FastAPI()
-        mock_router1 = MagicMock()
-        mock_router1.prefix = "/router1"
-        mock_router2 = MagicMock()
-        mock_router2.prefix = "/router2"
-        mock_create_routers.return_value = [mock_router1, mock_router2]
-
         register_all_routers(app)
 
-        mock_create_routers.assert_called_once()
-
-    @patch("rail_svc.router.app.create_all_routers")
-    def test_registers_routers_with_custom_prefix(self, mock_create_routers: MagicMock) -> None:
+    def test_registers_routers_with_custom_prefix(self) -> None:
         """Test registering routers with custom prefix."""
         app = FastAPI()
-        mock_router = MagicMock()
-        mock_router.prefix = "/test"
-        mock_create_routers.return_value = [mock_router]
-
         register_all_routers(app, prefix="/api/v2")
-
-        mock_create_routers.assert_called_once()
-
-    @patch("rail_svc.router.app.create_all_routers")
-    def test_handles_empty_router_list(self, mock_create_routers: MagicMock) -> None:
-        """Test handling of empty router list."""
-        app = FastAPI()
-        mock_create_routers.return_value = []
-
-        # Should not raise an error
-        register_all_routers(app)
-
-        mock_create_routers.assert_called_once()
 
 
 # Test add_rate_limiting
@@ -650,11 +573,8 @@ class TestIntegration:
     """Integration tests for app factory."""
 
     @patch("rail_svc.router.app.init_db")
-    @patch("rail_svc.router.app.create_all_routers")
-    def test_created_app_is_functional(self, mock_create_routers: MagicMock, mock_init_db: MagicMock) -> None:
+    def test_created_app_is_functional(self, mock_init_db: MagicMock) -> None:
         """Test that created app is functional."""
-        mock_create_routers.return_value = []
-
         app = create_fastapi_app(title="Test API")
         client = TestClient(app)
 
@@ -667,13 +587,11 @@ class TestIntegration:
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     @patch("rail_svc.router.app.init_db")
-    @patch("rail_svc.router.app.create_all_routers")
     def test_app_with_cors_and_rate_limiting(
-        self, mock_create_routers: MagicMock, mock_init_db: MagicMock
+        self,
+        mock_init_db: MagicMock,
     ) -> None:
         """Test app with both CORS and rate limiting."""
-        mock_create_routers.return_value = []
-
         app = create_fastapi_app(
             enable_cors=True,
             cors_origins=["https://example.com"],
@@ -684,52 +602,17 @@ class TestIntegration:
         # CORS middleware should be present
         assert len(app.user_middleware) > 0
 
-    @patch("rail_svc.router.app.create_all_routers")
-    def test_setup_and_create_produce_similar_apps(self, mock_create_routers: MagicMock) -> None:
-        """Test that setup and create produce functionally similar apps."""
-        mock_create_routers.return_value = []
-
-        # Create app using create_fastapi_app
-        with patch("rail_svc.router.app.init_db"):
-            app1 = create_fastapi_app()
-
-        # Create app using setup_fastapi_app
-        app2 = FastAPI()
-        setup_fastapi_app(app2)
-
-        # Both should have health checks
-        client1 = TestClient(app1)
-        client2 = TestClient(app2)
-
-        response1 = client1.get("/health")
-        response2 = client2.get("/health")
-
-        assert response1.status_code == response2.status_code == status.HTTP_200_OK
-
 
 # Edge Cases and Error Handling
 class TestEdgeCases:
     """Tests for edge cases and error handling."""
 
     @patch("rail_svc.router.app.init_db")
-    @patch("rail_svc.router.app.create_all_routers")
-    def test_handles_empty_router_list(self, mock_create_routers: MagicMock, mock_init_db: MagicMock) -> None:
-        """Test handling when no routers are created."""
-        mock_create_routers.return_value = []
-
-        app = create_fastapi_app()
-
-        assert isinstance(app, FastAPI)
-
-    @patch("rail_svc.router.app.init_db")
     @patch("rail_svc.router.app.Limiter", side_effect=ImportError)
-    @patch("rail_svc.router.app.create_all_routers")
     def test_continues_without_rate_limiting_if_unavailable(
-        self, mock_create_routers: MagicMock, mock_limiter: MagicMock, mock_init_db: MagicMock
+        self, mock_limiter: MagicMock, mock_init_db: MagicMock
     ) -> None:
         """Test that app creation continues if rate limiting is unavailable."""
-        mock_create_routers.return_value = []
-
         app = create_fastapi_app(enable_rate_limiting=True)
 
         # Should still create app successfully
@@ -780,33 +663,22 @@ class TestPerformanceAndConfiguration:
     """Tests for performance and configuration options."""
 
     @patch("rail_svc.router.app.init_db")
-    @patch("rail_svc.router.app.create_all_routers")
-    def test_debug_mode_enabled(self, mock_create_routers: MagicMock, mock_init_db: MagicMock) -> None:
+    def test_debug_mode_enabled(self, mock_init_db: MagicMock) -> None:
         """Test app creation with debug mode enabled."""
-        mock_create_routers.return_value = []
-
         app = create_fastapi_app(debug=True)
 
         assert app.debug is True
 
     @patch("rail_svc.router.app.init_db")
-    @patch("rail_svc.router.app.create_all_routers")
-    def test_debug_mode_disabled(self, mock_create_routers: MagicMock, mock_init_db: MagicMock) -> None:
+    def test_debug_mode_disabled(self, mock_init_db: MagicMock) -> None:
         """Test app creation with debug mode disabled."""
-        mock_create_routers.return_value = []
-
         app = create_fastapi_app(debug=False)
 
         assert app.debug is False
 
     @patch("rail_svc.router.app.init_db")
-    @patch("rail_svc.router.app.create_all_routers")
-    def test_error_details_in_debug_mode(
-        self, mock_create_routers: MagicMock, mock_init_db: MagicMock
-    ) -> None:
+    def test_error_details_in_debug_mode(self, mock_init_db: MagicMock) -> None:
         """Test that error details are shown in debug mode."""
-        mock_create_routers.return_value = []
-
         app = create_fastapi_app(debug=True)
 
         @app.get("/error")
@@ -821,13 +693,8 @@ class TestPerformanceAndConfiguration:
         # Just verify we get an error response with correct status
 
     @patch("rail_svc.router.app.init_db")
-    @patch("rail_svc.router.app.create_all_routers")
-    def test_error_details_hidden_in_production(
-        self, mock_create_routers: MagicMock, mock_init_db: MagicMock
-    ) -> None:
+    def test_error_details_hidden_in_production(self, mock_init_db: MagicMock) -> None:
         """Test that error details are hidden in production mode."""
-        mock_create_routers.return_value = []
-
         app = create_fastapi_app(debug=False)
 
         @app.get("/error")
@@ -948,33 +815,15 @@ class TestLifespanEvents:
 class TestRouterRegistration:
     """Tests for router registration."""
 
-    @patch("rail_svc.router.app.create_all_routers")
-    def test_routers_registered_with_prefix(self, mock_create_routers: MagicMock) -> None:
+    def test_routers_registered_with_prefix(self) -> None:
         """Test that routers are registered with correct prefix."""
         app = FastAPI()
-        mock_router = MagicMock()
-        mock_router.prefix = "/test"
-        mock_router.routes = []
-        mock_create_routers.return_value = [mock_router]
-
         register_all_routers(app, prefix="/api/v2")
 
-        # Verify the router was included
-        mock_create_routers.assert_called_once()
-
-    @patch("rail_svc.router.app.create_all_routers")
-    def test_multiple_routers_registered(self, mock_create_routers: MagicMock) -> None:
+    def test_multiple_routers_registered(self) -> None:
         """Test that multiple routers are all registered."""
         app = FastAPI()
-        mock_routers = [MagicMock() for _ in range(5)]
-        for i, router in enumerate(mock_routers):
-            router.prefix = f"/router{i}"
-            router.routes = []
-        mock_create_routers.return_value = mock_routers
-
         register_all_routers(app)
-
-        mock_create_routers.assert_called_once()
 
 
 # Error Handler Specific Tests

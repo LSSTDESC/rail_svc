@@ -8,7 +8,8 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from rail_svc.cli.remote.top import TABLES, cli, make_table_group
+from rail_svc.cli.remote.top import cli
+from rail_svc.cli.remote.base import make_table_group
 
 
 class TestMakeTableGroup:
@@ -35,21 +36,6 @@ class TestMakeTableGroup:
         make_table_group("test", mock_factory, "Test description")
 
         mock_factory.assert_called_once()
-
-
-class TestTablesConfiguration:
-    """Tests for TABLES configuration."""
-
-    def test_tables_structure(self) -> None:
-        """Test that TABLES has valid structure."""
-        assert isinstance(TABLES, list)
-        assert len(TABLES) > 0
-
-        for table in TABLES:
-            assert len(table) == 3
-            assert isinstance(table[0], str)  # name
-            assert callable(table[1])  # factory
-            assert isinstance(table[2], str)  # description
 
 
 class TestCliBasics:

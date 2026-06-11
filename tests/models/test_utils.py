@@ -6,10 +6,15 @@ import pytest
 import yaml
 from pydantic import BaseModel
 
-from rail_svc.models.utils import (OutputEnum, display_table, format_output,
-                                   output_json, output_pydantic,
-                                   output_pydantic_list,
-                                   output_pydantic_single)
+from rail_svc.models.utils import (
+    OutputEnum,
+    display_table,
+    format_output,
+    output_json,
+    output_pydantic,
+    output_pydantic_list,
+    output_pydantic_single,
+)
 
 
 class TestOutputEnum:

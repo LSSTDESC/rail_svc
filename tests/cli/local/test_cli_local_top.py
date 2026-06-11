@@ -9,7 +9,8 @@ import pytest
 from click.testing import CliRunner
 
 from rail_svc import __version__
-from rail_svc.cli.local.top import TABLES, cli, init, make_table_group
+from rail_svc.cli.local.base import make_table_group
+from rail_svc.cli.local.top import cli, init
 
 
 # Fixtures
@@ -133,28 +134,6 @@ class TestMakeTableGroup:
         group = make_table_group("test", mock_ops, "Test description")
 
         assert group.help == "Test description"
-
-
-# Test TABLES constant
-class TestTablesConstant:
-    """Tests for TABLES constant."""
-
-    def test_tables_is_list(self) -> None:
-        """Test that TABLES is a list."""
-        assert isinstance(TABLES, list)
-
-    def test_tables_not_empty(self) -> None:
-        """Test that TABLES is not empty."""
-        assert len(TABLES) > 0
-
-    def test_tables_structure(self) -> None:
-        """Test that each table entry has correct structure."""
-        for table in TABLES:
-            assert isinstance(table, tuple)
-            assert len(table) == 3
-            assert isinstance(table[0], str)  # name
-            # table[1] is operations object
-            assert isinstance(table[2], str)  # description
 
 
 # Test main CLI group
@@ -328,16 +307,6 @@ class TestAsyncExecution:
 
         # asyncio.run should be called with async function
         assert mock_asyncio_run.called
-
-
-# Test CLI completeness
-class TestCLICompleteness:
-    """Tests for CLI completeness and consistency."""
-
-    def test_no_duplicate_table_names(self) -> None:
-        """Test that there are no duplicate table names."""
-        names = [t[0] for t in TABLES]
-        assert len(names) == len(set(names))
 
 
 # Test edge cases

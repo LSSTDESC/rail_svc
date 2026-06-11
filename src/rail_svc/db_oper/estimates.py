@@ -16,10 +16,12 @@ File validation includes:
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import qp
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import db, db_funcs, models
+from ..rail_funcs.catalog_funcs import read_estimates_slice
 from .base import FileValidatedOperations, TableContext
 
 __all__ = ["EstimatesOperations", "estimates"]
@@ -165,6 +167,20 @@ class EstimatesOperations(FileValidatedOperations[db.Estimates, models.Estimates
 
         """
         return qp.data_length(str(path))
+
+    def get_subdirectory(self) -> str:
+        """Get the subdirectory to store files in"""
+        return "estimates"
+
+    async def read_slice(
+        self,
+        session: AsyncSession,
+        row: int,
+        the_slice: slice | int | None = None,
+    ) -> dict[str, np.ndarray]:
+
+        the_estimates = await self.get_row(session, row)
+        return read_estimates_slice(the_estimates.path, the_slice)
 
 
 # Module-level singleton

@@ -10,7 +10,12 @@ from typing import Any, TypeVar
 from pydantic import BaseModel
 
 from .. import models
-from ..remote_async.base import AsyncRemoteOperations
+from ..remote_async.base import (
+    AsyncRemoteOperations,
+    AsyncRemoteDatasetOperations,
+    AsyncRemoteEstimatesOperations,
+    AsyncRemoteModelOperations,
+)
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -212,6 +217,16 @@ class CatalogTagSyncRemoteOperations(SyncRemoteOperations[models.CatalogTag, mod
 class DatasetSyncRemoteOperations(SyncRemoteOperations[models.Dataset, models.DatasetCreate]):
     """Sync wrapper for remote operations on Dataset table."""
 
+    async_ops: AsyncRemoteDatasetOperations
+
+    @sync_wrapper(AsyncRemoteDatasetOperations.load)
+    def load(self, *args: Any, **kwargs: Any) -> models.Dataset:
+        return self.async_ops.load(*args, **kwargs)  # type: ignore
+
+    @sync_wrapper(AsyncRemoteDatasetOperations.read_slice)
+    def read_slice(self, *args: Any, **kwargs: Any) -> Any:
+        return self.async_ops.read_slice(*args, **kwargs)
+
 
 class DatasetAssocSyncRemoteOperations(SyncRemoteOperations[models.DatasetAssoc, models.DatasetAssocCreate]):
     """Sync wrapper for remote operations on DatasetAssoc table."""
@@ -220,6 +235,16 @@ class DatasetAssocSyncRemoteOperations(SyncRemoteOperations[models.DatasetAssoc,
 class EstimatesSyncRemoteOperations(SyncRemoteOperations[models.Estimates, models.EstimatesCreate]):
     """Sync wrapper for remote operations on Estimates table."""
 
+    async_ops: AsyncRemoteEstimatesOperations
+
+    @sync_wrapper(AsyncRemoteEstimatesOperations.load)
+    def load(self, *args: Any, **kwargs: Any) -> models.Estimates:
+        return self.async_ops.load(*args, **kwargs)  # type: ignore
+
+    @sync_wrapper(AsyncRemoteEstimatesOperations.read_slice)
+    def read_slice(self, *args: Any, **kwargs: Any) -> Any:
+        return self.async_ops.read_slice(*args, **kwargs)
+
 
 class EstimatorSyncRemoteOperations(SyncRemoteOperations[models.Estimator, models.EstimatorCreate]):
     """Sync wrapper for remote operations on Estimator table."""
@@ -227,3 +252,9 @@ class EstimatorSyncRemoteOperations(SyncRemoteOperations[models.Estimator, model
 
 class ModelSyncRemoteOperations(SyncRemoteOperations[models.Model, models.ModelCreate]):
     """Sync wrapper for remote operations on Model table."""
+
+    async_ops: AsyncRemoteModelOperations
+
+    @sync_wrapper(AsyncRemoteModelOperations.load)
+    def load(self, *args: Any, **kwargs: Any) -> models.Model:
+        return self.async_ops.load(*args, **kwargs)  # type: ignore

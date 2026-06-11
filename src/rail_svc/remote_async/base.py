@@ -8,7 +8,14 @@ from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
-from ..client.base import RemoteAPI, RemoteTableOperations
+from ..client.base import (
+    RemoteAPI,
+    RemoteTableOperations,
+    RemoteDatasetOperations,
+    RemoteEstimatesOperations,
+    RemoteModelOperations,
+)
+from .. import models
 
 # Type variables
 ResponseT = TypeVar("ResponseT", bound=BaseModel)
@@ -89,6 +96,7 @@ class AsyncRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
         api_prefix: str = "/api/v1",
         timeout: float = 30.0,
         auth_token: str | None = None,
+        client_class: type[RemoteTableOperations] | None = None,
     ) -> None:
         """Initialize the async remote table operations.
 
@@ -108,6 +116,8 @@ class AsyncRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
             Request timeout in seconds, by default 30.0
         auth_token : str | None, optional
             Authentication token for API requests, by default None
+        client_class : type[RemoteTableOperations] | None, optional
+            Custom client class to use instead of default RemoteTableOperations
         """
         self.base_url = base_url
         self.table_name = table_name
@@ -120,6 +130,7 @@ class AsyncRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
         self._client: RemoteTableOperations[ResponseT, CreateT] | None = None
         self._owns_api = False
         self._has_warned = False
+        self.client_class = client_class
 
     async def __aenter__(self) -> AsyncRemoteOperations:
         """Enter async context manager.
@@ -138,11 +149,23 @@ class AsyncRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
             auth_token=self.auth_token,
         )
         await self._api.__aenter__()
-        self._client = self._api.table(
-            self.table_name,
-            self.response_model,
-            self.create_model,
-        )
+
+        # Use custom client class if provided
+        if self.client_class:
+            endpoint = f"{self.base_url}{self.api_prefix}/{self.table_name}"
+            assert self._api.client
+            self._client = self.client_class(
+                client=self._api.client,
+                endpoint=endpoint,
+                response_model=self.response_model,
+                create_model=self.create_model,
+            )
+        else:
+            self._client = self._api.table(
+                self.table_name,
+                self.response_model,
+                self.create_model,
+            )
         self._owns_api = True
         return self
 
@@ -207,6 +230,18 @@ class AsyncRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
             timeout=self.timeout,
             auth_token=self.auth_token,
         )
+
+        # Use custom client class if provided
+        if self.client_class:
+            endpoint = f"{self.base_url}{self.api_prefix}/{self.table_name}"
+            assert api.client
+
+            return self.client_class(
+                client=api.client,
+                endpoint=endpoint,
+                response_model=self.response_model,
+                create_model=self.create_model,
+            )
 
         return api.table(
             self.table_name,
@@ -412,3 +447,63 @@ class AsyncRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
         **kwargs: Any,
     ) -> ResponseT:
         return await client.find_one_by(*args, **kwargs)
+
+
+# In remote/base.py - add these specialized classes after RemoteModelOperations
+
+
+class AsyncRemoteDatasetOperations(AsyncRemoteOperations[models.Dataset, models.DatasetCreate]):
+    """Extended async remote operations for Dataset table with custom operations."""
+
+    @with_client
+    async def load(
+        self,
+        client: RemoteDatasetOperations,
+        *args: Any,
+        **kwargs: Any,
+    ) -> models.Dataset:
+        return await client.load(*args, **kwargs)
+
+    @with_client
+    async def read_slice(
+        self,
+        client: RemoteDatasetOperations,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        return await client.read_slice(*args, **kwargs)
+
+
+class AsyncRemoteEstimatesOperations(AsyncRemoteOperations[models.Estimates, models.EstimatesCreate]):
+    """Extended async remote operations for Estimates table with custom operations."""
+
+    @with_client
+    async def load(
+        self,
+        client: RemoteEstimatesOperations,
+        *args: Any,
+        **kwargs: Any,
+    ) -> models.Estimates:
+        return await client.load(*args, **kwargs)
+
+    @with_client
+    async def read_slice(
+        self,
+        client: RemoteEstimatesOperations,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        return await client.read_slice(*args, **kwargs)
+
+
+class AsyncRemoteModelOperations(AsyncRemoteOperations[models.Model, models.ModelCreate]):
+    """Extended async remote operations for Model table with custom operations."""
+
+    @with_client
+    async def load(
+        self,
+        client: RemoteModelOperations,
+        *args: Any,
+        **kwargs: Any,
+    ) -> models.Model:
+        return await client.load(*args, **kwargs)

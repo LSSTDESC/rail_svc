@@ -2,32 +2,35 @@ from __future__ import annotations
 
 import logging
 from types import TracebackType
-from typing import Final, TypeVar
+from typing import Final
 
 from pydantic import BaseModel
 
 from .. import models
-from .base import RemoteAPI, RemoteTableOperations
+from .base import (
+    RemoteAPI,
+    RemoteDatasetOperations,
+    RemoteEstimatesOperations,
+    RemoteModelOperations,
+    RemoteTableOperations,
+)
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Type variables for generic operations
-T = TypeVar("T")  # Database model type
-ResponseT = TypeVar("ResponseT", bound=BaseModel)  # Response schema type
-CreateT = TypeVar("CreateT", bound=BaseModel)  # Create schema type
 
-
-# Define table configuration
-TABLE_CONFIGS: Final[dict[str, tuple[type[BaseModel], type[BaseModel]]]] = {
-    "algorithms": (models.Algorithm, models.AlgorithmCreate),
-    "bands": (models.Band, models.BandCreate),
-    "catalog_band_assocs": (models.CatalogBandAssoc, models.CatalogBandAssocCreate),
-    "catalog_tags": (models.CatalogTag, models.CatalogTagCreate),
-    "datasets": (models.Dataset, models.DatasetCreate),
-    "estimates": (models.Estimates, models.EstimatesCreate),
-    "estimators": (models.Estimator, models.EstimatorCreate),
-    "models": (models.Model, models.ModelCreate),
+# Define table configuration with optional custom client class
+TABLE_CONFIGS: Final[
+    dict[str, tuple[type[BaseModel], type[BaseModel], type[RemoteTableOperations] | None]]
+] = {
+    "algorithms": (models.Algorithm, models.AlgorithmCreate, None),
+    "bands": (models.Band, models.BandCreate, None),
+    "catalog_band_assocs": (models.CatalogBandAssoc, models.CatalogBandAssocCreate, None),
+    "catalog_tags": (models.CatalogTag, models.CatalogTagCreate, None),
+    "datasets": (models.Dataset, models.DatasetCreate, RemoteDatasetOperations),
+    "estimates": (models.Estimates, models.EstimatesCreate, RemoteEstimatesOperations),
+    "estimators": (models.Estimator, models.EstimatorCreate, None),
+    "models": (models.Model, models.ModelCreate, RemoteModelOperations),
 }
 
 
@@ -46,6 +49,11 @@ class RemoteDatabase:
         self.timeout = timeout
         self.auth_token = auth_token
         self._api: RemoteAPI | None = None
+
+        # Type hints for specialized clients
+        self.datasets: RemoteDatasetOperations
+        self.estimates: RemoteEstimatesOperations
+        self.models: RemoteModelOperations
 
     async def __aenter__(self) -> RemoteDatabase:
         self._api = RemoteAPI(
@@ -71,8 +79,21 @@ class RemoteDatabase:
         """Setup all table clients dynamically."""
         assert self._api is not None, "API not initialized"
 
-        for table_name, (model, create_model) in TABLE_CONFIGS.items():
-            client = self._api.table(table_name, model, create_model)
+        for table_name, (response_model, create_model, custom_class) in TABLE_CONFIGS.items():
+            if custom_class:
+                # Use custom client class
+                endpoint = f"{self.base_url}{self.api_prefix}/{table_name}"
+                assert self._api.client
+                client = custom_class(
+                    client=self._api.client,
+                    endpoint=endpoint,
+                    response_model=response_model,
+                    create_model=create_model,
+                )
+            else:
+                # Use standard client
+                client = self._api.table(table_name, response_model, create_model)
+
             setattr(self, table_name, client)
 
     def list_tables(self) -> list[str]:

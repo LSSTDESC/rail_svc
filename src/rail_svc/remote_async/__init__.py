@@ -11,11 +11,26 @@ Examples
 
 >>> # Or for single operations (less efficient):
 >>> result = await algorithm.get_row(1)
+
+>>> # Using extended dataset operations:
+>>> async with dataset as ops:
+...     loaded = await ops.load(path="/data/file.hdf5", load_type=LoadType.link)
+...     data = await ops.read_slice(row_id=loaded.id, start=0, stop=100)
 """
 
 from .. import models
+from ..client.base import (
+    RemoteDatasetOperations,
+    RemoteEstimatesOperations,
+    RemoteModelOperations,
+)
 from ..config import config as global_config
-from .base import AsyncRemoteOperations
+from .base import (
+    AsyncRemoteDatasetOperations,
+    AsyncRemoteEstimatesOperations,
+    AsyncRemoteModelOperations,
+    AsyncRemoteOperations,
+)
 
 BASE_URL = global_config.client.service_url
 
@@ -37,24 +52,24 @@ catalog_tag: AsyncRemoteOperations[models.CatalogTag, models.CatalogTagCreate] =
     BASE_URL, "catalog_tag", models.CatalogTag, models.CatalogTagCreate
 )
 
-dataset: AsyncRemoteOperations[models.Dataset, models.DatasetCreate] = AsyncRemoteOperations(
-    BASE_URL, "dataset", models.Dataset, models.DatasetCreate
+dataset: AsyncRemoteDatasetOperations = AsyncRemoteDatasetOperations(
+    BASE_URL, "dataset", models.Dataset, models.DatasetCreate, client_class=RemoteDatasetOperations
 )
 
 dataset_assoc: AsyncRemoteOperations[models.DatasetAssoc, models.DatasetAssocCreate] = AsyncRemoteOperations(
     BASE_URL, "dataset_assoc", models.DatasetAssoc, models.DatasetAssocCreate
 )
 
-estimates: AsyncRemoteOperations[models.Estimates, models.EstimatesCreate] = AsyncRemoteOperations(
-    BASE_URL, "estimates", models.Estimates, models.EstimatesCreate
+estimates: AsyncRemoteEstimatesOperations = AsyncRemoteEstimatesOperations(
+    BASE_URL, "estimates", models.Estimates, models.EstimatesCreate, client_class=RemoteEstimatesOperations
 )
 
 estimator: AsyncRemoteOperations[models.Estimator, models.EstimatorCreate] = AsyncRemoteOperations(
     BASE_URL, "estimator", models.Estimator, models.EstimatorCreate
 )
 
-model: AsyncRemoteOperations[models.Model, models.ModelCreate] = AsyncRemoteOperations(
-    BASE_URL, "model", models.Model, models.ModelCreate
+model: AsyncRemoteModelOperations = AsyncRemoteModelOperations(
+    BASE_URL, "model", models.Model, models.ModelCreate, client_class=RemoteModelOperations
 )
 
 __all__ = [
