@@ -239,7 +239,12 @@ class StorageConfiguration(BaseModel):
         description="The path for the import area for files for rail-svc database",
     )
 
-    @field_validator("archive", "import_area")
+    download_area: str = Field(
+        default="rail_svc_downloads",
+        description="The path for the import area for files for rail-svc database",
+    )
+
+    @field_validator("archive", "import_area", "download_area")
     @classmethod
     def ensure_path_exists(cls, v: str) -> str:
         """Ensure storage path exists"""

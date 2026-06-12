@@ -1360,6 +1360,29 @@ def dataset_read_slice(
         raise click.Abort()
 
 
+@dataset_group.command(name="download")
+@click.argument("row_id", type=int)
+@click.option("--output-path", type=click.Path(), help="Optional output path for downloaded file")
+def dataset_download(
+    row_id: int,
+    output_path: str | None,
+) -> None:
+    """Download a dataset file.
+
+    Downloads the dataset file to the local filesystem.
+    If --output-path is not provided, uses the original filename.
+    """
+    remote_sync_ops = remote_sync.dataset()
+    try:
+        file_path = remote_sync_ops.download(row_id=row_id, output_path=output_path)
+        click.echo(f"Successfully downloaded dataset {row_id} to {file_path}")
+
+    except Exception as exc:
+        logger.error(f"Error downloading dataset {row_id}", exc_info=True)
+        click.echo(f"Error downloading dataset: {exc}", err=True)
+        raise click.Abort()
+
+
 # Estimates custom commands
 @estimates_group.command(name="load")
 @common_options.path()
@@ -1449,6 +1472,52 @@ def estimates_read_slice(
         raise click.Abort()
 
 
+@estimates_group.command(name="download")
+@click.argument("row_id", type=int)
+@click.option("--output-path", type=click.Path(), help="Optional output path for downloaded file")
+def estimates_download(
+    row_id: int,
+    output_path: str | None,
+) -> None:
+    """Download an estimates file.
+
+    Downloads the estimates file to the local filesystem.
+    If --output-path is not provided, uses the original filename.
+    """
+    remote_sync_ops = remote_sync.estimates()
+    try:
+        file_path = remote_sync_ops.download(row_id=row_id, output_path=output_path)
+        click.echo(f"Successfully downloaded estimates {row_id} to {file_path}")
+
+    except Exception as exc:
+        logger.error(f"Error downloading estimates {row_id}", exc_info=True)
+        click.echo(f"Error downloading estimates: {exc}", err=True)
+        raise click.Abort()
+
+
+@model_group.command(name="download")
+@click.argument("row_id", type=int)
+@click.option("--output-path", type=click.Path(), help="Optional output path for downloaded file")
+def model_download(
+    row_id: int,
+    output_path: str | None,
+) -> None:
+    """Download a model file.
+
+    Downloads the model file to the local filesystem.
+    If --output-path is not provided, uses the original filename.
+    """
+    remote_sync_ops = remote_sync.model()
+    try:
+        file_path = remote_sync_ops.download(row_id=row_id, output_path=output_path)
+        click.echo(f"Successfully downloaded model {row_id} to {file_path}")
+
+    except Exception as exc:
+        logger.error(f"Error downloading model {row_id}", exc_info=True)
+        click.echo(f"Error downloading model: {exc}", err=True)
+        raise click.Abort()
+
+
 # Model custom commands
 @model_group.command(name="load")
 @common_options.path()
@@ -1495,7 +1564,6 @@ def model_load(
                 row_data[key] = json.loads(value)
             except json.JSONDecodeError:
                 row_data[key] = value
-
 
     remote_sync_ops = remote_sync.model()
     try:

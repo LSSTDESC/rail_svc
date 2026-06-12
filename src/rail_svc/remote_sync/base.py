@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 from functools import wraps
+from pathlib import Path
 from typing import Any, TypeVar
 
 from pydantic import BaseModel
@@ -227,6 +228,10 @@ class DatasetSyncRemoteOperations(SyncRemoteOperations[models.Dataset, models.Da
     def read_slice(self, *args: Any, **kwargs: Any) -> Any:
         return self.async_ops.read_slice(*args, **kwargs)
 
+    @sync_wrapper(AsyncRemoteDatasetOperations.download)
+    def download(self, *args: Any, **kwargs: Any) -> Path:
+        return self.async_ops.download(*args, **kwargs)  # type: ignore
+
 
 class DatasetAssocSyncRemoteOperations(SyncRemoteOperations[models.DatasetAssoc, models.DatasetAssocCreate]):
     """Sync wrapper for remote operations on DatasetAssoc table."""
@@ -245,6 +250,10 @@ class EstimatesSyncRemoteOperations(SyncRemoteOperations[models.Estimates, model
     def read_slice(self, *args: Any, **kwargs: Any) -> Any:
         return self.async_ops.read_slice(*args, **kwargs)
 
+    @sync_wrapper(AsyncRemoteEstimatesOperations.download)
+    def download(self, *args: Any, **kwargs: Any) -> Path:
+        return self.async_ops.download(*args, **kwargs)  # type: ignore
+
 
 class EstimatorSyncRemoteOperations(SyncRemoteOperations[models.Estimator, models.EstimatorCreate]):
     """Sync wrapper for remote operations on Estimator table."""
@@ -258,3 +267,7 @@ class ModelSyncRemoteOperations(SyncRemoteOperations[models.Model, models.ModelC
     @sync_wrapper(AsyncRemoteModelOperations.load)
     def load(self, *args: Any, **kwargs: Any) -> models.Model:
         return self.async_ops.load(*args, **kwargs)  # type: ignore
+
+    @sync_wrapper(AsyncRemoteModelOperations.download)
+    def download(self, *args: Any, **kwargs: Any) -> Path:
+        return self.async_ops.download(*args, **kwargs)  # type: ignore

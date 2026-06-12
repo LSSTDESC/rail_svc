@@ -5,11 +5,12 @@ from collections.abc import AsyncGenerator
 from pathlib import Path
 
 from fastapi import APIRouter, Body, Header, HTTPException, Query, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 import tables_io
 from pydantic import BaseModel, ValidationError
 
 from .. import local_async, models
+from ..config import config as global_config
 from ..common import LoadType, unexpected, str_to_slice
 from ..db.base import Base
 from ..local_async import LocalOperations
@@ -1026,10 +1027,66 @@ async def dataset_read_slice(
         slice_obj = str_to_slice(read_slice)
         data = await local_async.dataset.read_slice(row=row_id, the_slice=slice_obj)  # type: ignore[call-arg]
         json_table = tables_io.convert(data, tables_io.types.JSON_STRING)
-        return {"data":json_table}
+        return {"data": json_table}
 
     except Exception as exc:
         logger.exception(f"Error reading slice from dataset {row_id}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+
+@dataset_router.get("/download/{row_id}")
+async def dataset_download(
+    row_id: int,
+    output_path: str | None = Query(
+        default=None, description="Optional output path relative to download area"
+    ),
+) -> FileResponse:
+    """Download a dataset file.
+
+    Path Parameters:
+        row_id (int): Dataset row ID
+
+    Query Parameters:
+        output_path (str): Optional output path relative to download area (default: same as archive path)
+
+    Returns:
+        200: File download
+        404: Dataset not found
+        500: Internal server error
+    """
+    try:
+        archive_dir = Path(global_config.storage.archive)
+
+        # Get the dataset record
+        result = await local_async.dataset.get_row(row_id)
+        if result is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dataset not found")
+
+        # Get source file path
+        source_path = archive_dir / result.path
+
+        if not source_path.exists():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=f"Dataset file not found at {source_path}"
+            )
+
+        # Determine destination path
+        if output_path:
+            dest_path = output_path
+        else:
+            dest_path = result.path
+
+        # Return file for download
+        return FileResponse(
+            path=source_path,
+            filename=dest_path,
+            media_type="application/octet-stream",
+        )
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(f"Error downloading dataset {row_id}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 
@@ -1110,6 +1167,62 @@ async def estimates_read_slice(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 
+@estimates_router.get("/download/{row_id}")
+async def estimates_download(
+    row_id: int,
+    output_path: str | None = Query(
+        default=None, description="Optional output path relative to download area"
+    ),
+) -> FileResponse:
+    """Download an estimates file.
+
+    Path Parameters:
+        row_id (int): Estimates row ID
+
+    Query Parameters:
+        output_path (str): Optional output path relative to download area (default: same as archive path)
+
+    Returns:
+        200: File download
+        404: Estimates not found
+        500: Internal server error
+    """
+    try:
+        archive_dir = Path(global_config.storage.archive)
+
+        # Get the estimates record
+        result = await local_async.estimates.get_row(row_id)
+        if result is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Estimates not found")
+
+        # Get source file path
+        source_path = archive_dir / result.path
+
+        if not source_path.exists():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=f"Estimates file not found at {source_path}"
+            )
+
+        # Determine destination path
+        if output_path:
+            dest_path = output_path
+        else:
+            dest_path = result.path
+
+        # Return file for download
+        return FileResponse(
+            path=source_path,
+            filename=dest_path,
+            media_type="application/octet-stream",
+        )
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(f"Error downloading estimates {row_id}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+
 @model_router.post("/load", response_model=models.Model, status_code=status.HTTP_201_CREATED)
 async def model_load(
     path: Path | str = Body(...),
@@ -1152,6 +1265,62 @@ async def model_load(
         ) from exc
     except Exception as exc:
         logger.exception("Error loading model")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+
+@model_router.get("/download/{row_id}")
+async def model_download(
+    row_id: int,
+    output_path: str | None = Query(
+        default=None, description="Optional output path relative to download area"
+    ),
+) -> FileResponse:
+    """Download a model file.
+
+    Path Parameters:
+        row_id (int): Model row ID
+
+    Query Parameters:
+        output_path (str): Optional output path relative to download area (default: same as archive path)
+
+    Returns:
+        200: File download
+        404: Model not found
+        500: Internal server error
+    """
+    try:
+        archive_dir = Path(global_config.storage.archive)
+
+        # Get the model record
+        result = await local_async.model.get_row(row_id)
+        if result is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model not found")
+
+        # Get source file path
+        source_path = archive_dir / result.path
+
+        if not source_path.exists():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=f"Model file not found at {source_path}"
+            )
+
+        # Determine destination path
+        if output_path:
+            dest_path = output_path
+        else:
+            dest_path = result.path
+
+        # Return file for download
+        return FileResponse(
+            path=dest_path,
+            filename=source_path.name,
+            media_type="application/octet-stream",
+        )
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(f"Error downloading model {row_id}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 

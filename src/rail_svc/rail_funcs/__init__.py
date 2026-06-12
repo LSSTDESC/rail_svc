@@ -1,6 +1,6 @@
-from . import catalog_funcs, estimation_funcs
+from . import catalog_funcs, wrappers
 
 __all__ = [
     "catalog_funcs",
-    "estimation_funcs",
+    "wrappers",
 ]

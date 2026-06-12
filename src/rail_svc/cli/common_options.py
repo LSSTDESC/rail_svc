@@ -262,6 +262,14 @@ path = PartialOption(
 )
 
 
+output_path = PartialOption(
+    "--output-path",
+    type=click.Path(exists=False, dir_okay=False, writable=True),
+    required=True,
+    help="Output file path",
+)
+
+
 slice_option = PartialOption(
     "--slice", type=str, default=None, callback=parse_slice, help="Slice notation (e.g., '1:5', '::2', ':10')"
 )
@@ -273,4 +281,25 @@ load_type = PartialOption(
     default=LoadType.in_place.value,
     callback=lambda ctx, param, value: LoadType(value) if value else None,
     help="How to load the file: in_place (use file as-is), link (symlink), or copy (duplicate file)",
+)
+
+
+estimator_id = PartialOption(
+    "--estimator-id",
+    type=int,
+    help="Id of the requested estimator",
+)
+
+
+dataset_id = PartialOption(
+    "--dataset-id",
+    type=int,
+    help="Id of the requested dataset",
+)
+
+
+row = PartialOption(
+    "--row",
+    type=int,
+    help="Row index with the dataset",
 )

@@ -7,9 +7,9 @@ import numpy as np
 import qp
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .. import db_oper, models
+from .. import db_oper, models, db
 from ..db.session import get_session
-from ..rail_funcs.estimation_funcs import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
+from ..rail_funcs.wrappers import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
 
 
 def with_transaction(func: Callable) -> Callable:
@@ -25,37 +25,40 @@ def with_transaction(func: Callable) -> Callable:
 
 
 @with_transaction
-async def build_pdf_estimation_wrapper(session: AsyncSession, estimator_id: int) -> CatEstimatorPdfWrapper:
-    return await db_oper.estimation_funcs.build_pdf_estimation_wrapper(session, estimator_id)
+async def build_pdf_estimation_wrapper(
+    session: AsyncSession, *args: Any, **kwargs: Any
+) -> CatEstimatorPdfWrapper:
+    return await db_oper.wrappers.build_pdf_estimation_wrapper(session, *args, **kwargs)
 
 
 @with_transaction
 async def build_ensemble_estimation_wrapper(
-    session: AsyncSession, estimator_id: int
+    session: AsyncSession, *args: Any, **kwargs: Any
 ) -> CatEstimatorEnsembleWrapper:
-    return await db_oper.estimation_funcs.build_ensemble_estimation_wrapper(session, estimator_id)
+    return await db_oper.wrappers.build_ensemble_estimation_wrapper(session, *args, **kwargs)
 
 
 @with_transaction
-async def estimate_pdf(session: AsyncSession, estimator_id: int, dataset_id: int, row: int) -> qp.Ensemble:
-    return await db_oper.estimation_funcs.estimate_pdf(session, estimator_id, dataset_id, row)
+async def estimate_pdf(session: AsyncSession, *args: Any, **kwargs: Any) -> qp.Ensemble:
+    return await db_oper.estimation_funcs.estimate_pdf(session, *args, **kwargs)
 
 
 @with_transaction
-async def estimate_ensemble(
-    session: AsyncSession, estimator_id: int, dataset_id: int, output_file_path: str | Path
-) -> Path:
-    return await db_oper.estimation_funcs.estimate_ensemble(
-        session, estimator_id, dataset_id, output_file_path
-    )
+async def estimate_ensemble(session: AsyncSession, *args: Any, **kwargs: Any) -> Path:
+    return await db_oper.estimation_funcs.estimate_ensemble(session, *args, **kwargs)
+
+
+@with_transaction
+async def get_estimators_for_dataest(session: AsyncSession, *args: Any, **kwargs: Any) -> list[db.Estimator]:
+    return await db_oper.estimation_funcs.get_estimators_for_dataest(session, *args, **kwargs)
 
 
 @with_transaction
 async def load_catalog_yaml(
-    session: AsyncSession, catalog_yaml: Path, filter_dir: Path | None = None
+    session: AsyncSession, *args: Any, **kwargs: Any
 ) -> tuple[list[models.Band], list[models.CatalogTag], list[models.CatalogBandAssoc]]:
     db_bands, db_catalog_tags, db_models = await db_oper.catalog_funcs.load_catalog_yaml(
-        session, catalog_yaml, filter_dir
+        session, *args, **kwargs
     )
     return (
         db_oper.band.to_pydantic_list(db_bands),
@@ -65,20 +68,20 @@ async def load_catalog_yaml(
 
 
 @with_transaction
-async def get_catalog_row(session: AsyncSession, dataset_id: int, row: int) -> dict[str, np.ndarray]:
-    return await db_oper.catalog_funcs.get_catalog_row(session, dataset_id, row)
+async def get_catalog_row(session: AsyncSession, *args: Any, **kwargs: Any) -> dict[str, np.ndarray]:
+    return await db_oper.catalog_funcs.get_catalog_row(session, *args, **kwargs)
 
 
 @with_transaction
-async def get_estimates_row(session: AsyncSession, estimates_id: int, row: int) -> dict[str, np.ndarray]:
-    return await db_oper.catalog_funcs.get_estimates_row(session, estimates_id, row)
+async def get_estimates_row(session: AsyncSession, *args: Any, **kwargs: Any) -> dict[str, np.ndarray]:
+    return await db_oper.catalog_funcs.get_estimates_row(session, *args, **kwargs)
 
 
 @with_transaction
 async def get_dataset_and_estimates(
-    session: AsyncSession, dataset_id: int
+    session: AsyncSession, *args: Any, **kwargs: Any
 ) -> tuple[models.Dataset, list[models.Estimates]]:
-    db_dataset, db_estimates = await db_oper.catalog_funcs.get_dataset_and_estimates(session, dataset_id)
+    db_dataset, db_estimates = await db_oper.catalog_funcs.get_dataset_and_estimates(session, *args, **kwargs)
     return (
         db_oper.dataset.to_pydantic(db_dataset),
         db_oper.estimates.to_pydantic_list(db_estimates),
@@ -87,27 +90,17 @@ async def get_dataset_and_estimates(
 
 @with_transaction
 async def get_data_and_estimates_data(
-    session: AsyncSession, dataset_id: int, row: int
+    session: AsyncSession, *args: Any, **kwargs: Any
 ) -> tuple[dict[str, np.ndarray], dict[str, qp.Ensemble]]:
-    return await db_oper.catalog_funcs.get_data_and_estimates_data(session, dataset_id, row)
+    return await db_oper.catalog_funcs.get_data_and_estimates_data(session, *args, **kwargs)
 
 
 @with_transaction
 async def create_matched_dataset(
-    session: AsyncSession,
-    matched_dataset_name: str,
-    catalog_tag_name: str,
-    component_dataset_names: list[str],
-    path: str | None,
-    n_objects: int,
+    session: AsyncSession, *args: Any, **kwargs: Any
 ) -> tuple[models.Dataset, list[models.DatasetAssoc]]:
     db_matched_dataset, db_dataset_assocs = await db_oper.catalog_funcs.create_matched_dataset(
-        session,
-        matched_dataset_name=matched_dataset_name,
-        catalog_tag_name=catalog_tag_name,
-        component_dataset_names=component_dataset_names,
-        path=path,
-        n_objects=n_objects,
+        session, *args, **kwargs
     )
     return (
         db_oper.dataset.to_pydantic(db_matched_dataset),
@@ -117,15 +110,27 @@ async def create_matched_dataset(
 
 @with_transaction
 async def build_cat_estimator_pdf_wrappers_for_dataset(
-    session: AsyncSession, dataset_id: int
+    session: AsyncSession, *args: Any, **kwargs: Any
 ) -> list[CatEstimatorPdfWrapper]:
-    return await db_oper.estimation_funcs.build_cat_estimator_pdf_wrappers_for_dataset(session, dataset_id)
+    return await db_oper.estimation_funcs.build_cat_estimator_pdf_wrappers_for_dataset(
+        session, *args, **kwargs
+    )
 
 
 @with_transaction
 async def build_cat_estimator_ensemble_wrappers_for_dataset(
-    session: AsyncSession, dataset_id: int
+    session: AsyncSession, *args: Any, **kwargs: Any
 ) -> list[CatEstimatorEnsembleWrapper]:
     return await db_oper.estimation_funcs.build_cat_estimator_ensemble_wrappers_for_dataset(
-        session, dataset_id
+        session, *args, **kwargs
     )
+
+
+@with_transaction
+async def estimate_pdf_for_slice(session: AsyncSession, *args: Any, **kwargs: Any) -> qp.Ensemble:
+    return await db_oper.estimation_funcs.estimate_pdf_for_slice(session, *args, **kwargs)
+
+
+@with_transaction
+async def estimate_dataset(session: AsyncSession, *args: Any, **kwargs: Any) -> db.Estimates:
+    return await db_oper.estimation_funcs.estimate_dataset(session, *args, **kwargs)

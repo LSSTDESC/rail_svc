@@ -7,11 +7,13 @@ from pathlib import Path
 from types import TracebackType
 from typing import Any, cast
 
+import aiofiles
 import httpx
 import numpy as np
 from pydantic import BaseModel, ValidationError
 import qp
 
+from ..config import config as global_config
 from ..common import unexpected, LoadType, slice_to_str
 from ..models import CountResponse, Filter, FilterRequest, LookupResponse, OrderBy, RemoteAPIError
 from .. import models
@@ -1143,8 +1145,67 @@ class RemoteDatasetOperations(RemoteTableOperations[models.Dataset, models.Datas
             params=params,
         )
         result = cast(dict[str, Any], self._handle_response(response, expected_status=200))
-        out_data = json.loads(result['data'])
+        out_data = json.loads(result["data"])
         return out_data
+
+    async def download(
+        self,
+        row_id: int,
+        output_path: Path | str | None = None,
+    ) -> Path:
+        """Download a dataset file.
+
+        Parameters
+        ----------
+        row_id : int
+            Dataset row ID
+        output_path : Path | str | None
+            Optional output path relative to download area.
+            If None, uses the same path as in the archive area.
+
+        Returns
+        -------
+        Path
+            Path to the downloaded file
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+        """
+        download_dir = Path(global_config.storage.download_area)
+
+        params = {}
+        if output_path is not None:
+            params["output_path"] = str(output_path)
+
+        response = await self.client.get(
+            f"{self.endpoint}/download/{row_id}",
+            params=params,
+        )
+
+        if response.status_code != 200:
+            self._handle_response(response, expected_status=200)
+
+        # Extract filename from Content-Disposition header or use default
+        content_disposition = response.headers.get("content-disposition", "")
+        if "filename=" in content_disposition:
+            filename = content_disposition.split("filename=")[1].strip('"')
+        else:
+            filename = f"dataset_{row_id}"
+
+        # Determine the output path
+        if output_path is not None:
+            file_path = download_dir / Path(output_path)
+        else:
+            file_path = download_dir / Path(filename)
+
+        # Write the file
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        async with aiofiles.open(file_path, "wb") as f:
+            await f.write(response.content)
+
+        return file_path
 
 
 class RemoteEstimatesOperations(RemoteTableOperations[models.Estimates, models.EstimatesCreate]):
@@ -1229,6 +1290,66 @@ class RemoteEstimatesOperations(RemoteTableOperations[models.Estimates, models.E
         result = cast(dict[str, Any], self._handle_response(response))
         return qp.from_json(result)
 
+    async def download(
+        self,
+        row_id: int,
+        output_path: Path | str | None = None,
+    ) -> Path:
+        """Download an estimates file.
+
+        Parameters
+        ----------
+        row_id : int
+            Estimates row ID
+        output_path : Path | str | None
+            Optional output path relative to download area.
+            If None, uses the same path as in the archive area.
+
+        Returns
+        -------
+        Path
+            Path to the downloaded file
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+        """
+
+        download_dir = Path(global_config.storage.download_area)
+
+        params = {}
+        if output_path is not None:
+            params["output_path"] = str(output_path)
+
+        response = await self.client.get(
+            f"{self.endpoint}/download/{row_id}",
+            params=params,
+        )
+
+        if response.status_code != 200:
+            self._handle_response(response, expected_status=200)
+
+        # Extract filename from Content-Disposition header or use default
+        content_disposition = response.headers.get("content-disposition", "")
+        if "filename=" in content_disposition:
+            filename = content_disposition.split("filename=")[1].strip('"')
+        else:
+            filename = f"estimates_{row_id}"
+
+        # Determine the output path
+        if output_path is not None:
+            file_path = download_dir / Path(output_path)
+        else:
+            file_path = download_dir / Path(filename)
+
+        # Write the file
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        async with aiofiles.open(file_path, "wb") as f:
+            await f.write(response.content)
+
+        return file_path
+
 
 class RemoteModelOperations(RemoteTableOperations[models.Model, models.ModelCreate]):
     """Extended remote client for Model table with custom operations."""
@@ -1278,3 +1399,62 @@ class RemoteModelOperations(RemoteTableOperations[models.Model, models.ModelCrea
 
         result = cast(dict[str, Any], self._handle_response(response, expected_status=201))
         return models.Model(**result)
+
+    async def download(
+        self,
+        row_id: int,
+        output_path: Path | str | None = None,
+    ) -> Path:
+        """Download a model file.
+
+        Parameters
+        ----------
+        row_id : int
+            Model row ID
+        output_path : Path | str | None
+            Optional output path relative to download area.
+            If None, uses the same path as in the archive area.
+
+        Returns
+        -------
+        Path
+            Path to the downloaded file
+
+        Raises
+        ------
+        RemoteAPIError
+            If the API request fails
+        """
+        download_dir = Path(global_config.storage.download_area)
+
+        params = {}
+        if output_path is not None:
+            params["output_path"] = str(output_path)
+
+        response = await self.client.get(
+            f"{self.endpoint}/download/{row_id}",
+            params=params,
+        )
+
+        if response.status_code != 200:
+            self._handle_response(response, expected_status=200)
+
+        # Extract filename from Content-Disposition header or use default
+        content_disposition = response.headers.get("content-disposition", "")
+        if "filename=" in content_disposition:
+            filename = content_disposition.split("filename=")[1].strip('"')
+        else:
+            filename = f"model_{row_id}"
+
+        # Determine the output path
+        if output_path is not None:
+            file_path = download_dir / Path(output_path)
+        else:
+            file_path = download_dir / Path(filename)
+
+        # Write the file
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        async with aiofiles.open(file_path, "wb") as f:
+            await f.write(response.content)
+
+        return file_path
