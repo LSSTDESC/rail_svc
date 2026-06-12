@@ -6,7 +6,7 @@ import numpy as np
 import qp
 
 from .. import local_async, models, db
-from ..rail_funcs.estimation_funcs import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
+from ..rail_funcs.wrappers import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
 
 
 def build_pdf_estimation_wrapper(*args: Any, **kwargs: Any) -> CatEstimatorPdfWrapper:

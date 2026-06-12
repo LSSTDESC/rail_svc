@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rail_svc import db
 from rail_svc.db_oper import estimation_funcs
-from rail_svc.db_oper.estimation_funcs import WrapperType
-from rail_svc.rail_funcs.estimation_funcs import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
+from rail_svc.db_oper.wrappers import WrapperType
+from rail_svc.rail_funcs.wrappers import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
 
 
 @pytest.fixture

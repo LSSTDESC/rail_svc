@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 import qp
 
-from rail_svc.rail_funcs import estimation_funcs
+from rail_svc.rail_funcs import wrappers
 
 
 class TestCatEstimatorWrapperBase:
@@ -18,13 +18,13 @@ class TestCatEstimatorWrapperBase:
     def test_cannot_instantiate_abstract_class(self):
         """Test that abstract base class cannot be instantiated directly"""
         with pytest.raises(TypeError, match="Can't instantiate abstract class"):
-            estimation_funcs.CatEstimatorWrapperBase("test_name")
+            wrappers.CatEstimatorWrapperBase("test_name")
 
     def test_estim_name_property(self):
         """Test estim_name property"""
 
         # Create a concrete subclass for testing
-        class ConcreteWrapper(estimation_funcs.CatEstimatorWrapperBase):
+        class ConcreteWrapper(wrappers.CatEstimatorWrapperBase):
             def _build_wrapper(self, estim_name, estim_class, **kwargs):
                 pass
 
@@ -36,8 +36,8 @@ class TestCatEstimatorWrapperBase:
 
         assert wrapper.estim_name == "test_estimator"
 
-    @patch("rail_svc.rail_funcs.estimation_funcs.catalog_utils.apply")
-    @patch("rail_svc.rail_funcs.estimation_funcs.PipelineStage.get_stage")
+    @patch("rail_svc.rail_funcs.wrappers.catalog_utils.apply")
+    @patch("rail_svc.rail_funcs.wrappers.PipelineStage.get_stage")
     def test_build_wrapper_successful(self, mock_get_stage, mock_catalog_apply):
         """Test successful wrapper building"""
         # Create mock estimator class
@@ -45,7 +45,7 @@ class TestCatEstimatorWrapperBase:
         mock_get_stage.return_value = mock_estim_class
 
         # Create concrete subclass with _build_wrapper implemented
-        class ConcreteWrapper(estimation_funcs.CatEstimatorWrapperBase):
+        class ConcreteWrapper(wrappers.CatEstimatorWrapperBase):
             @classmethod
             def _build_wrapper(cls, estim_name, estim_class, **kwargs):
                 wrapper = cls.__new__(cls)
@@ -70,13 +70,13 @@ class TestCatEstimatorWrapperBase:
         assert result._estim_class == mock_estim_class
         mock_catalog_apply.assert_called_once_with("lsst_dp0")
 
-    @patch("rail_svc.rail_funcs.estimation_funcs.PipelineStage.get_stage")
+    @patch("rail_svc.rail_funcs.wrappers.PipelineStage.get_stage")
     def test_build_wrapper_module_import(self, mock_get_stage):
         """Test that module is imported if not already loaded"""
         mock_estim_class = Mock()
         mock_get_stage.return_value = mock_estim_class
 
-        class ConcreteWrapper(estimation_funcs.CatEstimatorWrapperBase):
+        class ConcreteWrapper(wrappers.CatEstimatorWrapperBase):
             @classmethod
             def _build_wrapper(cls, estim_name, estim_class, **kwargs):
                 wrapper = cls.__new__(cls)
@@ -100,11 +100,11 @@ class TestCatEstimatorWrapperBase:
 
             mock_import.assert_called_once_with(module_name)
 
-    @patch("rail_svc.rail_funcs.estimation_funcs.PipelineStage.get_stage")
+    @patch("rail_svc.rail_funcs.wrappers.PipelineStage.get_stage")
     def test_build_wrapper_import_error(self, mock_get_stage):
         """Test handling of module import errors"""
 
-        class ConcreteWrapper(estimation_funcs.CatEstimatorWrapperBase):
+        class ConcreteWrapper(wrappers.CatEstimatorWrapperBase):
             @classmethod
             def _build_wrapper(cls, estim_name, estim_class, **kwargs):
                 pass
@@ -124,12 +124,12 @@ class TestCatEstimatorWrapperBase:
                     model_path=Path("/path/to/model.pkl"),
                 )
 
-    @patch("rail_svc.rail_funcs.estimation_funcs.PipelineStage.get_stage")
+    @patch("rail_svc.rail_funcs.wrappers.PipelineStage.get_stage")
     def test_build_wrapper_class_not_found(self, mock_get_stage):
         """Test handling when class cannot be found"""
         mock_get_stage.side_effect = Exception("Class not found")
 
-        class ConcreteWrapper(estimation_funcs.CatEstimatorWrapperBase):
+        class ConcreteWrapper(wrappers.CatEstimatorWrapperBase):
             @classmethod
             def _build_wrapper(cls, estim_name, estim_class, **kwargs):
                 pass
@@ -146,14 +146,14 @@ class TestCatEstimatorWrapperBase:
                 model_path=Path("/path/to/model.pkl"),
             )
 
-    @patch("rail_svc.rail_funcs.estimation_funcs.catalog_utils.apply")
-    @patch("rail_svc.rail_funcs.estimation_funcs.PipelineStage.get_stage")
+    @patch("rail_svc.rail_funcs.wrappers.catalog_utils.apply")
+    @patch("rail_svc.rail_funcs.wrappers.PipelineStage.get_stage")
     def test_build_wrapper_without_catalog_tag(self, mock_get_stage, mock_catalog_apply):
         """Test building wrapper without catalog tag"""
         mock_estim_class = Mock()
         mock_get_stage.return_value = mock_estim_class
 
-        class ConcreteWrapper(estimation_funcs.CatEstimatorWrapperBase):
+        class ConcreteWrapper(wrappers.CatEstimatorWrapperBase):
             @classmethod
             def _build_wrapper(cls, estim_name, estim_class, **kwargs):
                 wrapper = cls.__new__(cls)
@@ -173,7 +173,7 @@ class TestCatEstimatorWrapperBase:
 
         mock_catalog_apply.assert_not_called()
 
-    @patch("rail_svc.rail_funcs.estimation_funcs.PipelineStage.get_stage")
+    @patch("rail_svc.rail_funcs.wrappers.PipelineStage.get_stage")
     def test_build_wrapper_kwargs_passed_correctly(self, mock_get_stage):
         """Test that kwargs are passed correctly including model path"""
         mock_estim_class = Mock()
@@ -181,7 +181,7 @@ class TestCatEstimatorWrapperBase:
 
         captured_kwargs = {}
 
-        class ConcreteWrapper(estimation_funcs.CatEstimatorWrapperBase):
+        class ConcreteWrapper(wrappers.CatEstimatorWrapperBase):
             @classmethod
             def _build_wrapper(cls, estim_name, estim_class, **kwargs):
                 captured_kwargs.update(kwargs)
@@ -227,7 +227,7 @@ class TestCatEstimatorPdfWrapper:
         mock_estimator = self.create_mock_estimator()
         names = ["mag_g", "mag_r", "mag_g_err", "mag_r_err"]
 
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test_pdf", cat_estimator=mock_estimator, names=names
         )
 
@@ -240,7 +240,7 @@ class TestCatEstimatorPdfWrapper:
         mock_estimator = self.create_mock_estimator()
         names = ["mag_g"]
 
-        _wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        _wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test", cat_estimator=mock_estimator, names=names
         )
 
@@ -253,7 +253,7 @@ class TestCatEstimatorPdfWrapper:
         mock_estimator._output_handle.data = mock_ensemble
 
         names = ["mag_g", "mag_r"]
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test", cat_estimator=mock_estimator, names=names
         )
 
@@ -270,7 +270,7 @@ class TestCatEstimatorPdfWrapper:
         mock_estimator._output_handle.data = mock_ensemble
 
         names = ["mag_g", "mag_r"]
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test", cat_estimator=mock_estimator, names=names
         )
 
@@ -288,7 +288,7 @@ class TestCatEstimatorPdfWrapper:
         mock_estimator._output_handle.data = mock_ensemble
 
         names = ["mag_g", "mag_r"]
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test", cat_estimator=mock_estimator, names=names
         )
 
@@ -304,7 +304,7 @@ class TestCatEstimatorPdfWrapper:
         mock_estimator = self.create_mock_estimator()
         names = ["mag_g", "mag_r"]
 
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test", cat_estimator=mock_estimator, names=names
         )
 
@@ -319,7 +319,7 @@ class TestCatEstimatorPdfWrapper:
         mock_estimator = self.create_mock_estimator()
         names = ["mag_g", "mag_r"]
 
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test", cat_estimator=mock_estimator, names=names
         )
 
@@ -334,7 +334,7 @@ class TestCatEstimatorPdfWrapper:
         mock_estimator = self.create_mock_estimator()
         names = ["mag_g"]
 
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test", cat_estimator=mock_estimator, names=names
         )
 
@@ -349,7 +349,7 @@ class TestCatEstimatorPdfWrapper:
         mock_estimator = self.create_mock_estimator()
         names = ["mag_g"]
 
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test", cat_estimator=mock_estimator, names=names
         )
 
@@ -363,7 +363,7 @@ class TestCatEstimatorPdfWrapper:
         mock_estimator._output_handle.data = mock_ensemble
 
         names = ["mag_g"]
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test", cat_estimator=mock_estimator, names=names
         )
 
@@ -383,7 +383,7 @@ class TestCatEstimatorPdfWrapper:
         ]
 
         names = ["mag_g"]
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test", cat_estimator=mock_estimator, names=names
         )
 
@@ -392,7 +392,7 @@ class TestCatEstimatorPdfWrapper:
         with pytest.raises(RuntimeError, match="Failed to process chunk"):
             wrapper(input_data)
 
-    @patch("rail_svc.rail_funcs.estimation_funcs.catalog_utils.get_active_tag")
+    @patch("rail_svc.rail_funcs.wrappers.catalog_utils.get_active_tag")
     def test_build_wrapper_successful(self, mock_get_active_tag):
         """Test successful wrapper building"""
         # Mock catalog tag
@@ -405,14 +405,14 @@ class TestCatEstimatorPdfWrapper:
         mock_estimator_instance = self.create_mock_estimator()
         mock_estim_class.make_stage.return_value = mock_estimator_instance
 
-        result = estimation_funcs.CatEstimatorPdfWrapper._build_wrapper(
+        result = wrappers.CatEstimatorPdfWrapper._build_wrapper(
             estim_name="test_wrapper", estim_class=mock_estim_class, model="/path/to/model.pkl"
         )
 
-        assert isinstance(result, estimation_funcs.CatEstimatorPdfWrapper)
+        assert isinstance(result, wrappers.CatEstimatorPdfWrapper)
         assert result.estim_name == "test_wrapper"
 
-    @patch("rail_svc.rail_funcs.estimation_funcs.catalog_utils.get_active_tag")
+    @patch("rail_svc.rail_funcs.wrappers.catalog_utils.get_active_tag")
     def test_build_wrapper_includes_error_columns(self, mock_get_active_tag):
         """Test that wrapper includes both mag and error columns"""
         mock_tag = Mock()
@@ -423,7 +423,7 @@ class TestCatEstimatorPdfWrapper:
         mock_estimator_instance = self.create_mock_estimator()
         mock_estim_class.make_stage.return_value = mock_estimator_instance
 
-        result = estimation_funcs.CatEstimatorPdfWrapper._build_wrapper(
+        result = wrappers.CatEstimatorPdfWrapper._build_wrapper(
             estim_name="test", estim_class=mock_estim_class
         )
 
@@ -431,7 +431,7 @@ class TestCatEstimatorPdfWrapper:
         expected_names = ["mag_g", "mag_r", "mag_g_err", "mag_r_err"]
         assert result._names == expected_names
 
-    @patch("rail_svc.rail_funcs.estimation_funcs.catalog_utils.get_active_tag")
+    @patch("rail_svc.rail_funcs.wrappers.catalog_utils.get_active_tag")
     def test_build_wrapper_preserves_kwargs(self, mock_get_active_tag):
         """Test that kwargs are preserved and passed to estimator"""
         mock_tag = Mock()
@@ -442,7 +442,7 @@ class TestCatEstimatorPdfWrapper:
         mock_estimator_instance = self.create_mock_estimator()
         mock_estim_class.make_stage.return_value = mock_estimator_instance
 
-        estimation_funcs.CatEstimatorPdfWrapper._build_wrapper(
+        wrappers.CatEstimatorPdfWrapper._build_wrapper(
             estim_name="test",
             estim_class=mock_estim_class,
             model="/path/to/model.pkl",
@@ -475,7 +475,7 @@ class TestCatEstimatorEnsembleWrapper:
         """Test successful initialization"""
         mock_estimator = self.create_mock_estimator()
 
-        wrapper = estimation_funcs.CatEstimatorEnsembleWrapper(
+        wrapper = wrappers.CatEstimatorEnsembleWrapper(
             estim_name="test_ensemble", cat_estimator=mock_estimator
         )
 
@@ -488,7 +488,7 @@ class TestCatEstimatorEnsembleWrapper:
         mock_output_handle = Mock()
         mock_estimator._output_handle = mock_output_handle
 
-        wrapper = estimation_funcs.CatEstimatorEnsembleWrapper(
+        wrapper = wrappers.CatEstimatorEnsembleWrapper(
             estim_name="test", cat_estimator=mock_estimator
         )
 
@@ -509,7 +509,7 @@ class TestCatEstimatorEnsembleWrapper:
         mock_output_handle = Mock()
         mock_estimator._output_handle = mock_output_handle
 
-        wrapper = estimation_funcs.CatEstimatorEnsembleWrapper(
+        wrapper = wrappers.CatEstimatorEnsembleWrapper(
             estim_name="test", cat_estimator=mock_estimator
         )
 
@@ -528,11 +528,11 @@ class TestCatEstimatorEnsembleWrapper:
         mock_estimator_instance = self.create_mock_estimator()
         mock_estim_class.make_stage.return_value = mock_estimator_instance
 
-        result = estimation_funcs.CatEstimatorEnsembleWrapper._build_wrapper(
+        result = wrappers.CatEstimatorEnsembleWrapper._build_wrapper(
             estim_name="test_wrapper", estim_class=mock_estim_class, model="/path/to/model.pkl"
         )
 
-        assert isinstance(result, estimation_funcs.CatEstimatorEnsembleWrapper)
+        assert isinstance(result, wrappers.CatEstimatorEnsembleWrapper)
         assert result.estim_name == "test_wrapper"
         assert result._estimator == mock_estimator_instance
 
@@ -542,7 +542,7 @@ class TestCatEstimatorEnsembleWrapper:
         mock_estimator_instance = self.create_mock_estimator()
         mock_estim_class.make_stage.return_value = mock_estimator_instance
 
-        estimation_funcs.CatEstimatorEnsembleWrapper._build_wrapper(
+        wrappers.CatEstimatorEnsembleWrapper._build_wrapper(
             estim_name="test",
             estim_class=mock_estim_class,
             model="/path/to/model.pkl",
@@ -576,7 +576,7 @@ class TestEdgeCases:
         """Test PDF wrapper with empty column names list"""
         mock_estimator = self.create_mock_estimator()
 
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test", cat_estimator=mock_estimator, names=[]
         )
 
@@ -587,7 +587,7 @@ class TestEdgeCases:
         mock_estimator = self.create_mock_estimator()
         mock_estimator._output_handle.data = Mock(spec=qp.Ensemble)
 
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test", cat_estimator=mock_estimator, names=["mag_g"]
         )
 
@@ -603,7 +603,7 @@ class TestEdgeCases:
         # Create many column names
         names = [f"col_{i}" for i in range(100)]
 
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test", cat_estimator=mock_estimator, names=names
         )
 
@@ -613,7 +613,7 @@ class TestEdgeCases:
         """Test ensemble wrapper explicitly with Path objects"""
         mock_estimator = self.create_mock_estimator()
 
-        wrapper = estimation_funcs.CatEstimatorEnsembleWrapper(
+        wrapper = wrappers.CatEstimatorEnsembleWrapper(
             estim_name="test", cat_estimator=mock_estimator
         )
 
@@ -632,7 +632,7 @@ class TestEdgeCases:
         mock_estimator._output_handle.data = Mock(spec=qp.Ensemble)
 
         names = ["mag_g", "mag_r", "mag_i"]
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test", cat_estimator=mock_estimator, names=names
         )
 
@@ -660,7 +660,7 @@ class TestEdgeCases:
         mock_estimator = self.create_mock_estimator()
         mock_estimator._output_handle.data = Mock(spec=qp.Ensemble)
 
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test", cat_estimator=mock_estimator, names=["mag_g", "mag_r"]
         )
 
@@ -675,7 +675,7 @@ class TestEdgeCases:
         mock_estimator = self.create_mock_estimator()
         mock_estimator._output_handle.data = Mock(spec=qp.Ensemble)
 
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test", cat_estimator=mock_estimator, names=["mag_g", "mag_r"]
         )
 
@@ -693,7 +693,7 @@ class TestEdgeCases:
         mock_estimator = self.create_mock_estimator()
         mock_estimator._output_handle.data = Mock(spec=qp.Ensemble)
 
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test", cat_estimator=mock_estimator, names=["mag_g"]
         )
 
@@ -711,9 +711,9 @@ class TestEdgeCases:
 class TestIntegration:
     """Integration tests combining multiple components"""
 
-    @patch("rail_svc.rail_funcs.estimation_funcs.catalog_utils.apply")
-    @patch("rail_svc.rail_funcs.estimation_funcs.catalog_utils.get_active_tag")
-    @patch("rail_svc.rail_funcs.estimation_funcs.PipelineStage.get_stage")
+    @patch("rail_svc.rail_funcs.wrappers.catalog_utils.apply")
+    @patch("rail_svc.rail_funcs.wrappers.catalog_utils.get_active_tag")
+    @patch("rail_svc.rail_funcs.wrappers.PipelineStage.get_stage")
     def test_complete_pdf_wrapper_workflow(self, mock_get_stage, mock_get_tag, mock_apply):
         """Test complete workflow for PDF wrapper"""
         # Setup mocks
@@ -738,7 +738,7 @@ class TestIntegration:
         sys.modules["rail.estimation.algos"] = Mock()
 
         # Build wrapper
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper.build_wrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper.build_wrapper(
             estim_name="integration_test",
             estim_class_name="rail.estimation.algos.BPZ",
             model_path=Path("/models/bpz.pkl"),
@@ -759,8 +759,8 @@ class TestIntegration:
         assert result == mock_ensemble
         mock_apply.assert_called_once_with("lsst_dp0")
 
-    @patch("rail_svc.rail_funcs.estimation_funcs.catalog_utils.get_active_tag")
-    @patch("rail_svc.rail_funcs.estimation_funcs.PipelineStage.get_stage")
+    @patch("rail_svc.rail_funcs.wrappers.catalog_utils.get_active_tag")
+    @patch("rail_svc.rail_funcs.wrappers.PipelineStage.get_stage")
     def test_complete_ensemble_wrapper_workflow(self, mock_get_stage, mock_get_tag):
         """Test complete workflow for ensemble wrapper"""
         # Setup mocks
@@ -780,7 +780,7 @@ class TestIntegration:
         sys.modules["rail.estimation.algos"] = Mock()
 
         # Build wrapper
-        wrapper = estimation_funcs.CatEstimatorEnsembleWrapper.build_wrapper(
+        wrapper = wrappers.CatEstimatorEnsembleWrapper.build_wrapper(
             estim_name="batch_test",
             estim_class_name="rail.estimation.algos.FlexZBoost",
             model_path=Path("/models/flexz.pkl"),
@@ -793,8 +793,8 @@ class TestIntegration:
         assert result == mock_output_handle
         mock_estimator_instance.run.assert_called_once()
 
-    @patch("rail_svc.rail_funcs.estimation_funcs.catalog_utils.get_active_tag")
-    @patch("rail_svc.rail_funcs.estimation_funcs.PipelineStage.get_stage")
+    @patch("rail_svc.rail_funcs.wrappers.catalog_utils.get_active_tag")
+    @patch("rail_svc.rail_funcs.wrappers.PipelineStage.get_stage")
     def test_multiple_wrapper_instances(self, mock_get_stage, mock_get_tag):
         """Test creating multiple wrapper instances"""
         mock_tag = Mock()
@@ -820,19 +820,19 @@ class TestIntegration:
         sys.modules["rail.estimation.algos"] = Mock()
 
         # Create multiple wrappers
-        wrapper1 = estimation_funcs.CatEstimatorPdfWrapper.build_wrapper(
+        wrapper1 = wrappers.CatEstimatorPdfWrapper.build_wrapper(
             estim_name="wrapper1",
             estim_class_name="rail.estimation.algos.BPZ",
             model_path=Path("/model1.pkl"),
         )
 
-        wrapper2 = estimation_funcs.CatEstimatorPdfWrapper.build_wrapper(
+        wrapper2 = wrappers.CatEstimatorPdfWrapper.build_wrapper(
             estim_name="wrapper2",
             estim_class_name="rail.estimation.algos.BPZ",
             model_path=Path("/model2.pkl"),
         )
 
-        wrapper3 = estimation_funcs.CatEstimatorEnsembleWrapper.build_wrapper(
+        wrapper3 = wrappers.CatEstimatorEnsembleWrapper.build_wrapper(
             estim_name="wrapper3",
             estim_class_name="rail.estimation.algos.FlexZBoost",
             model_path=Path("/model3.pkl"),
@@ -842,9 +842,9 @@ class TestIntegration:
         assert wrapper1.estim_name == "wrapper1"
         assert wrapper2.estim_name == "wrapper2"
         assert wrapper3.estim_name == "wrapper3"
-        assert isinstance(wrapper1, estimation_funcs.CatEstimatorPdfWrapper)
-        assert isinstance(wrapper2, estimation_funcs.CatEstimatorPdfWrapper)
-        assert isinstance(wrapper3, estimation_funcs.CatEstimatorEnsembleWrapper)
+        assert isinstance(wrapper1, wrappers.CatEstimatorPdfWrapper)
+        assert isinstance(wrapper2, wrappers.CatEstimatorPdfWrapper)
+        assert isinstance(wrapper3, wrappers.CatEstimatorEnsembleWrapper)
 
 
 class TestErrorHandling:
@@ -874,7 +874,7 @@ class TestErrorHandling:
         mock_estimator.open_model.side_effect = Exception("Failed to open model")
 
         with pytest.raises(Exception, match="Failed to open model"):
-            estimation_funcs.CatEstimatorPdfWrapper(
+            wrappers.CatEstimatorPdfWrapper(
                 estim_name="test", cat_estimator=mock_estimator, names=["mag_g"]
             )
 
@@ -883,7 +883,7 @@ class TestErrorHandling:
         mock_estimator = self.create_mock_estimator()
         mock_estimator.run.side_effect = Exception("Processing failed")
 
-        wrapper = estimation_funcs.CatEstimatorEnsembleWrapper(
+        wrapper = wrappers.CatEstimatorEnsembleWrapper(
             estim_name="test", cat_estimator=mock_estimator
         )
 
@@ -895,7 +895,7 @@ class TestErrorHandling:
         mock_estimator = self.create_mock_estimator()
 
         original_names = ["mag_g", "mag_r"]
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test", cat_estimator=mock_estimator, names=original_names
         )
 
@@ -912,21 +912,21 @@ class TestAbstractMethods:
 
     def test_pdf_wrapper_implements_call(self):
         """Test that PDF wrapper implements __call__"""
-        assert hasattr(estimation_funcs.CatEstimatorPdfWrapper, "__call__")
-        assert callable(getattr(estimation_funcs.CatEstimatorPdfWrapper, "__call__"))
+        assert hasattr(wrappers.CatEstimatorPdfWrapper, "__call__")
+        assert callable(getattr(wrappers.CatEstimatorPdfWrapper, "__call__"))
 
     def test_pdf_wrapper_implements_build_wrapper(self):
         """Test that PDF wrapper implements _build_wrapper"""
-        assert hasattr(estimation_funcs.CatEstimatorPdfWrapper, "_build_wrapper")
+        assert hasattr(wrappers.CatEstimatorPdfWrapper, "_build_wrapper")
 
     def test_ensemble_wrapper_implements_call(self):
         """Test that ensemble wrapper implements __call__"""
-        assert hasattr(estimation_funcs.CatEstimatorEnsembleWrapper, "__call__")
-        assert callable(getattr(estimation_funcs.CatEstimatorEnsembleWrapper, "__call__"))
+        assert hasattr(wrappers.CatEstimatorEnsembleWrapper, "__call__")
+        assert callable(getattr(wrappers.CatEstimatorEnsembleWrapper, "__call__"))
 
     def test_ensemble_wrapper_implements_build_wrapper(self):
         """Test that ensemble wrapper implements _build_wrapper"""
-        assert hasattr(estimation_funcs.CatEstimatorEnsembleWrapper, "_build_wrapper")
+        assert hasattr(wrappers.CatEstimatorEnsembleWrapper, "_build_wrapper")
 
 
 class TestDataFlow:
@@ -946,7 +946,7 @@ class TestDataFlow:
         expected_ensemble = Mock(spec=qp.Ensemble)
         mock_estimator._output_handle.data = expected_ensemble
 
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test", cat_estimator=mock_estimator, names=["mag_g", "mag_r"]
         )
 
@@ -969,7 +969,7 @@ class TestDataFlow:
         expected_handle = Mock()
         mock_estimator._output_handle = expected_handle
 
-        wrapper = estimation_funcs.CatEstimatorEnsembleWrapper(
+        wrapper = wrappers.CatEstimatorEnsembleWrapper(
             estim_name="test", cat_estimator=mock_estimator
         )
 
@@ -988,7 +988,7 @@ class TestDataFlow:
         mock_estimator._output_handle = Mock()
         mock_estimator._output_handle.data = Mock(spec=qp.Ensemble)
 
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test", cat_estimator=mock_estimator, names=["mag_g", "mag_r"]
         )
 
@@ -1008,8 +1008,8 @@ class TestDataFlow:
 class TestDocstringExamples:
     """Tests based on docstring examples"""
 
-    @patch("rail_svc.rail_funcs.estimation_funcs.catalog_utils.apply")
-    @patch("rail_svc.rail_funcs.estimation_funcs.PipelineStage.get_stage")
+    @patch("rail_svc.rail_funcs.wrappers.catalog_utils.apply")
+    @patch("rail_svc.rail_funcs.wrappers.PipelineStage.get_stage")
     def test_docstring_example_build_wrapper(self, mock_get_stage, mock_apply):
         """Test example from build_wrapper docstring"""
         mock_class = Mock()
@@ -1025,21 +1025,21 @@ class TestDocstringExamples:
 
         sys.modules["rail.estimation.algos"] = Mock()
 
-        with patch("rail_svc.rail_funcs.estimation_funcs.catalog_utils.get_active_tag"):
+        with patch("rail_svc.rail_funcs.wrappers.catalog_utils.get_active_tag"):
             mock_tag = Mock()
             mock_tag.band_name_dict.return_value = {"g": "mag_g"}
 
             with patch(
-                "rail_svc.rail_funcs.estimation_funcs.catalog_utils.get_active_tag", return_value=mock_tag
+                "rail_svc.rail_funcs.wrappers.catalog_utils.get_active_tag", return_value=mock_tag
             ):
-                wrapper = estimation_funcs.CatEstimatorPdfWrapper.build_wrapper(
+                wrapper = wrappers.CatEstimatorPdfWrapper.build_wrapper(
                     estim_name="my_estimator",
                     estim_class_name="rail.estimation.algos.BPZ",
                     model_path=Path("models/bpz_model.pkl"),
                     catalog_tag="lsst_dp0",
                 )
 
-                assert isinstance(wrapper, estimation_funcs.CatEstimatorPdfWrapper)
+                assert isinstance(wrapper, wrappers.CatEstimatorPdfWrapper)
                 assert wrapper.estim_name == "my_estimator"
 
     def test_docstring_example_pdf_wrapper_call_dict(self):
@@ -1054,7 +1054,7 @@ class TestDocstringExamples:
         mock_ensemble = Mock(spec=qp.Ensemble)
         mock_estimator._output_handle.data = mock_ensemble
 
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test",
             cat_estimator=mock_estimator,
             names=["mag_g", "mag_r", "mag_g_err", "mag_r_err"],
@@ -1082,7 +1082,7 @@ class TestDocstringExamples:
         mock_ensemble = Mock(spec=qp.Ensemble)
         mock_estimator._output_handle.data = mock_ensemble
 
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test",
             cat_estimator=mock_estimator,
             names=["mag_g", "mag_r", "mag_g_err", "mag_r_err"],
@@ -1092,8 +1092,8 @@ class TestDocstringExamples:
         pdfs = wrapper(data)
         assert pdfs is mock_ensemble
 
-    @patch("rail_svc.rail_funcs.estimation_funcs.catalog_utils.get_active_tag")
-    @patch("rail_svc.rail_funcs.estimation_funcs.PipelineStage.get_stage")
+    @patch("rail_svc.rail_funcs.wrappers.catalog_utils.get_active_tag")
+    @patch("rail_svc.rail_funcs.wrappers.PipelineStage.get_stage")
     def test_docstring_example_ensemble_wrapper(self, mock_get_stage, mock_get_tag):
         """Test example from ensemble wrapper docstring"""
         mock_class = Mock()
@@ -1110,7 +1110,7 @@ class TestDocstringExamples:
 
         sys.modules["rail.estimation.algos"] = Mock()
 
-        wrapper = estimation_funcs.CatEstimatorEnsembleWrapper.build_wrapper(
+        wrapper = wrappers.CatEstimatorEnsembleWrapper.build_wrapper(
             estim_name="batch_estimator",
             estim_class_name="rail.estimation.algos.FlexZBoost",
             model_path=Path("models/flexz.pkl"),
@@ -1137,7 +1137,7 @@ class TestSpecialCases:
         # Column names with unicode
         names = ["måg_g", "måg_r", "êrr_g", "êrr_r"]
 
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test", cat_estimator=mock_estimator, names=names
         )
 
@@ -1156,7 +1156,7 @@ class TestSpecialCases:
         long_name = "a" * 1000
         names = [long_name]
 
-        wrapper = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper = wrappers.CatEstimatorPdfWrapper(
             estim_name="test", cat_estimator=mock_estimator, names=names
         )
 
@@ -1172,7 +1172,7 @@ class TestSpecialCases:
         mock_estimator.data_store = Mock()
         mock_estimator._output_handle = Mock()
 
-        wrapper = estimation_funcs.CatEstimatorEnsembleWrapper(
+        wrapper = wrappers.CatEstimatorEnsembleWrapper(
             estim_name="test", cat_estimator=mock_estimator
         )
 
@@ -1184,7 +1184,7 @@ class TestSpecialCases:
 
     def test_build_wrapper_with_empty_kwargs(self):
         """Test building wrapper with no additional kwargs"""
-        with patch("rail_svc.rail_funcs.estimation_funcs.PipelineStage.get_stage"):
+        with patch("rail_svc.rail_funcs.wrappers.PipelineStage.get_stage"):
             mock_class = Mock()
             mock_estimator = Mock()
             mock_estimator.config = Mock()
@@ -1196,17 +1196,17 @@ class TestSpecialCases:
             mock_class.make_stage.return_value = mock_estimator
 
             with patch(
-                "rail_svc.rail_funcs.estimation_funcs.PipelineStage.get_stage", return_value=mock_class
+                "rail_svc.rail_funcs.wrappers.PipelineStage.get_stage", return_value=mock_class
             ):
                 sys.modules["rail.estimation.algos"] = Mock()
 
-                result = estimation_funcs.CatEstimatorEnsembleWrapper.build_wrapper(
+                result = wrappers.CatEstimatorEnsembleWrapper.build_wrapper(
                     estim_name="test",
                     estim_class_name="rail.estimation.algos.BPZ",
                     model_path=Path("/model.pkl"),
                 )
 
-                assert isinstance(result, estimation_funcs.CatEstimatorEnsembleWrapper)
+                assert isinstance(result, wrappers.CatEstimatorEnsembleWrapper)
 
     def test_multiple_wrappers_dont_share_state(self):
         """Test that multiple wrappers don't share mutable state"""
@@ -1227,11 +1227,11 @@ class TestSpecialCases:
         mock_estimator2.data_store = Mock()
         mock_estimator2._output_handle = Mock()
 
-        wrapper1 = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper1 = wrappers.CatEstimatorPdfWrapper(
             estim_name="wrapper1", cat_estimator=mock_estimator1, names=["mag_g"]
         )
 
-        wrapper2 = estimation_funcs.CatEstimatorPdfWrapper(
+        wrapper2 = wrappers.CatEstimatorPdfWrapper(
             estim_name="wrapper2", cat_estimator=mock_estimator2, names=["mag_r", "mag_i"]
         )
 
@@ -1250,16 +1250,16 @@ class TestSpecialCases:
             mock.data_store = Mock()
             return mock
 
-        with patch("rail_svc.rail_funcs.estimation_funcs.PipelineStage.get_stage"):
+        with patch("rail_svc.rail_funcs.wrappers.PipelineStage.get_stage"):
             mock_class = Mock()
             mock_class.make_stage = capture
 
             with patch(
-                "rail_svc.rail_funcs.estimation_funcs.PipelineStage.get_stage", return_value=mock_class
+                "rail_svc.rail_funcs.wrappers.PipelineStage.get_stage", return_value=mock_class
             ):
                 sys.modules["rail.estimation.algos"] = Mock()
 
-                estimation_funcs.CatEstimatorEnsembleWrapper.build_wrapper(
+                wrappers.CatEstimatorEnsembleWrapper.build_wrapper(
                     estim_name="test",
                     estim_class_name="rail.estimation.algos.BPZ",
                     model_path=Path("/path/to/model.pkl"),
@@ -1276,15 +1276,15 @@ class TestLogging:
     def test_build_wrapper_logs_module_import(self, caplog):
         """Test that module import is logged"""
         with caplog.at_level(logging.INFO):
-            with patch("rail_svc.rail_funcs.estimation_funcs.PipelineStage.get_stage"):
-                with patch("rail_svc.rail_funcs.estimation_funcs.catalog_utils.get_active_tag"):
+            with patch("rail_svc.rail_funcs.wrappers.PipelineStage.get_stage"):
+                with patch("rail_svc.rail_funcs.wrappers.catalog_utils.get_active_tag"):
                     module_name = "rail.estimation.test_log_module"
                     if module_name in sys.modules:
                         del sys.modules[module_name]
 
                     with patch("builtins.__import__"):
                         try:
-                            estimation_funcs.CatEstimatorPdfWrapper.build_wrapper(
+                            wrappers.CatEstimatorPdfWrapper.build_wrapper(
                                 estim_name="test",
                                 estim_class_name=f"{module_name}.TestClass",
                                 model_path=Path("/path/to/model.pkl"),
@@ -1297,13 +1297,13 @@ class TestLogging:
     def test_build_wrapper_logs_catalog_tag(self, caplog):
         """Test that catalog tag application is logged"""
         with caplog.at_level(logging.INFO):
-            with patch("rail_svc.rail_funcs.estimation_funcs.PipelineStage.get_stage"):
-                with patch("rail_svc.rail_funcs.estimation_funcs.catalog_utils.apply"):
-                    with patch("rail_svc.rail_funcs.estimation_funcs.catalog_utils.get_active_tag"):
+            with patch("rail_svc.rail_funcs.wrappers.PipelineStage.get_stage"):
+                with patch("rail_svc.rail_funcs.wrappers.catalog_utils.apply"):
+                    with patch("rail_svc.rail_funcs.wrappers.catalog_utils.get_active_tag"):
                         sys.modules["rail.estimation.algos"] = Mock()
 
                         try:
-                            estimation_funcs.CatEstimatorPdfWrapper.build_wrapper(
+                            wrappers.CatEstimatorPdfWrapper.build_wrapper(
                                 estim_name="test",
                                 estim_class_name="rail.estimation.algos.BPZ",
                                 model_path=Path("/path/to/model.pkl"),
@@ -1321,7 +1321,7 @@ class TestLogging:
         mock_estimator.data_store = Mock()
         mock_estimator._output_handle = Mock()
 
-        wrapper = estimation_funcs.CatEstimatorEnsembleWrapper(
+        wrapper = wrappers.CatEstimatorEnsembleWrapper(
             estim_name="test", cat_estimator=mock_estimator
         )
 

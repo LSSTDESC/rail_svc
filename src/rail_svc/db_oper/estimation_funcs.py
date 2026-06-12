@@ -7,9 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import db, rail_funcs
 from ..config import config as global_config
-from ..rail_funcs.estimation_funcs import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
+from ..rail_funcs.wrappers import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
 from . import catalog_funcs
-from .wappers import build_pdf_estimation_wrapper, build_ensemble_estimation_wrapper
+from .wrappers import build_pdf_estimation_wrapper, build_ensemble_estimation_wrapper
 from .catalog_tag import catalog_tag
 from .dataset import dataset
 from .estimator import estimator

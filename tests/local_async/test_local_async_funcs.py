@@ -7,7 +7,7 @@ import qp
 
 from rail_svc import models
 from rail_svc.local_async import funcs as api_funcs
-from rail_svc.rail_funcs.estimation_funcs import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
+from rail_svc.rail_funcs.wrappers import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
 
 
 @pytest.fixture
