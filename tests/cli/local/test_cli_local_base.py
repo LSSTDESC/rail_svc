@@ -14,7 +14,7 @@ from click.testing import CliRunner
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.exc import IntegrityError
 
-from rail_svc.cli.local.base import CliOperations
+from rail_svc.cli.local.base import CliOperations, handle_database_error
 from rail_svc.local_sync.base import SyncOperations
 from rail_svc.models import FilterOp
 from rail_svc.models.utils import OutputEnum
@@ -167,28 +167,28 @@ class TestUtilityMethods:
         )
 
         with pytest.raises(click.Abort):
-            cli_ops._handle_database_error(exc, "during test")
+            handle_database_error(exc, "during test")
 
     def test_handle_database_error_integrity(self, cli_ops: CliOperations) -> None:
         """Test handling integrity error."""
         exc = IntegrityError("statement", {}, "orig")
 
         with pytest.raises(click.Abort):
-            cli_ops._handle_database_error(exc, "during test")
+            handle_database_error(exc, "during test")
 
     def test_handle_database_error_value(self, cli_ops: CliOperations) -> None:
         """Test handling value error."""
         exc = ValueError("Invalid value")
 
         with pytest.raises(click.Abort):
-            cli_ops._handle_database_error(exc, "during test")
+            handle_database_error(exc, "during test")
 
     def test_handle_database_error_generic(self, cli_ops: CliOperations) -> None:
         """Test handling generic error."""
         exc = RuntimeError("Something went wrong")
 
         with pytest.raises(click.Abort):
-            cli_ops._handle_database_error(exc)
+            handle_database_error(exc)
 
 
 # Test Read Commands

@@ -27,6 +27,7 @@ from .base import (
     EstimatorSyncRemoteOperations,
     ModelSyncRemoteOperations,
 )
+from .funcs import SyncRemoteFuncs
 
 
 def algorithm() -> AlgorithmSyncRemoteOperations:
@@ -74,6 +75,11 @@ def model() -> ModelSyncRemoteOperations:
     return ModelSyncRemoteOperations(remote_async.model)
 
 
+def funcs() -> SyncRemoteFuncs:
+    """Create sync remote operations for fuctions."""
+    return SyncRemoteFuncs(remote_async.funcs)
+
+
 __all__ = [
     "algorithm",
     "band",
@@ -84,4 +90,5 @@ __all__ = [
     "estimates",
     "estimator",
     "model",
+    "funcs",
 ]

@@ -1471,7 +1471,7 @@ def dataset_load(
 def dataset_read_slice(
     row_id: int,
     output: OutputEnum,
-    slice: slice | None,
+    slice_option: slice | None,
 ) -> None:
     """Read a slice of data from a dataset.
 
@@ -1482,7 +1482,7 @@ def dataset_read_slice(
     init_db()
 
     try:
-        data = local_sync.dataset.read_slice(row=row_id, the_slice=slice)
+        data = local_sync.dataset.read_slice(row=row_id, the_slice=slice_option)
 
         # Output the data (this will depend on what format read_slice returns)
         # Assuming it returns something that can be displayed
@@ -1557,7 +1557,13 @@ def estimates_load(
             **row_data,
         )
         click.echo(f"Successfully loaded estimates from {path}")
-        print(output_pydantic([row], output, local_sync.estimates.ctx.response_class.col_names_for_table))  # type: ignore
+        print(
+            output_pydantic(
+                [row],
+                output,
+                local_sync.estimates.ctx.response_class.col_names_for_table  # type: ignore
+            )
+        )
 
     except Exception as exc:
         logger.error("Error loading estimates", exc_info=True)
@@ -1574,7 +1580,7 @@ def estimates_load(
 def estimates_read_slice(
     row_id: int,
     output: OutputEnum,
-    slice: slice | None,
+    slice_option: slice | None,
 ) -> None:
     """Read a slice of data from estimates.
 
@@ -1585,7 +1591,7 @@ def estimates_read_slice(
     init_db()
 
     try:
-        data = local_sync.estimates.read_slice(row=row_id, the_slice=slice)
+        data = local_sync.estimates.read_slice(row=row_id, the_slice=slice_option)
         # Output the data
         if output == OutputEnum.json:
             click.echo(json.dumps(data, indent=2, default=str))

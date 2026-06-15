@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rail_svc import db
 from rail_svc.db_oper import estimation_funcs
+from rail_svc.db_oper import wrappers as db_oper_wrappers
 from rail_svc.db_oper.wrappers import WrapperType
 from rail_svc.rail_funcs.wrappers import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
 
@@ -62,12 +63,12 @@ class TestGetEstimatorComponents:
         estimator, model, algorithm, catalog_tag = mock_components
 
         with (
-            patch("rail_svc.db_oper.estimation_funcs.estimator.get_row", return_value=estimator),
-            patch("rail_svc.db_oper.estimation_funcs.model.get_row", return_value=model),
-            patch("rail_svc.db_oper.estimation_funcs.algorithm.get_row", return_value=algorithm),
-            patch("rail_svc.db_oper.estimation_funcs.catalog_tag.get_row", return_value=catalog_tag),
+            patch("rail_svc.db_oper.wrappers.estimator.get_row", return_value=estimator),
+            patch("rail_svc.db_oper.wrappers.model.get_row", return_value=model),
+            patch("rail_svc.db_oper.wrappers.algorithm.get_row", return_value=algorithm),
+            patch("rail_svc.db_oper.wrappers.catalog_tag.get_row", return_value=catalog_tag),
         ):
-            result = await estimation_funcs._get_estimator_components(mock_session, estimator_id=1)
+            result = await db_oper_wrappers._get_estimator_components(mock_session, estimator_id=1)
 
             assert result == (estimator, model, algorithm, catalog_tag)
 
@@ -75,11 +76,11 @@ class TestGetEstimatorComponents:
     async def test_component_not_found(self, mock_session):
         """Test error when any component is not found."""
         with patch(
-            "rail_svc.db_oper.estimation_funcs.estimator.get_row",
+            "rail_svc.db_oper.wrappers.estimator.get_row",
             side_effect=ValueError("Not found"),
         ):
             with pytest.raises(ValueError, match="Not found"):
-                await estimation_funcs._get_estimator_components(mock_session, estimator_id=999)
+                await db_oper_wrappers._get_estimator_components(mock_session, estimator_id=999)
 
 
 class TestBuildEstimationWrapper:
@@ -99,14 +100,14 @@ class TestBuildEstimationWrapper:
 
         with (
             patch(
-                "rail_svc.db_oper.estimation_funcs._get_estimator_components",
+                "rail_svc.db_oper.wrappers._get_estimator_components",
                 return_value=mock_components,
             ),
-            patch("rail_svc.db_oper.estimation_funcs.global_config.storage.archive", str(archive_dir)),
+            patch("rail_svc.db_oper.wrappers.global_config.storage.archive", str(archive_dir)),
             patch("anyio.Path.absolute", return_value=archive_dir),
             patch.object(CatEstimatorPdfWrapper, "build_wrapper", return_value=mock_wrapper) as mock_build,
         ):
-            result = await estimation_funcs._build_estimation_wrapper(
+            result = await db_oper_wrappers._build_estimation_wrapper(
                 mock_session, estimator_id=1, wrapper_type=WrapperType.PDF
             )
 
@@ -130,13 +131,13 @@ class TestBuildEstimationWrapper:
 
         with (
             patch(
-                "rail_svc.db_oper.estimation_funcs._get_estimator_components", return_value=mock_components
+                "rail_svc.db_oper.wrappers._get_estimator_components", return_value=mock_components
             ),
             patch("rail_svc.db_oper.estimation_funcs.global_config.storage.archive", str(archive_dir)),
             patch("anyio.Path.absolute", return_value=archive_dir),
             patch.object(CatEstimatorEnsembleWrapper, "build_wrapper", return_value=mock_wrapper),
         ):
-            result = await estimation_funcs._build_estimation_wrapper(
+            result = await db_oper_wrappers._build_estimation_wrapper(
                 mock_session, estimator_id=1, wrapper_type=WrapperType.ENSEMBLE
             )
 
@@ -150,13 +151,13 @@ class TestBuildEstimationWrapper:
 
         with (
             patch(
-                "rail_svc.db_oper.estimation_funcs._get_estimator_components", return_value=mock_components
+                "rail_svc.db_oper.wrappers._get_estimator_components", return_value=mock_components
             ),
             patch("rail_svc.db_oper.estimation_funcs.global_config.storage.archive", str(archive_dir)),
             patch("anyio.Path.absolute", return_value=archive_dir),
         ):
             with pytest.raises(FileNotFoundError, match="Model file not found"):
-                await estimation_funcs._build_estimation_wrapper(
+                await db_oper_wrappers._build_estimation_wrapper(
                     mock_session, estimator_id=1, wrapper_type=WrapperType.PDF
                 )
 
@@ -176,13 +177,13 @@ class TestBuildEstimationWrapper:
 
         with (
             patch(
-                "rail_svc.db_oper.estimation_funcs._get_estimator_components", return_value=mock_components
+                "rail_svc.db_oper.wrappers._get_estimator_components", return_value=mock_components
             ),
             patch("rail_svc.db_oper.estimation_funcs.global_config.storage.archive", str(archive_dir)),
             patch("anyio.Path.absolute", return_value=archive_dir),
             patch.object(CatEstimatorPdfWrapper, "build_wrapper", return_value=mock_wrapper) as mock_build,
         ):
-            await estimation_funcs._build_estimation_wrapper(
+            await db_oper_wrappers._build_estimation_wrapper(
                 mock_session, estimator_id=1, wrapper_type=WrapperType.PDF
             )
 
@@ -200,7 +201,7 @@ class TestPublicWrapperBuilders:
         mock_wrapper = Mock(spec=CatEstimatorPdfWrapper)
 
         with patch(
-            "rail_svc.db_oper.estimation_funcs._build_estimation_wrapper",
+            "rail_svc.db_oper.wrappers._build_estimation_wrapper",
             return_value=mock_wrapper,
         ) as mock_build:
             result = await estimation_funcs.build_pdf_estimation_wrapper(mock_session, estimator_id=1)
@@ -214,7 +215,7 @@ class TestPublicWrapperBuilders:
         mock_wrapper = Mock(spec=CatEstimatorEnsembleWrapper)
 
         with patch(
-            "rail_svc.db_oper.estimation_funcs._build_estimation_wrapper",
+            "rail_svc.db_oper.wrappers._build_estimation_wrapper",
             return_value=mock_wrapper,
         ) as mock_build:
             result = await estimation_funcs.build_ensemble_estimation_wrapper(mock_session, estimator_id=1)
@@ -563,7 +564,7 @@ class TestIntegrationScenarios:
             patch("rail_svc.db_oper.estimation_funcs.model.find_by", return_value=[model]),
             patch("rail_svc.db_oper.estimation_funcs.estimator.find_by", return_value=[estimator]),
             patch(
-                "rail_svc.db_oper.estimation_funcs._get_estimator_components", return_value=mock_components
+                "rail_svc.db_oper.wrappers._get_estimator_components", return_value=mock_components
             ),
             patch("rail_svc.db_oper.estimation_funcs.global_config.storage.archive", str(archive_dir)),
             patch("anyio.Path.absolute", return_value=archive_dir),
@@ -619,7 +620,7 @@ class TestIntegrationScenarios:
             patch("rail_svc.db_oper.estimation_funcs.model.find_by", return_value=[model]),
             patch("rail_svc.db_oper.estimation_funcs.estimator.find_by", return_value=[estimator]),
             patch(
-                "rail_svc.db_oper.estimation_funcs._get_estimator_components", return_value=mock_components
+                "rail_svc.db_oper.wrappers._get_estimator_components", return_value=mock_components
             ),
             patch("rail_svc.db_oper.estimation_funcs.global_config.storage.archive", str(archive_dir)),
             patch("anyio.Path.absolute", return_value=archive_dir),

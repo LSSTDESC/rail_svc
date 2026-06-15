@@ -23,7 +23,7 @@ def mock_session():
 @pytest.fixture
 def mock_get_session(mock_session):
     """Mock the get_session context manager."""
-    with patch("rail_svc.local_async.funcs.get_session") as mock:
+    with patch("rail_svc.local_async.base.get_session") as mock:
         mock.return_value.__aenter__ = AsyncMock(return_value=mock_session)
         mock.return_value.__aexit__ = AsyncMock()
         yield mock
@@ -38,14 +38,13 @@ class TestEstimationFunctions:
         estimator_id = 123
         expected_wrapper = MagicMock(spec=CatEstimatorPdfWrapper)
 
-        with patch("rail_svc.db_oper.estimation_funcs.build_pdf_estimation_wrapper") as mock_build:
+        with patch("rail_svc.db_oper.wrappers.build_pdf_estimation_wrapper") as mock_build:
             mock_build.return_value = expected_wrapper
 
             result = await api_funcs.build_pdf_estimation_wrapper(estimator_id)
 
             assert result == expected_wrapper
             mock_build.assert_called_once_with(mock_session, estimator_id)
-            mock_session.begin.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_build_ensemble_estimation_wrapper(self, mock_get_session, mock_session):
@@ -53,14 +52,13 @@ class TestEstimationFunctions:
         estimator_id = 456
         expected_wrapper = MagicMock(spec=CatEstimatorEnsembleWrapper)
 
-        with patch("rail_svc.db_oper.estimation_funcs.build_ensemble_estimation_wrapper") as mock_build:
+        with patch("rail_svc.db_oper.wrappers.build_ensemble_estimation_wrapper") as mock_build:
             mock_build.return_value = expected_wrapper
 
             result = await api_funcs.build_ensemble_estimation_wrapper(estimator_id)
 
             assert result == expected_wrapper
             mock_build.assert_called_once_with(mock_session, estimator_id)
-            mock_session.begin.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_estimate_pdf(self, mock_get_session, mock_session):
@@ -77,7 +75,6 @@ class TestEstimationFunctions:
 
             assert result == expected_ensemble
             mock_estimate.assert_called_once_with(mock_session, estimator_id, dataset_id, row)
-            mock_session.begin.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_estimate_ensemble(self, mock_get_session, mock_session):
@@ -94,7 +91,6 @@ class TestEstimationFunctions:
 
             assert result == expected_path
             mock_estimate.assert_called_once_with(mock_session, estimator_id, dataset_id, output_path)
-            mock_session.begin.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_build_cat_estimator_pdf_wrappers_for_dataset(self, mock_get_session, mock_session):
@@ -114,7 +110,6 @@ class TestEstimationFunctions:
 
             assert result == expected_wrappers
             mock_build.assert_called_once_with(mock_session, dataset_id)
-            mock_session.begin.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_build_cat_estimator_ensemble_wrappers_for_dataset(self, mock_get_session, mock_session):
@@ -134,7 +129,6 @@ class TestEstimationFunctions:
 
             assert result == expected_wrappers
             mock_build.assert_called_once_with(mock_session, dataset_id)
-            mock_session.begin.assert_called_once()
 
 
 class TestCatalogFunctions:
@@ -234,7 +228,7 @@ class TestCatalogFunctions:
             result = await api_funcs.load_catalog_yaml(catalog_yaml)
 
             assert result == ([], [], [])
-            mock_load.assert_called_once_with(mock_session, catalog_yaml, None)
+            mock_load.assert_called_once_with(mock_session, catalog_yaml)
             mock_session.begin.assert_called_once()
 
     @pytest.mark.asyncio
@@ -251,7 +245,6 @@ class TestCatalogFunctions:
 
             assert result == expected_data
             mock_get.assert_called_once_with(mock_session, dataset_id, row)
-            mock_session.begin.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_get_estimates_row(self, mock_get_session, mock_session):
@@ -267,7 +260,6 @@ class TestCatalogFunctions:
 
             assert result == expected_data
             mock_get.assert_called_once_with(mock_session, estimates_id, row)
-            mock_session.begin.assert_called_once()
 
     @pytest.mark.skip(reason="Not working")
     @pytest.mark.asyncio
@@ -326,7 +318,6 @@ class TestCatalogFunctions:
 
             assert result == expected_result
             mock_get.assert_called_once_with(mock_session, dataset_id, row)
-            mock_session.begin.assert_called_once()
 
     @pytest.mark.skip(reason="Not working")
     @pytest.mark.asyncio
@@ -467,11 +458,8 @@ class TestDecoratorBehavior:
     async def test_decorator_creates_session(self):
         """Test that decorator creates and manages session."""
         mock_session = AsyncMock()
-        mock_session.begin = MagicMock()
-        mock_session.begin.return_value.__aenter__ = AsyncMock()
-        mock_session.begin.return_value.__aexit__ = AsyncMock()
 
-        with patch("rail_svc.local_async.funcs.get_session") as mock_get_session:
+        with patch("rail_svc.local_async.base.get_session") as mock_get_session:
             mock_get_session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_get_session.return_value.__aexit__ = AsyncMock()
 
@@ -482,18 +470,13 @@ class TestDecoratorBehavior:
 
                 # Verify session was created
                 mock_get_session.assert_called_once()
-                # Verify transaction was started
-                mock_session.begin.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_decorator_passes_session_to_function(self):
         """Test that decorator passes session as first argument."""
         mock_session = AsyncMock()
-        mock_session.begin = MagicMock()
-        mock_session.begin.return_value.__aenter__ = AsyncMock()
-        mock_session.begin.return_value.__aexit__ = AsyncMock()
 
-        with patch("rail_svc.local_async.funcs.get_session") as mock_get_session:
+        with patch("rail_svc.local_async.base.get_session") as mock_get_session:
             mock_get_session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_get_session.return_value.__aexit__ = AsyncMock()
 
@@ -503,18 +486,14 @@ class TestDecoratorBehavior:
                 await api_funcs.get_catalog_row(dataset_id=123, row=5)
 
                 # Verify session was passed as first argument
-                mock_get_row.assert_called_once_with(mock_session, 123, 5)
+                mock_get_row.assert_called_once_with(mock_session, dataset_id=123, row=5)
 
     @pytest.mark.asyncio
     async def test_decorator_propagates_exceptions(self):
         """Test that decorator propagates exceptions from wrapped function."""
         mock_session = AsyncMock()
-        mock_begin_context = MagicMock()
-        mock_begin_context.__aenter__ = AsyncMock()
-        mock_begin_context.__aexit__ = AsyncMock(return_value=False)
-        mock_session.begin = MagicMock(return_value=mock_begin_context)
 
-        with patch("rail_svc.local_async.funcs.get_session") as mock_get_session:
+        with patch("rail_svc.local_async.base.get_session") as mock_get_session:
             mock_get_session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_get_session.return_value.__aexit__ = AsyncMock(return_value=False)
 
@@ -526,23 +505,27 @@ class TestDecoratorBehavior:
 
     @pytest.mark.asyncio
     async def test_decorator_handles_transaction_rollback(self):
-        """Test that decorator properly handles transaction rollback on error."""
+        """Test that with_session_transaction handles errors properly."""
         mock_session = AsyncMock()
         mock_begin_context = MagicMock()
         mock_begin_context.__aenter__ = AsyncMock()
         mock_begin_context.__aexit__ = AsyncMock(return_value=False)
         mock_session.begin = MagicMock(return_value=mock_begin_context)
 
-        with patch("rail_svc.local_async.funcs.get_session") as mock_get_session:
+        with patch("rail_svc.local_async.base.get_session") as mock_get_session:
             mock_get_session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_get_session.return_value.__aexit__ = AsyncMock(return_value=False)
 
-            with patch("rail_svc.db_oper.catalog_funcs.get_catalog_row") as mock_get_row:
-                mock_get_row.side_effect = RuntimeError("Database error")
+            with patch(
+                "rail_svc.db_oper.catalog_funcs.load_catalog_yaml", new_callable=AsyncMock
+            ) as mock_load:
+                mock_load.side_effect = RuntimeError("Database error")
 
                 with pytest.raises(RuntimeError, match="Database error"):
-                    await api_funcs.get_catalog_row(dataset_id=123, row=5)
+                    await api_funcs.load_catalog_yaml("test.yaml")
 
+                # Verify begin was called (with_session_transaction)
+                mock_session.begin.assert_called_once()
                 # Verify __aexit__ was called (transaction cleanup)
                 mock_begin_context.__aexit__.assert_called_once()
 

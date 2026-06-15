@@ -113,9 +113,9 @@ def handle_file(
 ) -> Path:
     if load_type == LoadType.in_place:
         return Path(orig_path)
-    elif load_type == LoadType.link:
+    if load_type == LoadType.link:
         return link_file_to_archive(orig_path, relative_path)
-    elif load_type == LoadType.copy:
+    if load_type == LoadType.copy:
         return copy_file_to_archive(orig_path, relative_path)
     raise AssertionError(f"Unknown load_type {load_type}")
 
@@ -139,12 +139,12 @@ def str_to_slice(value: str | None) -> slice | None:
     if len(parts) == 1:
         # Single number: treat as stop value
         return slice(int(parts[0]) if parts[0] else None, None, None)
-    elif len(parts) == 2:
+    if len(parts) == 2:
         # start:stop
         start = int(parts[0]) if parts[0] else None
         stop = int(parts[1]) if parts[1] else None
         return slice(start, stop, None)
-    elif len(parts) == 3:
+    if len(parts) == 3:
         # start:stop:step
         start = int(parts[0]) if parts[0] else None
         stop = int(parts[1]) if parts[1] else None

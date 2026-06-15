@@ -394,14 +394,14 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
             # Need to look up Algorithm and CatalogTag for validation
             async with get_session() as session:
                 # Look up algorithm
-                algo_id, algo_obj = await db_funcs.read.lookup_by_id_or_name(
+                _algo_id, algo_obj = await db_funcs.read.lookup_by_id_or_name(
                     db.Algorithm, session, None, algo_name, need_object=True
                 )
                 if algo_obj is None:
                     raise ValueError(f"Algorithm '{algo_name}' not found in database")
 
                 # Look up catalog tag
-                catalog_tag_id, catalog_tag_obj = await db_funcs.read.lookup_by_id_or_name(
+                _catalog_tag_id, catalog_tag_obj = await db_funcs.read.lookup_by_id_or_name(
                     db.CatalogTag, session, None, catalog_tag_name, need_object=True
                 )
                 if catalog_tag_obj is None:

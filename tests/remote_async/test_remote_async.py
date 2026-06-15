@@ -5,6 +5,7 @@ from __future__ import annotations
 from rail_svc import models
 from rail_svc.remote_async import algorithm, band, dataset, model
 from rail_svc.remote_async.base import AsyncRemoteOperations
+from rail_svc.remote_async.funcs import AsyncRemoteFuncs
 
 
 class TestModuleBasics:
@@ -17,7 +18,7 @@ class TestModuleBasics:
 
         for export_name in __all__:
             obj = getattr(remote_async, export_name)
-            assert isinstance(obj, AsyncRemoteOperations)
+            assert isinstance(obj, (AsyncRemoteOperations, AsyncRemoteFuncs))
 
     def test_instances_are_usable(self) -> None:
         """Test that instances have the expected async methods."""

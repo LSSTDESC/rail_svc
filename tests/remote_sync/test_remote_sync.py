@@ -159,6 +159,7 @@ class TestModuleExports:
             "estimates",
             "estimator",
             "model",
+            "funcs",
         ]
 
         assert set(__all__) == set(expected)

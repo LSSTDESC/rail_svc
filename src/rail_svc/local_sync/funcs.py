@@ -71,5 +71,5 @@ def estimate_pdf_for_slice(*args: Any, **kwargs: Any) -> qp.Ensemble:
     return asyncio.run(local_async.funcs.estimate_pdf_for_slice(*args, **kwargs))
 
 
-def estimate_dataset(*args: Any, **kwargs: Any) -> db.Estimates:
+def estimate_dataset(*args: Any, **kwargs: Any) -> models.Estimates:
     return asyncio.run(local_async.funcs.estimate_dataset(*args, **kwargs))

@@ -16,6 +16,16 @@ from .web import (
     FindRequest,
     LookupResponse,
     RemoteAPIError,
+    EstimatePdfRequest,
+    EstimateEnsembleRequest,
+    EstimateEnsembleResponse,
+    LoadCatalogYamlRequest,
+    LoadCatalogYamlResponse,
+    GetDatasetAndEstimatesResponse,
+    GetDataAndEstimatesDataResponse,
+    CreateMatchedDatasetRequest,
+    EstimatePdfForSliceRequest,
+    EstimateDatasetRequest,
 )
 
 __all__ = [
@@ -47,4 +57,14 @@ __all__ = [
     "DeleteResponse",
     "FilterRequest",
     "FindRequest",
+    "EstimatePdfRequest",
+    "EstimateEnsembleRequest",
+    "EstimateEnsembleResponse",
+    "LoadCatalogYamlRequest",
+    "LoadCatalogYamlResponse",
+    "GetDatasetAndEstimatesResponse",
+    "GetDataAndEstimatesDataResponse",
+    "CreateMatchedDatasetRequest",
+    "EstimatePdfForSliceRequest",
+    "EstimateDatasetRequest",
 ]

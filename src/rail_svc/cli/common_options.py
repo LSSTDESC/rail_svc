@@ -50,7 +50,7 @@ def validate_non_empty(_ctx: click.Context, param: click.Parameter, value: str) 
     return value
 
 
-def parse_slice(ctx: click.Context, param: click.Parameter, value: str | None) -> slice | None:
+def parse_slice(_ctx: click.Context, _param: click.Parameter, value: str | None) -> slice | None:
     """Parse a string into a Python slice object.
 
     Accepts formats like:
