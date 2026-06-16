@@ -1066,8 +1066,12 @@ class RemoteAPI:
         )
 
 
-class RemoteDatasetOperations(RemoteTableOperations[models.Dataset, models.DatasetCreate]):
-    """Extended remote client for Dataset table with custom operations."""
+class RemoteFileOperations[ResponseT: BaseModel, CreateT: BaseModel](
+    RemoteTableOperations[ResponseT, CreateT]
+):
+    """Mixin for tables that support load and download operations."""
+
+    _default_filename_prefix: str = "file"
 
     async def load(
         self,
@@ -1076,8 +1080,8 @@ class RemoteDatasetOperations(RemoteTableOperations[models.Dataset, models.Datas
         *,
         validate: bool = True,
         **data: Any,
-    ) -> models.Dataset:
-        """Load a dataset from a file.
+    ) -> ResponseT:
+        """Load a file and create a record.
 
         Parameters
         ----------
@@ -1088,12 +1092,12 @@ class RemoteDatasetOperations(RemoteTableOperations[models.Dataset, models.Datas
         validate : bool
             Whether to validate data on the server (default: True)
         **data
-            Additional fields for the dataset record
+            Additional fields for the record
 
         Returns
         -------
-        models.Dataset
-            Created dataset row
+        ResponseT
+            Created row
 
         Raises
         ------
@@ -1113,32 +1117,75 @@ class RemoteDatasetOperations(RemoteTableOperations[models.Dataset, models.Datas
         )
 
         result = cast(dict[str, Any], self._handle_response(response, expected_status=201))
-        return models.Dataset(**result)
+        return self.response_model(**result)
 
-    async def read_slice(
+    async def download(
         self,
         row_id: int,
-        the_slice: slice | int | None = None,
-    ) -> dict[str, np.ndarray]:
-        """Read a slice of data from a dataset.
+        output_path: Path | str | None = None,
+    ) -> Path:
+        """Download a file.
 
         Parameters
         ----------
         row_id : int
-            Dataset row ID
-        the_slice : slice |int | None
-            Slice to read
+            Row ID
+        output_path : Path | str | None
+            Optional output path relative to download area.
 
         Returns
         -------
-        Any
-            Sliced data
+        Path
+            Path to the downloaded file
 
         Raises
         ------
         RemoteAPIError
             If the API request fails
         """
+        download_dir = Path(global_config.storage.download_area)
+
+        params = {}
+        if output_path is not None:
+            params["output_path"] = str(output_path)
+
+        response = await self.client.get(
+            f"{self.endpoint}/download/{row_id}",
+            params=params,
+        )
+
+        if unexpected(response.status_code != 200):
+            self._handle_response(response, expected_status=200)
+
+        content_disposition = response.headers.get("content-disposition", "")
+        if "filename=" in content_disposition:
+            filename = content_disposition.split("filename=")[1].strip('"')
+        else:  # pragma: no cover
+            filename = f"{self._default_filename_prefix}_{row_id}"
+
+        if output_path is not None:
+            file_path = download_dir / Path(output_path)
+        else:
+            file_path = download_dir / Path(filename)
+
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        async with aiofiles.open(file_path, "wb") as f:
+            await f.write(response.content)
+
+        return file_path
+
+
+class RemoteDatasetOperations(RemoteFileOperations[models.Dataset, models.DatasetCreate]):
+    """Extended remote client for Dataset table with custom operations."""
+
+    _default_filename_prefix = "dataset"
+
+    async def read_slice(
+        self,
+        row_id: int,
+        the_slice: slice | int | None = None,
+    ) -> dict[str, np.ndarray]:
+        """Read a slice of data from a dataset."""
         params = dict(read_slice=slice_to_str(the_slice))
         response = await self.client.get(
             f"{self.endpoint}/read_slice/{row_id}",
@@ -1148,139 +1195,18 @@ class RemoteDatasetOperations(RemoteTableOperations[models.Dataset, models.Datas
         out_data = json.loads(result["data"])
         return out_data
 
-    async def download(
-        self,
-        row_id: int,
-        output_path: Path | str | None = None,
-    ) -> Path:
-        """Download a dataset file.
 
-        Parameters
-        ----------
-        row_id : int
-            Dataset row ID
-        output_path : Path | str | None
-            Optional output path relative to download area.
-            If None, uses the same path as in the archive area.
-
-        Returns
-        -------
-        Path
-            Path to the downloaded file
-
-        Raises
-        ------
-        RemoteAPIError
-            If the API request fails
-        """
-        download_dir = Path(global_config.storage.download_area)
-
-        params = {}
-        if output_path is not None:
-            params["output_path"] = str(output_path)
-
-        response = await self.client.get(
-            f"{self.endpoint}/download/{row_id}",
-            params=params,
-        )
-
-        if unexpected(response.status_code != 200):
-            self._handle_response(response, expected_status=200)
-
-        # Extract filename from Content-Disposition header or use default
-        content_disposition = response.headers.get("content-disposition", "")
-        if "filename=" in content_disposition:
-            filename = content_disposition.split("filename=")[1].strip('"')
-        else:  # pragma: no cover
-            filename = f"dataset_{row_id}"
-
-        # Determine the output path
-        if output_path is not None:
-            file_path = download_dir / Path(output_path)
-        else:
-            file_path = download_dir / Path(filename)
-
-        # Write the file
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        async with aiofiles.open(file_path, "wb") as f:
-            await f.write(response.content)
-
-        return file_path
-
-
-class RemoteEstimatesOperations(RemoteTableOperations[models.Estimates, models.EstimatesCreate]):
+class RemoteEstimatesOperations(RemoteFileOperations[models.Estimates, models.EstimatesCreate]):
     """Extended remote client for Estimates table with custom operations."""
 
-    async def load(
-        self,
-        path: Path | str,
-        load_type: LoadType = LoadType.in_place,
-        *,
-        validate: bool = True,
-        **data: Any,
-    ) -> models.Estimates:
-        """Load estimates from a file.
-
-        Parameters
-        ----------
-        path : Path | str
-            Path to the estimates file
-        load_type : LoadType
-            How to handle the file (in_place, link, or copy)
-        validate : bool
-            Whether to validate data on the server (default: True)
-        **data
-            Additional fields for the estimates record
-
-        Returns
-        -------
-        models.Estimates
-            Created estimates row
-
-        Raises
-        ------
-        RemoteAPIError
-            If the API request fails
-        """
-        request_body = {
-            "path": str(path),
-            "load_type": load_type.value,
-            "data": data,
-        }
-
-        response = await self.client.post(
-            f"{self.endpoint}/load",
-            json=request_body,
-            params={"validate": validate},
-        )
-
-        result = cast(dict[str, Any], self._handle_response(response, expected_status=201))
-        return models.Estimates(**result)
+    _default_filename_prefix = "estimates"
 
     async def read_slice(
         self,
         row_id: int,
         the_slice: slice | int | None = None,
     ) -> dict[str, np.ndarray]:
-        """Read a slice of data from estimates.
-
-        Parameters
-        ----------
-        row_id : int
-            Estimates row ID
-        the_slice : slice |int | None
-            Slice to read
-
-        Returns
-        -------
-        Any
-            Sliced data
-
-        Raises
-        ------
-        RemoteAPIError
-            If the API request fails
-        """
+        """Read a slice of data from estimates."""
         params = dict(read_slice=slice_to_str(the_slice))
         response = await self.client.get(
             f"{self.endpoint}/read_slice/{row_id}",
@@ -1290,171 +1216,8 @@ class RemoteEstimatesOperations(RemoteTableOperations[models.Estimates, models.E
         result = cast(dict[str, Any], self._handle_response(response))
         return qp.from_json(result)
 
-    async def download(
-        self,
-        row_id: int,
-        output_path: Path | str | None = None,
-    ) -> Path:
-        """Download an estimates file.
 
-        Parameters
-        ----------
-        row_id : int
-            Estimates row ID
-        output_path : Path | str | None
-            Optional output path relative to download area.
-            If None, uses the same path as in the archive area.
-
-        Returns
-        -------
-        Path
-            Path to the downloaded file
-
-        Raises
-        ------
-        RemoteAPIError
-            If the API request fails
-        """
-
-        download_dir = Path(global_config.storage.download_area)
-
-        params = {}
-        if output_path is not None:
-            params["output_path"] = str(output_path)
-
-        response = await self.client.get(
-            f"{self.endpoint}/download/{row_id}",
-            params=params,
-        )
-
-        if unexpected(response.status_code != 200):
-            self._handle_response(response, expected_status=200)
-
-        # Extract filename from Content-Disposition header or use default
-        content_disposition = response.headers.get("content-disposition", "")
-        if "filename=" in content_disposition:
-            filename = content_disposition.split("filename=")[1].strip('"')
-        else:  # pragma: no cover
-            filename = f"estimates_{row_id}"
-
-        # Determine the output path
-        if output_path is not None:
-            file_path = download_dir / Path(output_path)
-        else:
-            file_path = download_dir / Path(filename)
-
-        # Write the file
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        async with aiofiles.open(file_path, "wb") as f:
-            await f.write(response.content)
-
-        return file_path
-
-
-class RemoteModelOperations(RemoteTableOperations[models.Model, models.ModelCreate]):
+class RemoteModelOperations(RemoteFileOperations[models.Model, models.ModelCreate]):
     """Extended remote client for Model table with custom operations."""
 
-    async def load(
-        self,
-        path: Path | str,
-        load_type: LoadType = LoadType.in_place,
-        *,
-        validate: bool = True,
-        **data: Any,
-    ) -> models.Model:
-        """Load a model from a file.
-
-        Parameters
-        ----------
-        path : Path | str
-            Path to the model file
-        load_type : LoadType
-            How to handle the file (in_place, link, or copy)
-        validate : bool
-            Whether to validate data on the server (default: True)
-        **data
-            Additional fields for the model record
-
-        Returns
-        -------
-        models.Model
-            Created model row
-
-        Raises
-        ------
-        RemoteAPIError
-            If the API request fails
-        """
-        request_body = {
-            "path": str(path),
-            "load_type": load_type.value,
-            "data": data,
-        }
-
-        response = await self.client.post(
-            f"{self.endpoint}/load",
-            json=request_body,
-            params={"validate": validate},
-        )
-
-        result = cast(dict[str, Any], self._handle_response(response, expected_status=201))
-        return models.Model(**result)
-
-    async def download(
-        self,
-        row_id: int,
-        output_path: Path | str | None = None,
-    ) -> Path:
-        """Download a model file.
-
-        Parameters
-        ----------
-        row_id : int
-            Model row ID
-        output_path : Path | str | None
-            Optional output path relative to download area.
-            If None, uses the same path as in the archive area.
-
-        Returns
-        -------
-        Path
-            Path to the downloaded file
-
-        Raises
-        ------
-        RemoteAPIError
-            If the API request fails
-        """
-        download_dir = Path(global_config.storage.download_area)
-
-        params = {}
-        if output_path is not None:
-            params["output_path"] = str(output_path)
-
-        response = await self.client.get(
-            f"{self.endpoint}/download/{row_id}",
-            params=params,
-        )
-
-        if unexpected(response.status_code != 200):
-            self._handle_response(response, expected_status=200)
-
-        # Extract filename from Content-Disposition header or use default
-        content_disposition = response.headers.get("content-disposition", "")
-        if "filename=" in content_disposition:
-            filename = content_disposition.split("filename=")[1].strip('"')
-        else:  # pragma: no cover
-            filename = f"model_{row_id}"
-
-        # Determine the output path
-        if output_path is not None:
-            file_path = download_dir / Path(output_path)
-        else:
-            file_path = download_dir / Path(filename)
-
-        # Write the file
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        async with aiofiles.open(file_path, "wb") as f:
-            await f.write(response.content)
-
-        return file_path
+    _default_filename_prefix = "model"

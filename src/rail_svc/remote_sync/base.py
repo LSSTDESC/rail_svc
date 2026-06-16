@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
-from functools import wraps
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, ClassVar
 
 from pydantic import BaseModel
 
@@ -18,183 +16,60 @@ from ..remote_async.base import (
     AsyncRemoteModelOperations,
 )
 
-F = TypeVar("F", bound=Callable[..., Any])
+
+def _make_sync_method(method_name: str) -> Any:
+    """Create a sync method that delegates to self.async_ops.<method_name>."""
+
+    def sync_method(self: Any, *args: Any, **kwargs: Any) -> Any:
+        coro = getattr(self.async_ops, method_name)(*args, **kwargs)
+
+        async def _run() -> Any:
+            async with self.async_ops:
+                return await coro
+
+        return asyncio.run(_run())
+
+    sync_method.__name__ = method_name
+    return sync_method
 
 
-def sync_wrapper(async_method: Callable[..., Any]) -> Callable[[F], F]:
-    """Decorator that wraps an async method call with asyncio.run and copies its docstring.
-
-    This decorator is designed for creating synchronous wrappers around async methods.
-    It automatically calls asyncio.run() on the async method and copies the docstring
-    from the async method to the sync wrapper.
-
-    Parameters
-    ----------
-    async_method : Callable
-        The async method to wrap (unbound method reference)
-
-    Returns
-    -------
-    Callable
-        Decorator function that creates a sync wrapper
-
-    Examples
-    --------
-    >>> class AsyncOps:
-    ...     async def get_data(self, x: int) -> int:
-    ...         '''Fetch data asynchronously.'''
-    ...         return x * 2
-    >>>
-    >>> class SyncOps:
-    ...     def __init__(self, async_ops: AsyncOps):
-    ...         self.async_ops = async_ops
-    ...
-    ...     @sync_wrapper(AsyncOps.get_data)
-    ...     def get_data(self, *args, **kwargs):
-    ...         return self.async_ops.get_data(*args, **kwargs)
-    >>>
-    >>> sync_ops = SyncOps(AsyncOps())
-    >>> sync_ops.get_data(5)  # Automatically runs in asyncio.run()
-    """
-
-    def decorator(func: F) -> F:
-        @wraps(func)
-        def wrapped(self: Any, *args: Any, **kwargs: Any) -> Any:
-            # Call the original function to get the coroutine
-            coro = func(self, *args, **kwargs)
-
-            async def doit() -> Any:
-                async with self.async_ops:
-                    return await coro
-
-            # Run it with asyncio.run
-            return asyncio.run(doit())
-
-        wrapped.__doc__ = async_method.__doc__
-        return wrapped  # type: ignore
-
-    return decorator
+_BASE_METHODS = [
+    "create_row", "create_rows", "create_rows_batched", "bulk_insert_rows",
+    "get_row", "get_row_by_name", "get_rows", "get_row_or_none",
+    "count_rows", "lookup_by_id_or_name",
+    "update_row", "update_rows",
+    "delete_row", "delete_rows", "bulk_delete_rows",
+    "filter_rows", "count_filtered_rows", "filter_one", "filter_one_or_none",
+    "find_by", "find_one_by",
+]
 
 
 class SyncRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
     """Synchronous wrapper for AsyncRemoteOperations.
 
     Provides blocking synchronous methods that wrap async remote operations
-    using asyncio.run(). Each method call creates a new event loop.
+    using asyncio.run(). Each method call opens and closes the async context.
 
     Warning
     -------
-    This wrapper is convenient but less efficient than using AsyncRemoteOperations
-    directly. For multiple operations, prefer the async API with context manager.
-
     Cannot be used from async code (will raise RuntimeError).
-
-    Examples
-    --------
-    >>> ops = SyncRemoteOperations(async_ops)
-    >>> result = ops.get_row(1)
-    >>> rows = ops.get_rows(limit=10)
     """
+
+    _extra_methods: ClassVar[list[str]] = []
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        for method_name in cls._extra_methods:
+            if not hasattr(cls, method_name) or method_name not in cls.__dict__:
+                setattr(cls, method_name, _make_sync_method(method_name))
 
     def __init__(self, async_ops: AsyncRemoteOperations[ResponseT, CreateT]) -> None:
         self.async_ops = async_ops
 
-    # CREATE operations
 
-    @sync_wrapper(AsyncRemoteOperations.create_row)
-    def create_row(self, *args: Any, **kwargs: Any) -> ResponseT:
-        return self.async_ops.create_row(*args, **kwargs)  # type: ignore
-
-    @sync_wrapper(AsyncRemoteOperations.create_rows)
-    def create_rows(self, *args: Any, **kwargs: Any) -> list[ResponseT]:
-        return self.async_ops.create_rows(*args, **kwargs)  # type: ignore
-
-    @sync_wrapper(AsyncRemoteOperations.create_rows_batched)
-    def create_rows_batched(self, *args: Any, **kwargs: Any) -> list[ResponseT]:
-        return self.async_ops.create_rows_batched(*args, **kwargs)  # type: ignore
-
-    @sync_wrapper(AsyncRemoteOperations.bulk_insert_rows)
-    def bulk_insert_rows(self, *args: Any, **kwargs: Any) -> int:
-        return self.async_ops.bulk_insert_rows(*args, **kwargs)  # type: ignore
-
-    # READ operations
-
-    @sync_wrapper(AsyncRemoteOperations.get_row)
-    def get_row(self, *args: Any, **kwargs: Any) -> ResponseT:
-        return self.async_ops.get_row(*args, **kwargs)  # type: ignore
-
-    @sync_wrapper(AsyncRemoteOperations.get_row_by_name)
-    def get_row_by_name(self, *args: Any, **kwargs: Any) -> ResponseT:
-        return self.async_ops.get_row_by_name(*args, **kwargs)  # type: ignore
-
-    @sync_wrapper(AsyncRemoteOperations.get_rows)
-    def get_rows(self, *args: Any, **kwargs: Any) -> list[ResponseT]:
-        return self.async_ops.get_rows(*args, **kwargs)  # type: ignore
-
-    @sync_wrapper(AsyncRemoteOperations.get_row_or_none)
-    def get_row_or_none(self, *args: Any, **kwargs: Any) -> ResponseT | None:
-        return self.async_ops.get_row_or_none(*args, **kwargs)  # type: ignore
-
-    @sync_wrapper(AsyncRemoteOperations.count_rows)
-    def count_rows(self, *args: Any, **kwargs: Any) -> int:
-        return self.async_ops.count_rows(*args, **kwargs)  # type: ignore
-
-    @sync_wrapper(AsyncRemoteOperations.lookup_by_id_or_name)
-    def lookup_by_id_or_name(self, *args: Any, **kwargs: Any) -> tuple[int, ResponseT]:
-        return self.async_ops.lookup_by_id_or_name(*args, **kwargs)  # type: ignore
-
-    # UPDATE operations
-
-    @sync_wrapper(AsyncRemoteOperations.update_row)
-    def update_row(self, *args: Any, **kwargs: Any) -> ResponseT:
-        return self.async_ops.update_row(*args, **kwargs)  # type: ignore
-
-    @sync_wrapper(AsyncRemoteOperations.update_rows)
-    def update_rows(self, *args: Any, **kwargs: Any) -> list[ResponseT]:
-        return self.async_ops.update_rows(*args, **kwargs)  # type: ignore
-
-    # DELETE operations
-
-    @sync_wrapper(AsyncRemoteOperations.delete_row)
-    def delete_row(self, *args: Any, **kwargs: Any) -> ResponseT | None:
-        return self.async_ops.delete_row(*args, **kwargs)  # type: ignore
-
-    @sync_wrapper(AsyncRemoteOperations.delete_rows)
-    def delete_rows(self, *args: Any, **kwargs: Any) -> list[ResponseT] | int:
-        return self.async_ops.delete_rows(*args, **kwargs)  # type: ignore
-
-    @sync_wrapper(AsyncRemoteOperations.bulk_delete_rows)
-    def bulk_delete_rows(self, *args: Any, **kwargs: Any) -> int:
-        return self.async_ops.bulk_delete_rows(*args, **kwargs)  # type: ignore
-
-    # FILTER/QUERY operations
-
-    @sync_wrapper(AsyncRemoteOperations.filter_rows)
-    def filter_rows(self, *args: Any, **kwargs: Any) -> list[ResponseT]:
-        return self.async_ops.filter_rows(*args, **kwargs)  # type: ignore
-
-    @sync_wrapper(AsyncRemoteOperations.count_filtered_rows)
-    def count_filtered_rows(self, *args: Any, **kwargs: Any) -> int:
-        return self.async_ops.count_filtered_rows(*args, **kwargs)  # type: ignore
-
-    @sync_wrapper(AsyncRemoteOperations.filter_one)
-    def filter_one(self, *args: Any, **kwargs: Any) -> ResponseT:
-        return self.async_ops.filter_one(*args, **kwargs)  # type: ignore
-
-    @sync_wrapper(AsyncRemoteOperations.filter_one_or_none)
-    def filter_one_or_none(self, *args: Any, **kwargs: Any) -> ResponseT | None:
-        return self.async_ops.filter_one_or_none(*args, **kwargs)  # type: ignore
-
-    @sync_wrapper(AsyncRemoteOperations.find_by)
-    def find_by(self, *args: Any, **kwargs: Any) -> list[ResponseT]:
-        return self.async_ops.find_by(*args, **kwargs)  # type: ignore
-
-    @sync_wrapper(AsyncRemoteOperations.find_one_by)
-    def find_one_by(self, *args: Any, **kwargs: Any) -> ResponseT:
-        return self.async_ops.find_one_by(*args, **kwargs)  # type: ignore
-
-
-# Subclasses
+# Generate base CRUD methods on SyncRemoteOperations
+for _name in _BASE_METHODS:
+    setattr(SyncRemoteOperations, _name, _make_sync_method(_name))
 
 
 class AlgorithmSyncRemoteOperations(SyncRemoteOperations[models.Algorithm, models.AlgorithmCreate]):
@@ -218,19 +93,7 @@ class CatalogTagSyncRemoteOperations(SyncRemoteOperations[models.CatalogTag, mod
 class DatasetSyncRemoteOperations(SyncRemoteOperations[models.Dataset, models.DatasetCreate]):
     """Sync wrapper for remote operations on Dataset table."""
 
-    async_ops: AsyncRemoteDatasetOperations
-
-    @sync_wrapper(AsyncRemoteDatasetOperations.load)
-    def load(self, *args: Any, **kwargs: Any) -> models.Dataset:
-        return self.async_ops.load(*args, **kwargs)  # type: ignore
-
-    @sync_wrapper(AsyncRemoteDatasetOperations.read_slice)
-    def read_slice(self, *args: Any, **kwargs: Any) -> Any:
-        return self.async_ops.read_slice(*args, **kwargs)
-
-    @sync_wrapper(AsyncRemoteDatasetOperations.download)
-    def download(self, *args: Any, **kwargs: Any) -> Path:
-        return self.async_ops.download(*args, **kwargs)  # type: ignore
+    _extra_methods: ClassVar[list[str]] = ["load", "read_slice", "download"]
 
 
 class DatasetAssocSyncRemoteOperations(SyncRemoteOperations[models.DatasetAssoc, models.DatasetAssocCreate]):
@@ -240,19 +103,7 @@ class DatasetAssocSyncRemoteOperations(SyncRemoteOperations[models.DatasetAssoc,
 class EstimatesSyncRemoteOperations(SyncRemoteOperations[models.Estimates, models.EstimatesCreate]):
     """Sync wrapper for remote operations on Estimates table."""
 
-    async_ops: AsyncRemoteEstimatesOperations
-
-    @sync_wrapper(AsyncRemoteEstimatesOperations.load)
-    def load(self, *args: Any, **kwargs: Any) -> models.Estimates:
-        return self.async_ops.load(*args, **kwargs)  # type: ignore
-
-    @sync_wrapper(AsyncRemoteEstimatesOperations.read_slice)
-    def read_slice(self, *args: Any, **kwargs: Any) -> Any:
-        return self.async_ops.read_slice(*args, **kwargs)
-
-    @sync_wrapper(AsyncRemoteEstimatesOperations.download)
-    def download(self, *args: Any, **kwargs: Any) -> Path:
-        return self.async_ops.download(*args, **kwargs)  # type: ignore
+    _extra_methods: ClassVar[list[str]] = ["load", "read_slice", "download"]
 
 
 class EstimatorSyncRemoteOperations(SyncRemoteOperations[models.Estimator, models.EstimatorCreate]):
@@ -262,12 +113,4 @@ class EstimatorSyncRemoteOperations(SyncRemoteOperations[models.Estimator, model
 class ModelSyncRemoteOperations(SyncRemoteOperations[models.Model, models.ModelCreate]):
     """Sync wrapper for remote operations on Model table."""
 
-    async_ops: AsyncRemoteModelOperations
-
-    @sync_wrapper(AsyncRemoteModelOperations.load)
-    def load(self, *args: Any, **kwargs: Any) -> models.Model:
-        return self.async_ops.load(*args, **kwargs)  # type: ignore
-
-    @sync_wrapper(AsyncRemoteModelOperations.download)
-    def download(self, *args: Any, **kwargs: Any) -> Path:
-        return self.async_ops.download(*args, **kwargs)  # type: ignore
+    _extra_methods: ClassVar[list[str]] = ["load", "download"]
