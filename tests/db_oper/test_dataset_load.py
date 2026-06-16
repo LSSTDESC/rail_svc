@@ -63,7 +63,6 @@ class TestDatasetReadSlice:
             mock_read.assert_called_once_with(sample_dataset.path, None)
             assert result == expected_data
 
-    @pytest.mark.skip(reason="Bug: dataset.get_row() called with keyword arg 'row' instead of positional")
     @pytest.mark.asyncio
     async def test_read_collection_dataset(self, session_factory, sample_catalog_tag):
         """Test reading from a collection dataset resolves component paths."""

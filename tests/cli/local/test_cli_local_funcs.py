@@ -52,7 +52,6 @@ class TestEstimatePdf:
 class TestEstimateEnsemble:
     """Test estimate-ensemble CLI command."""
 
-    @pytest.mark.skip(reason="Bug: CLI option --output-path maps to output_path, not output_file_path")
     @patch("rail_svc.db.session.init_db")
     @patch("rail_svc.local_sync.funcs.estimate_ensemble")
     def test_success(self, mock_estimate, mock_init, runner, tmp_path):
@@ -122,7 +121,6 @@ class TestGetDatasetAndEstimates:
 class TestCreateMatchedDataset:
     """Test create-matched-dataset CLI command."""
 
-    @pytest.mark.skip(reason="Bug: CLI casts tuple return to Dataset instead of unpacking")
     @patch("rail_svc.db.session.init_db")
     @patch("rail_svc.local_sync.funcs.create_matched_dataset")
     def test_success(self, mock_create, mock_init, runner, tmp_path):

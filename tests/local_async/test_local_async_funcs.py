@@ -111,7 +111,6 @@ class TestCreateMatchedDataset:
 class TestGetEstimatorsForDataset:
     """Test get_estimators_for_dataest with real DB."""
 
-    @pytest.mark.skip(reason="@to_pydantic_list decorator not compatible with standalone functions")
     @pytest.mark.asyncio
     async def test_finds_estimators(self, patch_session, sample_dataset, sample_estimator):
         """Test finding estimators for a dataset via catalog_tag → model → estimator chain."""
@@ -120,7 +119,6 @@ class TestGetEstimatorsForDataset:
         assert len(result) >= 1
         assert any(e.id_ == sample_estimator.id_ for e in result)
 
-    @pytest.mark.skip(reason="@to_pydantic_list decorator not compatible with standalone functions")
     @pytest.mark.asyncio
     async def test_multiple_estimators(self, patch_session, sample_dataset, multiple_estimators):
         """Test finding multiple estimators for a dataset."""

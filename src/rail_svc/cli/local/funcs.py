@@ -60,7 +60,7 @@ def estimate_pdf(
 def estimate_ensemble(
     estimator_id: int,
     dataset_id: int,
-    output_file_path: str | Path,
+    output_path: str | Path,
 ) -> None:
 
     # Ensure database engine is initialized
@@ -70,7 +70,7 @@ def estimate_ensemble(
         output_file = local_sync.funcs.estimate_ensemble(
             estimator_id=estimator_id,
             dataset_id=dataset_id,
-            output_file_path=output_file_path,
+            output_file_path=output_path,
         )
         print(f"Wrote data to {output_file}")
 
@@ -209,14 +209,14 @@ def create_matched_dataset(
     init_db()
 
     try:
-        data = local_sync.funcs.create_matched_dataset(
+        dataset, _assocs = local_sync.funcs.create_matched_dataset(
             matched_dataset_name=matched_dataset_name,
             catalog_tag_name=catalog_tag_name,
             component_dataset_names=component_dataset_names,
             path=path,
             n_objects=n_objects,
         )
-        print(output_pydantic(cast(models.Dataset, data), output, models.Dataset.col_names_for_table))
+        print(output_pydantic(dataset, output, models.Dataset.col_names_for_table))
     except Exception as uexc:
         handle_database_error(uexc, f"{uexc}")
 

@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import db_oper, models
 from ..rail_funcs.wrappers import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
-from .base import with_session, with_session_transaction, to_pydantic_list
+from .base import with_session, with_session_transaction
 
 
 @with_session
@@ -35,9 +35,9 @@ async def estimate_ensemble(session: AsyncSession, *args: Any, **kwargs: Any) ->
 
 
 @with_session
-@to_pydantic_list
-async def get_estimators_for_dataest(session: AsyncSession, *args: Any, **kwargs: Any) -> Any:
-    return await db_oper.estimation_funcs.get_estimators_for_dataest(session, *args, **kwargs)
+async def get_estimators_for_dataest(session: AsyncSession, *args: Any, **kwargs: Any) -> list[models.Estimator]:
+    result = await db_oper.estimation_funcs.get_estimators_for_dataest(session, *args, **kwargs)
+    return db_oper.estimator.to_pydantic_list(result)
 
 
 @with_session_transaction
@@ -119,6 +119,6 @@ async def estimate_pdf_for_slice(session: AsyncSession, *args: Any, **kwargs: An
 
 
 @with_session_transaction
-@to_pydantic_list
 async def estimate_dataset(session: AsyncSession, *args: Any, **kwargs: Any) -> models.Estimates:
-    return await db_oper.estimation_funcs.estimate_dataset(session, *args, **kwargs)  # type: ignore
+    result = await db_oper.estimation_funcs.estimate_dataset(session, *args, **kwargs)
+    return db_oper.estimates.to_pydantic(result)
