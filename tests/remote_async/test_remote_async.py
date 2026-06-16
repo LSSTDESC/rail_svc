@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from rail_svc.remote_async import algorithm, band, dataset, model
+from rail_svc.remote_async import algorithm, dataset
 
 
 class TestUsagePatterns:

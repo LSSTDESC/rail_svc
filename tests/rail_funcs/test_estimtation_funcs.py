@@ -488,9 +488,7 @@ class TestCatEstimatorEnsembleWrapper:
         mock_output_handle = Mock()
         mock_estimator._output_handle = mock_output_handle
 
-        wrapper = wrappers.CatEstimatorEnsembleWrapper(
-            estim_name="test", cat_estimator=mock_estimator
-        )
+        wrapper = wrappers.CatEstimatorEnsembleWrapper(estim_name="test", cat_estimator=mock_estimator)
 
         input_file = Path("/path/to/input.hdf5")
         output_file = Path("/path/to/output.hdf5")
@@ -509,9 +507,7 @@ class TestCatEstimatorEnsembleWrapper:
         mock_output_handle = Mock()
         mock_estimator._output_handle = mock_output_handle
 
-        wrapper = wrappers.CatEstimatorEnsembleWrapper(
-            estim_name="test", cat_estimator=mock_estimator
-        )
+        wrapper = wrappers.CatEstimatorEnsembleWrapper(estim_name="test", cat_estimator=mock_estimator)
 
         input_file = "/path/to/input.hdf5"
         output_file = "/path/to/output.hdf5"
@@ -576,9 +572,7 @@ class TestEdgeCases:
         """Test PDF wrapper with empty column names list"""
         mock_estimator = self.create_mock_estimator()
 
-        wrapper = wrappers.CatEstimatorPdfWrapper(
-            estim_name="test", cat_estimator=mock_estimator, names=[]
-        )
+        wrapper = wrappers.CatEstimatorPdfWrapper(estim_name="test", cat_estimator=mock_estimator, names=[])
 
         assert wrapper._names == []
 
@@ -613,9 +607,7 @@ class TestEdgeCases:
         """Test ensemble wrapper explicitly with Path objects"""
         mock_estimator = self.create_mock_estimator()
 
-        wrapper = wrappers.CatEstimatorEnsembleWrapper(
-            estim_name="test", cat_estimator=mock_estimator
-        )
+        wrapper = wrappers.CatEstimatorEnsembleWrapper(estim_name="test", cat_estimator=mock_estimator)
 
         input_path = Path("/data/catalog.hdf5")
         output_path = Path("/results/output.hdf5")
@@ -874,18 +866,14 @@ class TestErrorHandling:
         mock_estimator.open_model.side_effect = Exception("Failed to open model")
 
         with pytest.raises(Exception, match="Failed to open model"):
-            wrappers.CatEstimatorPdfWrapper(
-                estim_name="test", cat_estimator=mock_estimator, names=["mag_g"]
-            )
+            wrappers.CatEstimatorPdfWrapper(estim_name="test", cat_estimator=mock_estimator, names=["mag_g"])
 
     def test_ensemble_wrapper_handles_run_error(self):
         """Test handling of errors during catalog processing"""
         mock_estimator = self.create_mock_estimator()
         mock_estimator.run.side_effect = Exception("Processing failed")
 
-        wrapper = wrappers.CatEstimatorEnsembleWrapper(
-            estim_name="test", cat_estimator=mock_estimator
-        )
+        wrapper = wrappers.CatEstimatorEnsembleWrapper(estim_name="test", cat_estimator=mock_estimator)
 
         with pytest.raises(Exception, match="Processing failed"):
             wrapper(Path("/input.hdf5"), Path("/output.hdf5"))
@@ -969,9 +957,7 @@ class TestDataFlow:
         expected_handle = Mock()
         mock_estimator._output_handle = expected_handle
 
-        wrapper = wrappers.CatEstimatorEnsembleWrapper(
-            estim_name="test", cat_estimator=mock_estimator
-        )
+        wrapper = wrappers.CatEstimatorEnsembleWrapper(estim_name="test", cat_estimator=mock_estimator)
 
         result = wrapper(input_file=Path("/input.hdf5"), output_file=Path("/output.hdf5"))
 
@@ -1029,9 +1015,7 @@ class TestDocstringExamples:
             mock_tag = Mock()
             mock_tag.band_name_dict.return_value = {"g": "mag_g"}
 
-            with patch(
-                "rail_svc.rail_funcs.wrappers.catalog_utils.get_active_tag", return_value=mock_tag
-            ):
+            with patch("rail_svc.rail_funcs.wrappers.catalog_utils.get_active_tag", return_value=mock_tag):
                 wrapper = wrappers.CatEstimatorPdfWrapper.build_wrapper(
                     estim_name="my_estimator",
                     estim_class_name="rail.estimation.algos.BPZ",
@@ -1172,9 +1156,7 @@ class TestSpecialCases:
         mock_estimator.data_store = Mock()
         mock_estimator._output_handle = Mock()
 
-        wrapper = wrappers.CatEstimatorEnsembleWrapper(
-            estim_name="test", cat_estimator=mock_estimator
-        )
+        wrapper = wrappers.CatEstimatorEnsembleWrapper(estim_name="test", cat_estimator=mock_estimator)
 
         # Relative paths
         wrapper(input_file="./data/input.hdf5", output_file="../results/output.hdf5")
@@ -1195,9 +1177,7 @@ class TestSpecialCases:
             mock_estimator._output_handle = Mock()
             mock_class.make_stage.return_value = mock_estimator
 
-            with patch(
-                "rail_svc.rail_funcs.wrappers.PipelineStage.get_stage", return_value=mock_class
-            ):
+            with patch("rail_svc.rail_funcs.wrappers.PipelineStage.get_stage", return_value=mock_class):
                 sys.modules["rail.estimation.algos"] = Mock()
 
                 result = wrappers.CatEstimatorEnsembleWrapper.build_wrapper(
@@ -1254,9 +1234,7 @@ class TestSpecialCases:
             mock_class = Mock()
             mock_class.make_stage = capture
 
-            with patch(
-                "rail_svc.rail_funcs.wrappers.PipelineStage.get_stage", return_value=mock_class
-            ):
+            with patch("rail_svc.rail_funcs.wrappers.PipelineStage.get_stage", return_value=mock_class):
                 sys.modules["rail.estimation.algos"] = Mock()
 
                 wrappers.CatEstimatorEnsembleWrapper.build_wrapper(
@@ -1321,9 +1299,7 @@ class TestLogging:
         mock_estimator.data_store = Mock()
         mock_estimator._output_handle = Mock()
 
-        wrapper = wrappers.CatEstimatorEnsembleWrapper(
-            estim_name="test", cat_estimator=mock_estimator
-        )
+        wrapper = wrappers.CatEstimatorEnsembleWrapper(estim_name="test", cat_estimator=mock_estimator)
 
         with caplog.at_level(logging.INFO):
             wrapper(Path("/input.hdf5"), Path("/output.hdf5"))

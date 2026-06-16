@@ -12,22 +12,43 @@ from rail_svc.db_oper import (
     band,
     catalog_band_assoc,
     catalog_tag,
-    dataset,
     dataset_assoc,
-    estimates,
     estimator,
-    model,
 )
 from rail_svc.db_oper.base import TableOperations
 
-
 OPER_CONFIGS = [
-    {"module_path": "rail_svc.db_oper.algorithm", "singleton": algorithm, "db_class": db.Algorithm, "name": "algorithm"},
+    {
+        "module_path": "rail_svc.db_oper.algorithm",
+        "singleton": algorithm,
+        "db_class": db.Algorithm,
+        "name": "algorithm",
+    },
     {"module_path": "rail_svc.db_oper.band", "singleton": band, "db_class": db.Band, "name": "band"},
-    {"module_path": "rail_svc.db_oper.catalog_tag", "singleton": catalog_tag, "db_class": db.CatalogTag, "name": "catalog_tag"},
-    {"module_path": "rail_svc.db_oper.catalog_band_assoc", "singleton": catalog_band_assoc, "db_class": db.CatalogBandAssoc, "name": "catalog_band_assoc"},
-    {"module_path": "rail_svc.db_oper.dataset_assoc", "singleton": dataset_assoc, "db_class": db.DatasetAssoc, "name": "dataset_assoc"},
-    {"module_path": "rail_svc.db_oper.estimator", "singleton": estimator, "db_class": db.Estimator, "name": "estimator"},
+    {
+        "module_path": "rail_svc.db_oper.catalog_tag",
+        "singleton": catalog_tag,
+        "db_class": db.CatalogTag,
+        "name": "catalog_tag",
+    },
+    {
+        "module_path": "rail_svc.db_oper.catalog_band_assoc",
+        "singleton": catalog_band_assoc,
+        "db_class": db.CatalogBandAssoc,
+        "name": "catalog_band_assoc",
+    },
+    {
+        "module_path": "rail_svc.db_oper.dataset_assoc",
+        "singleton": dataset_assoc,
+        "db_class": db.DatasetAssoc,
+        "name": "dataset_assoc",
+    },
+    {
+        "module_path": "rail_svc.db_oper.estimator",
+        "singleton": estimator,
+        "db_class": db.Estimator,
+        "name": "estimator",
+    },
 ]
 
 

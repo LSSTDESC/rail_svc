@@ -9,7 +9,6 @@ from pydantic import ValidationError
 
 from rail_svc import models
 
-
 MODEL_CONFIGS = [
     {
         "model_class": models.Algorithm,
@@ -21,8 +20,17 @@ MODEL_CONFIGS = [
     {
         "model_class": models.Band,
         "create_class": models.BandCreate,
-        "valid_data": {"id_": 1, "name": "g_band", "band_wavelengths": [400.0, 500.0], "band_transmission": [0.1, 0.9]},
-        "create_data": {"name": "g_band", "band_wavelengths": [400.0, 500.0], "band_transmission": [0.1, 0.9]},
+        "valid_data": {
+            "id_": 1,
+            "name": "g_band",
+            "band_wavelengths": [400.0, 500.0],
+            "band_transmission": [0.1, 0.9],
+        },
+        "create_data": {
+            "name": "g_band",
+            "band_wavelengths": [400.0, 500.0],
+            "band_transmission": [0.1, 0.9],
+        },
         "name": "band",
     },
     {
@@ -35,15 +43,41 @@ MODEL_CONFIGS = [
     {
         "model_class": models.Dataset,
         "create_class": models.DatasetCreate,
-        "valid_data": {"id_": 1, "name": "ds", "path": "/d.hdf5", "n_objects": 100, "is_collection": False, "catalog_tag_id": 1},
-        "create_data": {"name": "ds", "path": "/d.hdf5", "n_objects": 100, "is_collection": False, "catalog_tag_name": "lsst"},
+        "valid_data": {
+            "id_": 1,
+            "name": "ds",
+            "path": "/d.hdf5",
+            "n_objects": 100,
+            "is_collection": False,
+            "catalog_tag_id": 1,
+        },
+        "create_data": {
+            "name": "ds",
+            "path": "/d.hdf5",
+            "n_objects": 100,
+            "is_collection": False,
+            "catalog_tag_name": "lsst",
+        },
         "name": "dataset",
     },
     {
         "model_class": models.Estimates,
         "create_class": models.EstimatesCreate,
-        "valid_data": {"id_": 1, "name": "est", "path": "/e.hdf5", "n_objects": 100, "dataset_id": 1, "estimator_id": 1},
-        "create_data": {"name": "est", "path": "/e.hdf5", "n_objects": 100, "dataset_name": "ds", "estimator_name": "bpz"},
+        "valid_data": {
+            "id_": 1,
+            "name": "est",
+            "path": "/e.hdf5",
+            "n_objects": 100,
+            "dataset_id": 1,
+            "estimator_id": 1,
+        },
+        "create_data": {
+            "name": "est",
+            "path": "/e.hdf5",
+            "n_objects": 100,
+            "dataset_name": "ds",
+            "estimator_name": "bpz",
+        },
         "name": "estimates",
     },
     {

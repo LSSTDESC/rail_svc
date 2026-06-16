@@ -81,9 +81,7 @@ class TestEstimateEnsemble:
     @pytest.mark.asyncio
     async def test_success(self):
         def handler(request: httpx.Request) -> httpx.Response:
-            return httpx.Response(
-                200, json={"output_file": "/out.hdf5", "message": "Done"}
-            )
+            return httpx.Response(200, json={"output_file": "/out.hdf5", "message": "Done"})
 
         from unittest.mock import patch, AsyncMock
 

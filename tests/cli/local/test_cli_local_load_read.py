@@ -4,8 +4,7 @@ Uses Click's CliRunner with mocked local_sync operations.
 """
 
 import json
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
@@ -84,8 +83,14 @@ class TestDatasetLoad:
         result = runner.invoke(
             dataset_group,
             [
-                "load", "--path", str(data_file), "--no-validate", "--output", "json",
-                "catalog_tag_name=test", "n_objects=50",
+                "load",
+                "--path",
+                str(data_file),
+                "--no-validate",
+                "--output",
+                "json",
+                "catalog_tag_name=test",
+                "n_objects=50",
             ],
         )
 
@@ -223,17 +228,20 @@ class TestModelLoad:
         model_file = tmp_path / "model.pkl"
         model_file.write_bytes(b"model")
 
-        mock_result = models.Model(
-            id_=1, name="my_model", path=str(model_file), algo_id=1, catalog_tag_id=1
-        )
+        mock_result = models.Model(id_=1, name="my_model", path=str(model_file), algo_id=1, catalog_tag_id=1)
         mock_local_sync.model.load.return_value = mock_result
         mock_local_sync.model.ctx.response_class.col_names_for_table = ["id_", "name"]
 
         result = runner.invoke(
             model_group,
             [
-                "load", "--path", str(model_file), "--output", "json",
-                "algo_name=BPZEstimator", "catalog_tag_name=lsst",
+                "load",
+                "--path",
+                str(model_file),
+                "--output",
+                "json",
+                "algo_name=BPZEstimator",
+                "catalog_tag_name=lsst",
             ],
         )
 
@@ -256,8 +264,15 @@ class TestModelLoad:
         result = runner.invoke(
             model_group,
             [
-                "load", "--path", str(model_file), "--load-type", "link", "--output", "json",
-                "algo_name=RF", "catalog_tag_name=lsst",
+                "load",
+                "--path",
+                str(model_file),
+                "--load-type",
+                "link",
+                "--output",
+                "json",
+                "algo_name=RF",
+                "catalog_tag_name=lsst",
             ],
         )
 

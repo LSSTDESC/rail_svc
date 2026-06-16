@@ -79,8 +79,10 @@ class TestSyncRemoteFuncs:
 
         with patch("asyncio.run", return_value=expected) as mock_run:
             result = sync_funcs.create_matched_dataset(
-                matched_dataset_name="m", catalog_tag_name="l",
-                component_dataset_names=["c1"], path="/m.hdf5",
+                matched_dataset_name="m",
+                catalog_tag_name="l",
+                component_dataset_names=["c1"],
+                path="/m.hdf5",
             )
             assert result == expected
             mock_run.assert_called_once()

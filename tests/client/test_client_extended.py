@@ -4,25 +4,24 @@ Uses httpx.MockTransport to simulate HTTP responses.
 """
 
 import json
-from pathlib import Path
 from unittest.mock import patch
 
 import httpx
-import numpy as np
 import pytest
 
 from rail_svc import models
 from rail_svc.client.base import RemoteDatasetOperations, RemoteEstimatesOperations, RemoteModelOperations
 from rail_svc.common import LoadType
-from rail_svc.models import RemoteAPIError
 
 
 def make_dataset_ops(handler) -> tuple[httpx.AsyncClient, RemoteDatasetOperations]:
     transport = httpx.MockTransport(handler)
     client = httpx.AsyncClient(transport=transport)
     ops = RemoteDatasetOperations(
-        client=client, endpoint="http://test/api/v1/dataset",
-        response_model=models.Dataset, create_model=models.DatasetCreate,
+        client=client,
+        endpoint="http://test/api/v1/dataset",
+        response_model=models.Dataset,
+        create_model=models.DatasetCreate,
     )
     return client, ops
 
@@ -31,8 +30,10 @@ def make_estimates_ops(handler) -> tuple[httpx.AsyncClient, RemoteEstimatesOpera
     transport = httpx.MockTransport(handler)
     client = httpx.AsyncClient(transport=transport)
     ops = RemoteEstimatesOperations(
-        client=client, endpoint="http://test/api/v1/estimates",
-        response_model=models.Estimates, create_model=models.EstimatesCreate,
+        client=client,
+        endpoint="http://test/api/v1/estimates",
+        response_model=models.Estimates,
+        create_model=models.EstimatesCreate,
     )
     return client, ops
 
@@ -41,8 +42,10 @@ def make_model_ops(handler) -> tuple[httpx.AsyncClient, RemoteModelOperations]:
     transport = httpx.MockTransport(handler)
     client = httpx.AsyncClient(transport=transport)
     ops = RemoteModelOperations(
-        client=client, endpoint="http://test/api/v1/model",
-        response_model=models.Model, create_model=models.ModelCreate,
+        client=client,
+        endpoint="http://test/api/v1/model",
+        response_model=models.Model,
+        create_model=models.ModelCreate,
     )
     return client, ops
 
@@ -54,14 +57,23 @@ class TestDatasetLoad:
     async def test_success(self):
         def handler(request: httpx.Request) -> httpx.Response:
             assert "/load" in str(request.url)
-            return httpx.Response(201, json={
-                "id_": 1, "name": "ds", "path": "/d.hdf5",
-                "n_objects": 100, "is_collection": False, "catalog_tag_id": 1,
-            })
+            return httpx.Response(
+                201,
+                json={
+                    "id_": 1,
+                    "name": "ds",
+                    "path": "/d.hdf5",
+                    "n_objects": 100,
+                    "is_collection": False,
+                    "catalog_tag_id": 1,
+                },
+            )
 
         client, ops = make_dataset_ops(handler)
         async with client:
-            result = await ops.load(path="/data/file.hdf5", load_type=LoadType.in_place, catalog_tag_name="lsst")
+            result = await ops.load(
+                path="/data/file.hdf5", load_type=LoadType.in_place, catalog_tag_name="lsst"
+            )
             assert isinstance(result, models.Dataset)
             assert result.name == "ds"
 
@@ -111,14 +123,23 @@ class TestEstimatesLoad:
     async def test_success(self):
         def handler(request: httpx.Request) -> httpx.Response:
             assert "/load" in str(request.url)
-            return httpx.Response(201, json={
-                "id_": 1, "name": "est", "path": "/e.hdf5",
-                "n_objects": 500, "dataset_id": 1, "estimator_id": 1,
-            })
+            return httpx.Response(
+                201,
+                json={
+                    "id_": 1,
+                    "name": "est",
+                    "path": "/e.hdf5",
+                    "n_objects": 500,
+                    "dataset_id": 1,
+                    "estimator_id": 1,
+                },
+            )
 
         client, ops = make_estimates_ops(handler)
         async with client:
-            result = await ops.load(path="/data/est.hdf5", load_type=LoadType.copy, dataset_name="ds", estimator_name="bpz")
+            result = await ops.load(
+                path="/data/est.hdf5", load_type=LoadType.copy, dataset_name="ds", estimator_name="bpz"
+            )
             assert isinstance(result, models.Estimates)
             assert result.name == "est"
 
@@ -167,14 +188,22 @@ class TestModelLoad:
     async def test_success(self):
         def handler(request: httpx.Request) -> httpx.Response:
             assert "/load" in str(request.url)
-            return httpx.Response(201, json={
-                "id_": 1, "name": "rf", "path": "/m.pkl",
-                "algo_id": 1, "catalog_tag_id": 1,
-            })
+            return httpx.Response(
+                201,
+                json={
+                    "id_": 1,
+                    "name": "rf",
+                    "path": "/m.pkl",
+                    "algo_id": 1,
+                    "catalog_tag_id": 1,
+                },
+            )
 
         client, ops = make_model_ops(handler)
         async with client:
-            result = await ops.load(path="/models/rf.pkl", load_type=LoadType.in_place, algo_name="RF", catalog_tag_name="lsst")
+            result = await ops.load(
+                path="/models/rf.pkl", load_type=LoadType.in_place, algo_name="RF", catalog_tag_name="lsst"
+            )
             assert isinstance(result, models.Model)
             assert result.name == "rf"
 

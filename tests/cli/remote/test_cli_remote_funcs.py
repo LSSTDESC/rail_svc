@@ -79,9 +79,7 @@ class TestGetDatasetAndEstimates:
         mock_dataset = models.Dataset(
             id_=1, name="ds", path="/d.hdf5", n_objects=100, is_collection=False, catalog_tag_id=1
         )
-        mock_response = models.GetDatasetAndEstimatesResponse(
-            dataset=mock_dataset, estimates={}
-        )
+        mock_response = models.GetDatasetAndEstimatesResponse(dataset=mock_dataset, estimates={})
         mock_sync_funcs.get_dataset_and_estimates.return_value = mock_response
 
         result = runner.invoke(
@@ -113,13 +111,20 @@ class TestCreateMatchedDataset:
             funcs_group,
             [
                 "create-matched-dataset",
-                "--matched-dataset-name", "matched",
-                "--catalog-tag-name", "lsst",
-                "--component-dataset-names", "comp1",
-                "--component-dataset-names", "comp2",
-                "--path", str(path_file),
-                "--n-objects", "1000",
-                "--output", "json",
+                "--matched-dataset-name",
+                "matched",
+                "--catalog-tag-name",
+                "lsst",
+                "--component-dataset-names",
+                "comp1",
+                "--component-dataset-names",
+                "comp2",
+                "--path",
+                str(path_file),
+                "--n-objects",
+                "1000",
+                "--output",
+                "json",
             ],
         )
 

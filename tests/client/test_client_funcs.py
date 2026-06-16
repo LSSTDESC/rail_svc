@@ -4,7 +4,6 @@ Uses httpx.MockTransport to simulate server responses without a real server.
 """
 
 from pathlib import Path
-from typing import Any
 
 import httpx
 import pytest
@@ -61,9 +60,7 @@ class TestEstimateEnsemble:
     async def test_success(self):
         def handler(request: httpx.Request) -> httpx.Response:
             assert "/estimate-ensemble" in str(request.url)
-            return httpx.Response(
-                200, json={"output_file": "/output/est.hdf5", "message": "Done"}
-            )
+            return httpx.Response(200, json={"output_file": "/output/est.hdf5", "message": "Done"})
 
         client, ops = make_client(handler)
         async with client:
@@ -214,9 +211,7 @@ class TestEstimatePdfForSlice:
 
         client, ops = make_client(handler)
         async with client:
-            result = await ops.estimate_pdf_for_slice(
-                estimator_id=1, dataset_id=2, the_slice="0:10"
-            )
+            result = await ops.estimate_pdf_for_slice(estimator_id=1, dataset_id=2, the_slice="0:10")
             assert result == expected
 
 

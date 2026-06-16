@@ -9,7 +9,6 @@ from sqlalchemy import select
 
 from rail_svc import db, models
 
-
 ENTITY_CONFIGS = [
     {
         "db_class": db.Algorithm,
@@ -141,9 +140,7 @@ class TestEntityCRUD:
     @pytest.mark.asyncio
     async def test_query_by_name(self, session, entity_config, entity_instance):
         db_class = entity_config["db_class"]
-        result = await session.execute(
-            select(db_class).where(db_class.name == entity_instance.name)
-        )
+        result = await session.execute(select(db_class).where(db_class.name == entity_instance.name))
         row = result.scalar_one()
         assert row.id_ == entity_instance.id_
 
@@ -170,9 +167,7 @@ class TestEntityEdgeCases:
         db_class = entity_config["db_class"]
         results = []
         for _ in range(5):
-            result = await session.execute(
-                select(db_class).where(db_class.id_ == entity_instance.id_)
-            )
+            result = await session.execute(select(db_class).where(db_class.id_ == entity_instance.id_))
             results.append(result.scalar_one())
         assert len(results) == 5
         assert all(r.id_ == entity_instance.id_ for r in results)

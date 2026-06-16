@@ -9,7 +9,9 @@ class TestGetEstimatorComponents:
     """Test _get_estimator_components against real DB."""
 
     @pytest.mark.asyncio
-    async def test_fetches_all_components(self, session, sample_estimator, sample_model, sample_algorithm, sample_catalog_tag):
+    async def test_fetches_all_components(
+        self, session, sample_estimator, sample_model, sample_algorithm, sample_catalog_tag
+    ):
         """Test that all related components are fetched correctly."""
         estimator_obj, model_obj, algo_obj, catalog_tag_obj = await _get_estimator_components(
             session, sample_estimator.id_

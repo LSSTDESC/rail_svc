@@ -1,7 +1,6 @@
 """Tests for Estimates load and read_slice operations."""
 
 from contextlib import asynccontextmanager
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -10,7 +9,7 @@ import qp
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
-from rail_svc import db, models
+from rail_svc import models
 from rail_svc.common import LoadType
 from rail_svc.db_oper.estimates import estimates
 
@@ -62,10 +61,8 @@ class TestEstimatesReadSlice:
         """Test reading a single row index."""
         mock_data = {"z_pdf": np.array([0.1, 0.5, 0.3, 0.1])}
 
-        with patch(
-            "rail_svc.db_oper.estimates.read_estimates_slice", return_value=mock_data
-        ) as mock_read:
-            result = await estimates.read_slice(session, sample_estimates.id_, 42)
+        with patch("rail_svc.db_oper.estimates.read_estimates_slice", return_value=mock_data) as mock_read:
+            _result = await estimates.read_slice(session, sample_estimates.id_, 42)
 
             mock_read.assert_called_once_with(sample_estimates.path, 42)
 
@@ -80,7 +77,9 @@ class TestEstimatesLoad:
     """Test EstimatesOperations.load."""
 
     @pytest.mark.asyncio
-    async def test_load_without_validation(self, mock_get_session, sample_dataset, sample_estimator, tmp_path):
+    async def test_load_without_validation(
+        self, mock_get_session, sample_dataset, sample_estimator, tmp_path
+    ):
         """Test loading estimates with validate_file=False."""
         source_file = tmp_path / "estimates.hdf5"
         source_file.write_bytes(b"fake qp data")

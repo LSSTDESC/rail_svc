@@ -241,9 +241,7 @@ class TestModelLoad:
         model_file = tmp_path / "model.pkl"
         model_file.write_bytes(b"model")
 
-        mock_result = models.Model(
-            id_=1, name="rf_model", path=str(model_file), algo_id=1, catalog_tag_id=1
-        )
+        mock_result = models.Model(id_=1, name="rf_model", path=str(model_file), algo_id=1, catalog_tag_id=1)
         mock_model_ops.load.return_value = mock_result
 
         result = runner.invoke(

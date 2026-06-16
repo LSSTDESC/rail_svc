@@ -3,7 +3,6 @@
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 
 from rail_svc import models
 from rail_svc.local_sync import funcs as sync_funcs

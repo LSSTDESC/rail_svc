@@ -29,7 +29,9 @@ class TestModelLoad:
     """Test ModelOperations.load."""
 
     @pytest.mark.asyncio
-    async def test_load_without_validation(self, mock_get_session, sample_algorithm, sample_catalog_tag, tmp_path):
+    async def test_load_without_validation(
+        self, mock_get_session, sample_algorithm, sample_catalog_tag, tmp_path
+    ):
         """Test loading a model with validate_file=False."""
         source_file = tmp_path / "model.pkl"
         source_file.write_bytes(b"pickled model")
@@ -106,7 +108,9 @@ class TestModelLoad:
             assert link_path.is_symlink()
 
     @pytest.mark.asyncio
-    async def test_load_with_validation(self, mock_get_session, sample_algorithm, sample_catalog_tag, tmp_path):
+    async def test_load_with_validation(
+        self, mock_get_session, sample_algorithm, sample_catalog_tag, tmp_path
+    ):
         """Test loading a model with validation enabled (catalog_tag matches)."""
         source_file = tmp_path / "validated_model.pkl"
         source_file.write_bytes(b"valid model")

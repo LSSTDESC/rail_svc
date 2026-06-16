@@ -5,7 +5,7 @@ without requiring real DB or file operations.
 """
 
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import FastAPI
@@ -128,7 +128,12 @@ class TestGetDatasetAndEstimates:
     def test_success(self, client):
         """Test successful dataset+estimates retrieval."""
         mock_dataset = models.Dataset(
-            id_=1, name="test_ds", path="/data/test.hdf5", n_objects=100, is_collection=False, catalog_tag_id=1
+            id_=1,
+            name="test_ds",
+            path="/data/test.hdf5",
+            n_objects=100,
+            is_collection=False,
+            catalog_tag_id=1,
         )
         mock_estimates = {
             "bpz": models.Estimates(

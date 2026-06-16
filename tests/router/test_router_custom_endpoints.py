@@ -3,7 +3,6 @@
 Uses FastAPI TestClient with mocked local_async operations.
 """
 
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -34,7 +33,11 @@ class TestDatasetLoad:
 
             response = client.post(
                 "/api/v1/dataset/load",
-                json={"path": "/data/cat.hdf5", "load_type": "in_place", "data": {"catalog_tag_name": "lsst"}},
+                json={
+                    "path": "/data/cat.hdf5",
+                    "load_type": "in_place",
+                    "data": {"catalog_tag_name": "lsst"},
+                },
                 params={"validate": True},
             )
 
@@ -46,7 +49,6 @@ class TestDatasetReadSlice:
     """Test /dataset/read_slice endpoint."""
 
     def test_success(self, client):
-        import tables_io
 
         with (
             patch("rail_svc.router.base.local_async.dataset.read_slice", new_callable=AsyncMock) as mock_read,
@@ -87,7 +89,7 @@ class TestDatasetDownload:
         ):
             mock_get.return_value = mock_result
 
-            response = client.get(f"/api/v1/dataset/download/1")
+            response = client.get("/api/v1/dataset/download/1")
 
             assert response.status_code == 200
 
@@ -105,7 +107,11 @@ class TestEstimatesLoad:
 
             response = client.post(
                 "/api/v1/estimates/load",
-                json={"path": "/data/est.hdf5", "load_type": "in_place", "data": {"dataset_name": "ds", "estimator_name": "bpz"}},
+                json={
+                    "path": "/data/est.hdf5",
+                    "load_type": "in_place",
+                    "data": {"dataset_name": "ds", "estimator_name": "bpz"},
+                },
                 params={"validate": True},
             )
 
@@ -153,16 +159,18 @@ class TestModelLoad:
     """Test /model/load endpoint."""
 
     def test_success(self, client):
-        mock_result = models.Model(
-            id_=1, name="rf", path="/m.pkl", algo_id=1, catalog_tag_id=1
-        )
+        mock_result = models.Model(id_=1, name="rf", path="/m.pkl", algo_id=1, catalog_tag_id=1)
 
         with patch("rail_svc.router.base.local_async.model.load", new_callable=AsyncMock) as mock:
             mock.return_value = mock_result
 
             response = client.post(
                 "/api/v1/model/load",
-                json={"path": "/models/rf.pkl", "load_type": "in_place", "data": {"algo_name": "RF", "catalog_tag_name": "lsst"}},
+                json={
+                    "path": "/models/rf.pkl",
+                    "load_type": "in_place",
+                    "data": {"algo_name": "RF", "catalog_tag_name": "lsst"},
+                },
                 params={"validate": True},
             )
 

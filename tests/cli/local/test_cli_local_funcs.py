@@ -3,9 +3,8 @@
 Uses Click's CliRunner with mocked local_sync.funcs to test CLI behavior.
 """
 
-import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
@@ -62,9 +61,12 @@ class TestEstimateEnsemble:
             funcs_group,
             [
                 "estimate-ensemble",
-                "--estimator-id", "1",
-                "--dataset-id", "2",
-                "--output-path", str(tmp_path / "est.hdf5"),
+                "--estimator-id",
+                "1",
+                "--dataset-id",
+                "2",
+                "--output-path",
+                str(tmp_path / "est.hdf5"),
             ],
         )
 
@@ -142,13 +144,20 @@ class TestCreateMatchedDataset:
             funcs_group,
             [
                 "create-matched-dataset",
-                "--matched-dataset-name", "matched",
-                "--catalog-tag-name", "lsst",
-                "--component-dataset-names", "comp1",
-                "--component-dataset-names", "comp2",
-                "--path", str(path_file),
-                "--n-objects", "1000",
-                "--output", "json",
+                "--matched-dataset-name",
+                "matched",
+                "--catalog-tag-name",
+                "lsst",
+                "--component-dataset-names",
+                "comp1",
+                "--component-dataset-names",
+                "comp2",
+                "--path",
+                str(path_file),
+                "--n-objects",
+                "1000",
+                "--output",
+                "json",
             ],
         )
 
@@ -219,10 +228,14 @@ class TestEstimatePdfForSlice:
             funcs_group,
             [
                 "estimate-pdf-for-slice",
-                "--estimator-id", "1",
-                "--dataset-id", "2",
-                "--slice", "0:10",
-                "--output", "json",
+                "--estimator-id",
+                "1",
+                "--dataset-id",
+                "2",
+                "--slice",
+                "0:10",
+                "--output",
+                "json",
             ],
         )
 

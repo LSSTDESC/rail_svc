@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from rail_svc import db, models
+from rail_svc import models
 from rail_svc.local_async import funcs as api_funcs
 
 

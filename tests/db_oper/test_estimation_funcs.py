@@ -52,7 +52,6 @@ def mock_dataset():
     return dataset
 
 
-
 class TestEstimatePdf:
     """Test estimate_pdf function."""
 
@@ -392,9 +391,7 @@ class TestIntegrationScenarios:
             patch("rail_svc.db_oper.estimation_funcs.catalog_tag.get_row", return_value=catalog_tag),
             patch("rail_svc.db_oper.estimation_funcs.model.find_by", return_value=[model]),
             patch("rail_svc.db_oper.estimation_funcs.estimator.find_by", return_value=[estimator]),
-            patch(
-                "rail_svc.db_oper.wrappers._get_estimator_components", return_value=mock_components
-            ),
+            patch("rail_svc.db_oper.wrappers._get_estimator_components", return_value=mock_components),
             patch("rail_svc.db_oper.estimation_funcs.global_config.storage.archive", str(archive_dir)),
             patch("anyio.Path.absolute", return_value=archive_dir),
             patch.object(CatEstimatorPdfWrapper, "build_wrapper", return_value=mock_wrapper),
@@ -448,9 +445,7 @@ class TestIntegrationScenarios:
             patch("rail_svc.db_oper.estimation_funcs.catalog_tag.get_row", return_value=catalog_tag),
             patch("rail_svc.db_oper.estimation_funcs.model.find_by", return_value=[model]),
             patch("rail_svc.db_oper.estimation_funcs.estimator.find_by", return_value=[estimator]),
-            patch(
-                "rail_svc.db_oper.wrappers._get_estimator_components", return_value=mock_components
-            ),
+            patch("rail_svc.db_oper.wrappers._get_estimator_components", return_value=mock_components),
             patch("rail_svc.db_oper.estimation_funcs.global_config.storage.archive", str(archive_dir)),
             patch("anyio.Path.absolute", return_value=archive_dir),
             patch.object(CatEstimatorEnsembleWrapper, "build_wrapper", return_value=mock_wrapper),
@@ -468,5 +463,3 @@ class TestIntegrationScenarios:
 
             assert result_path == output_path
             assert output_path.exists()
-
-

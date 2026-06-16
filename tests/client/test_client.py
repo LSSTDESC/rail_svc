@@ -274,7 +274,6 @@ class TestTableConfigurations:
             assert issubclass(response_model, BaseModel)
             assert issubclass(create_model, BaseModel)
 
-
     def test_all_models_are_pydantic(self) -> None:
         """Test that all models in TABLE_CONFIGS are Pydantic models."""
         for table_name, (response_model, create_model, _ops_model) in TABLE_CONFIGS.items():
