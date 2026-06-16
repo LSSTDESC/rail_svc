@@ -19,7 +19,6 @@ from ...models.utils import OutputEnum, output_pydantic
 from .. import common_options
 from ..load_commands import make_load_command, make_read_slice_command
 
-
 logger = logging.getLogger(__name__)
 
 # Type variables

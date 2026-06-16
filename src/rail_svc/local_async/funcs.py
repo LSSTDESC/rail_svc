@@ -35,7 +35,9 @@ async def estimate_ensemble(session: AsyncSession, *args: Any, **kwargs: Any) ->
 
 
 @with_session
-async def get_estimators_for_dataest(session: AsyncSession, *args: Any, **kwargs: Any) -> list[models.Estimator]:
+async def get_estimators_for_dataest(
+    session: AsyncSession, *args: Any, **kwargs: Any
+) -> list[models.Estimator]:
     result = await db_oper.estimation_funcs.get_estimators_for_dataest(session, *args, **kwargs)
     return db_oper.estimator.to_pydantic_list(result)
 
