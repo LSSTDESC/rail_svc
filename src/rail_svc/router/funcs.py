@@ -102,7 +102,11 @@ async def get_estimators_for_dataset(dataset_id: int) -> list[Estimator]:
 async def load_catalog_yaml(request: LoadCatalogYamlRequest) -> LoadCatalogYamlResponse:
     """Load catalog from YAML file."""
     try:
-        bands, catalog_tags, catalog_band_assocs = await local_async.funcs.load_catalog_yaml(  # pylint: disable=no-value-for-parameter
+        (
+            bands,
+            catalog_tags,
+            catalog_band_assocs,
+        ) = await local_async.funcs.load_catalog_yaml(  # pylint: disable=no-value-for-parameter
             catalog_yaml=Path(request.catalog_yaml),
             filter_dir=Path(request.filter_dir) if request.filter_dir else None,
         )  # type: ignore
@@ -127,7 +131,10 @@ async def load_catalog_yaml(request: LoadCatalogYamlRequest) -> LoadCatalogYamlR
 async def get_dataset_and_estimates(dataset_id: int) -> GetDatasetAndEstimatesResponse:
     """Get dataset and its estimates."""
     try:
-        the_dataset, the_estimates = await local_async.funcs.get_dataset_and_estimates(  # pylint: disable=no-value-for-parameter
+        (
+            the_dataset,
+            the_estimates,
+        ) = await local_async.funcs.get_dataset_and_estimates(  # pylint: disable=no-value-for-parameter
             dataset_id=dataset_id,
         )  # type: ignore
         return GetDatasetAndEstimatesResponse(
@@ -150,7 +157,10 @@ async def get_dataset_and_estimates(dataset_id: int) -> GetDatasetAndEstimatesRe
 async def get_data_and_estimates_data(dataset_id: int, row: int) -> GetDataAndEstimatesDataResponse:
     """Get data and estimates data for a specific row."""
     try:
-        data, the_estimates_dict = await local_async.funcs.get_data_and_estimates_data(  # pylint: disable=no-value-for-parameter
+        (
+            data,
+            the_estimates_dict,
+        ) = await local_async.funcs.get_data_and_estimates_data(  # pylint: disable=no-value-for-parameter
             dataset_id=dataset_id,
             row=row,
         )  # type: ignore

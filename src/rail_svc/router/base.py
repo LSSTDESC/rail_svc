@@ -995,7 +995,7 @@ async def dataset_load(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": "Validation error", "details": uexc.errors()},
-        ) from exc
+        ) from uexc
     except Exception as uexc:
         logger.exception("Error loading dataset")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
@@ -1129,7 +1129,7 @@ async def estimates_load(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": "Validation error", "details": uexc.errors()},
-        ) from exc
+        ) from uexc
     except Exception as uexc:
         logger.exception("Error loading estimates")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc

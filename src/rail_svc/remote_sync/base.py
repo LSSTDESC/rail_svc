@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
 from typing import Any, ClassVar
 
 from pydantic import BaseModel
@@ -11,9 +10,6 @@ from pydantic import BaseModel
 from .. import models
 from ..remote_async.base import (
     AsyncRemoteOperations,
-    AsyncRemoteDatasetOperations,
-    AsyncRemoteEstimatesOperations,
-    AsyncRemoteModelOperations,
 )
 
 
@@ -34,13 +30,27 @@ def _make_sync_method(method_name: str) -> Any:
 
 
 _BASE_METHODS = [
-    "create_row", "create_rows", "create_rows_batched", "bulk_insert_rows",
-    "get_row", "get_row_by_name", "get_rows", "get_row_or_none",
-    "count_rows", "lookup_by_id_or_name",
-    "update_row", "update_rows",
-    "delete_row", "delete_rows", "bulk_delete_rows",
-    "filter_rows", "count_filtered_rows", "filter_one", "filter_one_or_none",
-    "find_by", "find_one_by",
+    "create_row",
+    "create_rows",
+    "create_rows_batched",
+    "bulk_insert_rows",
+    "get_row",
+    "get_row_by_name",
+    "get_rows",
+    "get_row_or_none",
+    "count_rows",
+    "lookup_by_id_or_name",
+    "update_row",
+    "update_rows",
+    "delete_row",
+    "delete_rows",
+    "bulk_delete_rows",
+    "filter_rows",
+    "count_filtered_rows",
+    "filter_one",
+    "filter_one_or_none",
+    "find_by",
+    "find_one_by",
 ]
 
 

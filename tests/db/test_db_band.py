@@ -102,32 +102,6 @@ class TestBand:
         assert str(sample_band) == sample_band.name
 
 
-class TestBandPydanticIntegration:
-    """Tests for Band Pydantic integration"""
-
-    @pytest.mark.asyncio
-    async def test_band_to_pydantic(self, sample_band):
-        """Test converting Band ORM to Pydantic model"""
-        pydantic_obj = Band.to_pydantic(sample_band)
-
-        assert isinstance(pydantic_obj, BandPydantic)
-        assert pydantic_obj.id_ == sample_band.id_
-        assert pydantic_obj.name == sample_band.name
-        assert pydantic_obj.band_wavelengths == sample_band.band_wavelengths
-        assert pydantic_obj.band_transmission == sample_band.band_transmission
-
-    @pytest.mark.asyncio
-    async def test_band_to_pydantic_dict(self, sample_band):
-        """Test converting Band to dict via Pydantic"""
-        data = Band.to_pydantic_dict(sample_band)
-
-        assert isinstance(data, dict)
-        assert data["id_"] == sample_band.id_
-        assert data["name"] == sample_band.name
-        assert data["band_wavelengths"] == sample_band.band_wavelengths
-        assert data["band_transmission"] == sample_band.band_transmission
-
-
 class TestBandValidation:
     """Tests for Band field validation"""
 
@@ -272,133 +246,6 @@ class TestBandArrayFields:
 # ============================================================================
 
 
-class TestEdgeCases:
-    """Tests for edge cases and boundary conditions"""
-
-    @pytest.mark.asyncio
-    async def test_band_with_long_name(self, session):
-        """Test Band with maximum length name"""
-        long_name = "a" * 255
-        band = Band(name=long_name, band_wavelengths=[500.0], band_transmission=[0.5])
-        session.add(band)
-        await session.commit()
-        await session.refresh(band)
-
-        assert band.name == long_name
-
-    @pytest.mark.asyncio
-    async def test_band_with_special_characters(self, session):
-        """Test Band name with special characters"""
-        band = Band(name="LSST-u_band_v2.0", band_wavelengths=[350.0], band_transmission=[0.7])
-        session.add(band)
-        await session.commit()
-        await session.refresh(band)
-
-        assert band.name == "LSST-u_band_v2.0"
-
-    @pytest.mark.asyncio
-    async def test_query_nonexistent_band(self, session):
-        """Test querying for non-existent band"""
-        result = await session.get(Band, 99999)
-        assert result is None
-
-    @pytest.mark.asyncio
-    async def test_multiple_sessions(self, engine):
-        """Test that multiple sessions work independently"""
-        from sqlalchemy.ext.asyncio import AsyncSession
-        from sqlalchemy.orm import sessionmaker
-
-        async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-
-        async with async_session() as session1:
-            band1 = Band(name="session1_band", band_wavelengths=[500.0], band_transmission=[0.8])
-            session1.add(band1)
-            await session1.commit()
-            await session1.refresh(band1)
-            band1_id = band1.id_
-
-        async with async_session() as session2:
-            band2 = await session2.get(Band, band1_id)
-            assert band2 is not None
-            assert band2.name == "session1_band"
-
-    @pytest.mark.asyncio
-    async def test_rollback_on_error(self, session):
-        """Test that transaction rolls back on error"""
-        initial_count = (await session.execute(select(Band))).scalars().all()
-        initial_len = len(initial_count)
-
-        try:
-            band = Band(name="test_rollback", band_wavelengths=[500.0], band_transmission=[0.8])
-            session.add(band)
-            await session.flush()
-
-            # Create duplicate to force error
-            duplicate = Band(name="test_rollback", band_wavelengths=[600.0], band_transmission=[0.7])
-            session.add(duplicate)
-            await session.commit()
-        except Exception:
-            await session.rollback()
-
-        final_count = (await session.execute(select(Band))).scalars().all()
-        assert len(final_count) == initial_len
-
-    @pytest.mark.asyncio
-    async def test_band_with_empty_arrays(self, session):
-        """Test Band with empty arrays"""
-        # Note: This may or may not be valid depending on your business rules
-        # If Pydantic validation prevents this, this test would fail at the API level
-        band = Band(name="empty_arrays", band_wavelengths=[], band_transmission=[])
-        session.add(band)
-        await session.commit()
-        await session.refresh(band)
-
-        assert band.band_wavelengths == []
-        assert band.band_transmission == []
-
-    @pytest.mark.asyncio
-    async def test_band_with_very_large_arrays(self, session):
-        """Test Band with very large arrays"""
-        wavelengths = [float(i) for i in range(1000)]
-        transmission = [0.5] * 1000
-
-        band = Band(name="large_arrays", band_wavelengths=wavelengths, band_transmission=transmission)
-        session.add(band)
-        await session.commit()
-        await session.refresh(band)
-
-        assert len(band.band_wavelengths) == 1000
-        assert len(band.band_transmission) == 1000
-
-
-class TestConcurrentAccess:
-    """Tests for concurrent database access"""
-
-    @pytest.mark.asyncio
-    async def test_concurrent_reads(self, session, sample_band):
-        """Test that concurrent reads work correctly"""
-        results = []
-        for _ in range(5):
-            result = await session.execute(select(Band).where(Band.id_ == sample_band.id_))
-            results.append(result.scalar_one())
-
-        assert len(results) == 5
-        assert all(r.id_ == sample_band.id_ for r in results)
-
-    @pytest.mark.asyncio
-    async def test_refresh_after_update(self, session, sample_band):
-        """Test that refresh loads updated data"""
-        original_wavelengths = sample_band.band_wavelengths.copy()
-
-        new_wavelengths = [450.0, 550.0, 650.0]
-        sample_band.band_wavelengths = new_wavelengths
-        await session.commit()
-        await session.refresh(sample_band)
-
-        assert sample_band.band_wavelengths == new_wavelengths
-        assert sample_band.band_wavelengths != original_wavelengths
-
-
 # ============================================================================
 # Batch Operations Tests
 # ============================================================================
@@ -461,19 +308,6 @@ class TestBandBatch:
         for band_id in band_ids:
             result = await session.get(Band, band_id)
             assert result is None
-
-
-class TestTypeAnnotations:
-    """Tests for type annotations and type hints"""
-
-    def test_band_has_type_annotations(self):
-        """Test that Band fields have proper type annotations"""
-        assert hasattr(Band, "__annotations__")
-        annotations = Band.__annotations__
-        assert "id_" in annotations or hasattr(Band, "id_")
-        assert "name" in annotations or hasattr(Band, "name")
-        assert "band_wavelengths" in annotations or hasattr(Band, "band_wavelengths")
-        assert "band_transmission" in annotations or hasattr(Band, "band_transmission")
 
 
 class TestJSONSerialization:

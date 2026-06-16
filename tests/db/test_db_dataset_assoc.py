@@ -113,32 +113,6 @@ class TestDatasetAssoc:
         assert str(sample_dataset_assoc) == sample_dataset_assoc.name
 
 
-class TestDatasetAssocPydanticIntegration:
-    """Tests for DatasetAssoc Pydantic integration"""
-
-    @pytest.mark.asyncio
-    async def test_dataset_assoc_to_pydantic(self, sample_dataset_assoc):
-        """Test converting DatasetAssoc ORM to Pydantic model"""
-        pydantic_obj = DatasetAssoc.to_pydantic(sample_dataset_assoc)
-
-        assert isinstance(pydantic_obj, DatasetAssocPydantic)
-        assert pydantic_obj.id_ == sample_dataset_assoc.id_
-        assert pydantic_obj.name == sample_dataset_assoc.name
-        assert pydantic_obj.matched_dataset_id == sample_dataset_assoc.matched_dataset_id
-        assert pydantic_obj.component_dataset_id == sample_dataset_assoc.component_dataset_id
-
-    @pytest.mark.asyncio
-    async def test_dataset_assoc_to_pydantic_dict(self, sample_dataset_assoc):
-        """Test converting DatasetAssoc to dict via Pydantic"""
-        data = DatasetAssoc.to_pydantic_dict(sample_dataset_assoc)
-
-        assert isinstance(data, dict)
-        assert data["id_"] == sample_dataset_assoc.id_
-        assert data["name"] == sample_dataset_assoc.name
-        assert data["matched_dataset_id"] == sample_dataset_assoc.matched_dataset_id
-        assert data["component_dataset_id"] == sample_dataset_assoc.component_dataset_id
-
-
 class TestDatasetAssocValidation:
     """Tests for DatasetAssoc field validation"""
 
@@ -277,140 +251,6 @@ class TestDatasetAssocRelationships:
 # ============================================================================
 
 
-class TestEdgeCases:
-    """Tests for edge cases and boundary conditions"""
-
-    @pytest.mark.asyncio
-    async def test_dataset_assoc_with_long_name(self, session, matched_dataset, component_dataset_1):
-        """Test DatasetAssoc with maximum length name"""
-        long_name = "a" * 255
-        assoc = DatasetAssoc(
-            name=long_name,
-            matched_dataset_id=matched_dataset.id_,
-            component_dataset_id=component_dataset_1.id_,
-        )
-        session.add(assoc)
-        await session.commit()
-        await session.refresh(assoc)
-
-        assert assoc.name == long_name
-
-    @pytest.mark.asyncio
-    async def test_dataset_assoc_with_special_characters(self, session, matched_dataset, component_dataset_1):
-        """Test DatasetAssoc name with special characters"""
-        assoc = DatasetAssoc(
-            name="gaia-dr3_to_sdss-dr17_v2.0",
-            matched_dataset_id=matched_dataset.id_,
-            component_dataset_id=component_dataset_1.id_,
-        )
-        session.add(assoc)
-        await session.commit()
-        await session.refresh(assoc)
-
-        assert assoc.name == "gaia-dr3_to_sdss-dr17_v2.0"
-
-    @pytest.mark.asyncio
-    async def test_query_nonexistent_dataset_assoc(self, session):
-        """Test querying for non-existent dataset assoc"""
-        result = await session.get(DatasetAssoc, 99999)
-        assert result is None
-
-    @pytest.mark.asyncio
-    async def test_multiple_sessions(self, engine, matched_dataset, component_dataset_1):
-        """Test that multiple sessions work independently"""
-        from sqlalchemy.ext.asyncio import AsyncSession
-        from sqlalchemy.orm import sessionmaker
-
-        async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-
-        async with async_session() as session1:
-            assoc1 = DatasetAssoc(
-                name="session1_assoc",
-                matched_dataset_id=matched_dataset.id_,
-                component_dataset_id=component_dataset_1.id_,
-            )
-            session1.add(assoc1)
-            await session1.commit()
-            await session1.refresh(assoc1)
-            assoc1_id = assoc1.id_
-
-        async with async_session() as session2:
-            assoc2 = await session2.get(DatasetAssoc, assoc1_id)
-            assert assoc2 is not None
-            assert assoc2.name == "session1_assoc"
-
-    @pytest.mark.asyncio
-    async def test_rollback_on_error(self, session, matched_dataset, component_dataset_1):
-        """Test that transaction rolls back on error"""
-        initial_count = (await session.execute(select(DatasetAssoc))).scalars().all()
-        initial_len = len(initial_count)
-
-        try:
-            assoc = DatasetAssoc(
-                name="test_rollback",
-                matched_dataset_id=matched_dataset.id_,
-                component_dataset_id=component_dataset_1.id_,
-            )
-            session.add(assoc)
-            await session.flush()
-
-            # Create duplicate to force error
-            duplicate = DatasetAssoc(
-                name="test_rollback",
-                matched_dataset_id=matched_dataset.id_,
-                component_dataset_id=component_dataset_1.id_,
-            )
-            session.add(duplicate)
-            await session.commit()
-        except Exception:
-            await session.rollback()
-
-        final_count = (await session.execute(select(DatasetAssoc))).scalars().all()
-        assert len(final_count) == initial_len
-
-    @pytest.mark.asyncio
-    async def test_dataset_assoc_with_empty_string_name(self, session, matched_dataset, component_dataset_1):
-        """Test DatasetAssoc with empty string name"""
-        assoc = DatasetAssoc(
-            name="", matched_dataset_id=matched_dataset.id_, component_dataset_id=component_dataset_1.id_
-        )
-        session.add(assoc)
-        await session.commit()
-        await session.refresh(assoc)
-
-        assert assoc.name == ""
-
-
-class TestConcurrentAccess:
-    """Tests for concurrent database access"""
-
-    @pytest.mark.asyncio
-    async def test_concurrent_reads(self, session, sample_dataset_assoc):
-        """Test that concurrent reads work correctly"""
-        results = []
-        for _ in range(5):
-            result = await session.execute(
-                select(DatasetAssoc).where(DatasetAssoc.id_ == sample_dataset_assoc.id_)
-            )
-            results.append(result.scalar_one())
-
-        assert len(results) == 5
-        assert all(r.id_ == sample_dataset_assoc.id_ for r in results)
-
-    @pytest.mark.asyncio
-    async def test_refresh_after_update(self, session, sample_dataset_assoc):
-        """Test that refresh loads updated data"""
-        original_name = sample_dataset_assoc.name
-
-        new_name = "updated_assoc"
-        sample_dataset_assoc.name = new_name
-        await session.commit()
-        await session.refresh(sample_dataset_assoc)
-
-        assert sample_dataset_assoc.name == new_name
-        assert sample_dataset_assoc.name != original_name
-
-
 # ============================================================================
 # Batch Operations Tests
 # ============================================================================
@@ -492,19 +332,6 @@ class TestDatasetAssocBatch:
         for assoc_id in assoc_ids:
             result = await session.get(DatasetAssoc, assoc_id)
             assert result is None
-
-
-class TestTypeAnnotations:
-    """Tests for type annotations and type hints"""
-
-    def test_dataset_assoc_has_type_annotations(self):
-        """Test that DatasetAssoc fields have proper type annotations"""
-        assert hasattr(DatasetAssoc, "__annotations__")
-        annotations = DatasetAssoc.__annotations__
-        assert "id_" in annotations or hasattr(DatasetAssoc, "id_")
-        assert "name" in annotations or hasattr(DatasetAssoc, "name")
-        assert "matched_dataset_id" in annotations or hasattr(DatasetAssoc, "matched_dataset_id")
-        assert "component_dataset_id" in annotations or hasattr(DatasetAssoc, "component_dataset_id")
 
 
 class TestDatasetAssocQueries:

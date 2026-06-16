@@ -99,3 +99,21 @@ Environment variables with `__` as nested delimiter:
 - Naming conventions relaxed: camelCase in variables and non-lowercase function names are allowed (N802, N803, N806, N815, N816 ignored)
 - Python 3.13+ required (uses PEP 695 generics syntax)
 - Docstrings: numpy convention
+
+## Key Patterns for New Code
+
+- **Sync wrappers**: `local_sync/funcs.py` and `remote_sync/funcs.py` use `__getattr__` to auto-generate sync versions of async functions. Don't add explicit wrapper functions — just add the async version and it's available synchronously.
+- **`with_session` decorator**: Detects methods vs standalone functions via `_is_method()` in `local_async/base.py`. For standalone functions, session is injected as the first arg. For methods, `self` is preserved.
+- **CLI load/read_slice/download**: Use factories in `cli/load_commands.py` rather than copy-pasting command definitions per entity.
+- **Remote client extended ops**: `RemoteFileOperations` base class in `client/base.py` provides `load()` and `download()`. Subclasses only override `read_slice()`.
+- **Remote sync operations**: `_make_sync_method` + `__init_subclass__` in `remote_sync/base.py` auto-generates sync wrappers. Add extra methods via `_extra_methods` class variable.
+- **Parametrized tests**: `tests/db/test_db_shared.py`, `tests/db_oper/test_db_oper_shared.py`, and `tests/models/test_models_shared.py` test common entity patterns. Add new entities to `ENTITY_CONFIGS` rather than creating new test files.
+
+## Known Bugs (documented as skipped tests)
+
+- `cli/local/funcs.py` `estimate-ensemble`: Click option `--output-path` maps to `output_path` but function param is `output_file_path`
+- `cli/local/funcs.py` `create-matched-dataset`: Casts tuple return to `Dataset` instead of unpacking
+- `cli/remote/funcs.py` `get-dataset-and-estimates`: Expects `.dataset` attribute on dict return
+- `cli/remote/funcs.py` `create-matched-dataset`: Same pattern — expects object attributes on dict
+- `db_oper/dataset.py` `read_slice` for collections: Calls `get_row(session, row=...)` with keyword where positional is expected
+- `local_async/funcs.py` `@to_pydantic_list`: Decorator uses `self.table_ops` which doesn't exist on standalone functions

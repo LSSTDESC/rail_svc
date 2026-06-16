@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import json
 import logging
-from pathlib import Path
 from typing import TypeVar, Any
 
 import click
 from pydantic import BaseModel, ValidationError
 
-from ...common import unexpected, LoadType
+from ...common import unexpected
 from ...models import Filter, FilterOp, OrderBy
 from ...models.utils import OutputEnum, output_pydantic
 from ...remote_sync.base import SyncRemoteOperations
 from ... import remote_sync
+from ..load_commands import make_load_command, make_read_slice_command, make_download_command
 from .. import common_options
 
 logger = logging.getLogger(__name__)
@@ -139,7 +139,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
         ) -> None:
             """Get a single row by ID."""
             try:
-                row = self.sync_oper.get_row(row_id=row_id)
+                row = self.sync_oper.get_row(row_id=row_id)  # type: ignore
                 print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as exc:
@@ -160,7 +160,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
         ) -> None:
             """Get a single row by name."""
             try:
-                row = self.sync_oper.get_row_by_name(name=name)
+                row = self.sync_oper.get_row_by_name(name=name)  # type: ignore
                 print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as exc:
@@ -195,7 +195,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
 
             # Retrieve and display rows
             try:
-                rows = self.sync_oper.get_rows(
+                rows = self.sync_oper.get_rows(  # type: ignore
                     skip=skip,
                     limit=limit or page_size,
                 )
@@ -223,7 +223,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
         ) -> None:
             """Get a single row by ID, or nothing if not found."""
             try:
-                row = self.sync_oper.get_row_or_none(row_id=row_id)
+                row = self.sync_oper.get_row_or_none(row_id=row_id)  # type: ignore
 
                 if row is None:
                     click.echo(f"No {self.table_name} found with ID {row_id}")
@@ -243,7 +243,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
         def command() -> None:
             """Count total rows in the table."""
             try:
-                count = self.sync_oper.count_rows()
+                count = self.sync_oper.count_rows()  # type: ignore
                 click.echo(f"Total {self.table_name} rows: {count}")
 
             except Exception as exc:
@@ -271,7 +271,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 raise click.Abort()
 
             try:
-                _found_id, row = self.sync_oper.lookup_by_id_or_name(row_id=row_id, name=name)
+                _found_id, row = self.sync_oper.lookup_by_id_or_name(row_id=row_id, name=name)  # type: ignore
                 print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as uexc:
@@ -355,7 +355,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 raise click.Abort()
 
             try:
-                row = self.sync_oper.create_row(validate=not no_validate, **row_data)
+                row = self.sync_oper.create_row(validate=not no_validate, **row_data)  # type: ignore
                 click.echo(f"Created {self.table_name} row successfully")
                 print(output_pydantic([row], output, self.col_names_for_table))
 
@@ -404,7 +404,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 raise click.Abort()
 
             try:
-                rows = self.sync_oper.create_rows(rows_data=rows_data, validate=not no_validate)
+                rows = self.sync_oper.create_rows(rows_data=rows_data, validate=not no_validate)  # type: ignore
                 click.echo(f"Successfully created {len(rows)} {self.table_name} rows")
                 print(output_pydantic(rows, output, self.col_names_for_table))
 
@@ -461,7 +461,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 raise click.Abort()
 
             try:
-                rows = self.sync_oper.create_rows_batched(
+                rows = self.sync_oper.create_rows_batched(  # type: ignore
                     rows_data=rows_data, validate=not no_validate, batch_size=batch_size
                 )
                 click.echo(
@@ -515,7 +515,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 raise click.Abort()
 
             try:
-                count = self.sync_oper.bulk_insert_rows(rows_data=rows_data, validate=not no_validate)
+                count = self.sync_oper.bulk_insert_rows(rows_data=rows_data, validate=not no_validate)  # type: ignore
                 click.echo(f"Successfully inserted {count} {self.table_name} rows")
 
             except Exception as exc:
@@ -599,7 +599,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 raise click.Abort()
 
             try:
-                row = self.sync_oper.update_row(row_id=row_id, **update_data)
+                row = self.sync_oper.update_row(row_id=row_id, **update_data)  # type: ignore
                 click.echo(f"Successfully updated {self.table_name} row with ID {row_id}")
                 print(output_pydantic([row], output, self.col_names_for_table))
 
@@ -662,7 +662,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                     raise click.Abort()
 
             try:
-                rows = self.sync_oper.update_rows(updates=updates)
+                rows = self.sync_oper.update_rows(updates=updates)  # type: ignore
                 click.echo(f"Successfully updated {len(rows)} {self.table_name} rows")
                 print(output_pydantic(rows, output, self.col_names_for_table))
 
@@ -713,7 +713,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                     return
 
             try:
-                deleted_data = self.sync_oper.delete_row(row_id=row_id, capture_data=not no_capture)
+                deleted_data = self.sync_oper.delete_row(row_id=row_id, capture_data=not no_capture)  # type: ignore
 
                 click.echo(f"Successfully deleted {self.table_name} row with ID {row_id}")
 
@@ -796,7 +796,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                     return
 
             try:
-                deleted_data = self.sync_oper.delete_rows(row_ids=ids_list, capture_data=capture_data)
+                deleted_data = self.sync_oper.delete_rows(row_ids=ids_list, capture_data=capture_data)  # type: ignore
 
                 if isinstance(deleted_data, list):
                     click.echo(f"Successfully deleted {len(deleted_data)} {self.table_name} rows")
@@ -879,7 +879,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                     return
 
             try:
-                count = self.sync_oper.bulk_delete_rows(row_ids=ids_list)
+                count = self.sync_oper.bulk_delete_rows(row_ids=ids_list)  # type: ignore
 
                 click.echo(f"Successfully deleted {count} {self.table_name} rows")
 
@@ -1019,7 +1019,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 order_by_list.append(OrderBy(field=field_name, descending=descending))
 
             try:
-                rows = self.sync_oper.filter_rows(
+                rows = self.sync_oper.filter_rows(  # type: ignore
                     filters=filters if filters else None,
                     logical_op="or" if use_or else "and",
                     order_by=order_by_list if order_by_list else None,
@@ -1090,7 +1090,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 filters.append(Filter(field=field_name, op=op, value=value))
 
             try:
-                count = self.sync_oper.count_filtered_rows(
+                count = self.sync_oper.count_filtered_rows(  # type: ignore
                     filters=filters if filters else None,
                     logical_op="or" if use_or else "and",
                 )
@@ -1163,7 +1163,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 order_by_list.append(OrderBy(field=field_name, descending=descending))
 
             try:
-                rows = self.sync_oper.find_by(
+                rows = self.sync_oper.find_by(  # type: ignore
                     order_by=order_by_list if order_by_list else None,
                     skip=skip,
                     limit=limit or page_size,
@@ -1216,7 +1216,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 raise click.Abort()
 
             try:
-                row = self.sync_oper.find_one_by(**kwargs)
+                row = self.sync_oper.find_one_by(**kwargs)  # type: ignore
                 print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as exc:
@@ -1294,8 +1294,6 @@ model_group = make_table_group("model", remote_sync.model, "Manage Model table")
 # CUSTOM COMMANDS FOR SPECIFIC TABLES (via shared factories)
 # ============================================================================
 
-from ..load_commands import make_load_command, make_read_slice_command, make_download_command
-
 make_load_command(dataset_group, "dataset", lambda: remote_sync.dataset(), handle_error)
 make_read_slice_command(dataset_group, "dataset", lambda: remote_sync.dataset(), handle_error)
 make_download_command(dataset_group, "dataset", lambda: remote_sync.dataset(), handle_error)
@@ -1317,5 +1315,3 @@ all_table_groups = [
     estimator_group,
     model_group,
 ]
-
-

@@ -12,43 +12,6 @@ from rail_svc.models import Algorithm as AlgorithmModel
 # ============================================================================
 
 
-def test_algorithm_operations_can_be_instantiated():
-    """Test that AlgorithmOperations can be instantiated."""
-    context = TableContext.from_db_class(Algorithm)
-    ops = AlgorithmOperations(context)
-
-    assert isinstance(ops, AlgorithmOperations)
-
-
-# ============================================================================
-# Module-level singleton tests
-# ============================================================================
-
-
-def test_module_singleton_exists():
-    """Test that module-level algorithm singleton exists."""
-    assert algorithm is not None
-
-
-def test_module_singleton_is_algorithm_operations():
-    """Test that module singleton is an AlgorithmOperations instance."""
-    assert isinstance(algorithm, AlgorithmOperations)
-
-
-def test_module_singleton_is_singleton():
-    """Test that module exports the same instance."""
-    from rail_svc.db_oper.algorithm import algorithm as algorithm2
-
-    # Should be the exact same object
-    assert algorithm is algorithm2
-
-
-# ============================================================================
-# Integration with base class tests
-# ============================================================================
-
-
-@pytest.mark.asyncio
 async def test_algorithm_operations_inherits_crud_methods(session, sample_algorithm):
     """Test that AlgorithmOperations inherits CRUD methods from base."""
     context = TableContext.from_db_class(Algorithm)

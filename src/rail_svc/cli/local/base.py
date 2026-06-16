@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import logging
-from pathlib import Path
 from typing import Any, TypeVar, cast
 
 import aiofiles
@@ -11,13 +10,15 @@ from pydantic import BaseModel, ValidationError
 from sqlalchemy.exc import IntegrityError
 
 from ... import local_sync
-from ...common import LoadType, unexpected
+from ...common import unexpected
 from ...db.base import Base
 from ...db.session import init_db
 from ...local_sync.base import SyncOperations
 from ...models import Filter, FilterOp, OrderBy
 from ...models.utils import OutputEnum, output_pydantic
 from .. import common_options
+from ..load_commands import make_load_command, make_read_slice_command
+
 
 logger = logging.getLogger(__name__)
 
@@ -1391,13 +1392,18 @@ estimator_group = make_table_group("estimator", local_sync.estimator, "Manage Es
 
 model_group = make_table_group("model", local_sync.model, "Manage Model table")
 
-# Register load and read_slice commands using shared factories
-from ..load_commands import make_load_command, make_read_slice_command
-
-make_load_command(dataset_group, "dataset", lambda: local_sync.dataset, handle_database_error, init_hook=init_db)
-make_read_slice_command(dataset_group, "dataset", lambda: local_sync.dataset, handle_database_error, init_hook=init_db)
-make_load_command(estimates_group, "estimates", lambda: local_sync.estimates, handle_database_error, init_hook=init_db)
-make_read_slice_command(estimates_group, "estimates", lambda: local_sync.estimates, handle_database_error, init_hook=init_db)
+make_load_command(
+    dataset_group, "dataset", lambda: local_sync.dataset, handle_database_error, init_hook=init_db
+)
+make_read_slice_command(
+    dataset_group, "dataset", lambda: local_sync.dataset, handle_database_error, init_hook=init_db
+)
+make_load_command(
+    estimates_group, "estimates", lambda: local_sync.estimates, handle_database_error, init_hook=init_db
+)
+make_read_slice_command(
+    estimates_group, "estimates", lambda: local_sync.estimates, handle_database_error, init_hook=init_db
+)
 make_load_command(model_group, "model", lambda: local_sync.model, handle_database_error, init_hook=init_db)
 
 
@@ -1412,4 +1418,3 @@ all_table_groups = [
     estimator_group,
     model_group,
 ]
-

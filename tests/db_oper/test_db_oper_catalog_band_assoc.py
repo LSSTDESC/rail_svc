@@ -12,43 +12,6 @@ from rail_svc.models import CatalogBandAssoc as CatalogBandAssocModel
 # ============================================================================
 
 
-def test_catalog_band_assoc_operations_can_be_instantiated():
-    """Test that CatalogBandAssocOperations can be instantiated."""
-    context = TableContext.from_db_class(CatalogBandAssoc)
-    ops = CatalogBandAssocOperations(context)
-
-    assert isinstance(ops, CatalogBandAssocOperations)
-
-
-# ============================================================================
-# Module-level singleton tests
-# ============================================================================
-
-
-def test_module_singleton_exists():
-    """Test that module-level catalog_band_assoc singleton exists."""
-    assert catalog_band_assoc is not None
-
-
-def test_module_singleton_is_catalog_band_assoc_operations():
-    """Test that module singleton is a CatalogBandAssocOperations instance."""
-    assert isinstance(catalog_band_assoc, CatalogBandAssocOperations)
-
-
-def test_module_singleton_is_singleton():
-    """Test that module exports the same instance."""
-    from rail_svc.db_oper.catalog_band_assoc import catalog_band_assoc as assoc2
-
-    # Should be the exact same object
-    assert catalog_band_assoc is assoc2
-
-
-# ============================================================================
-# Integration with base class tests
-# ============================================================================
-
-
-@pytest.mark.asyncio
 async def test_catalog_band_assoc_operations_inherits_crud_methods(session, sample_catalog_band_assoc):
     """Test that CatalogBandAssocOperations inherits CRUD methods from base."""
     context = TableContext.from_db_class(CatalogBandAssoc)

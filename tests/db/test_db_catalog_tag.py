@@ -98,28 +98,6 @@ class TestCatalogTag:
         assert str(sample_catalog_tag) == sample_catalog_tag.name
 
 
-class TestCatalogTagPydanticIntegration:
-    """Tests for CatalogTag Pydantic integration"""
-
-    @pytest.mark.asyncio
-    async def test_catalog_tag_to_pydantic(self, sample_catalog_tag):
-        """Test converting CatalogTag ORM to Pydantic model"""
-        pydantic_obj = CatalogTag.to_pydantic(sample_catalog_tag)
-
-        assert isinstance(pydantic_obj, CatalogTagPydantic)
-        assert pydantic_obj.id_ == sample_catalog_tag.id_
-        assert pydantic_obj.name == sample_catalog_tag.name
-
-    @pytest.mark.asyncio
-    async def test_catalog_tag_to_pydantic_dict(self, sample_catalog_tag):
-        """Test converting CatalogTag to dict via Pydantic"""
-        data = CatalogTag.to_pydantic_dict(sample_catalog_tag)
-
-        assert isinstance(data, dict)
-        assert data["id_"] == sample_catalog_tag.id_
-        assert data["name"] == sample_catalog_tag.name
-
-
 class TestCatalogTagValidation:
     """Tests for CatalogTag field validation"""
 
@@ -142,136 +120,6 @@ class TestCatalogTagValidation:
 # ============================================================================
 # Edge Cases and Integration Tests
 # ============================================================================
-
-
-class TestEdgeCases:
-    """Tests for edge cases and boundary conditions"""
-
-    @pytest.mark.asyncio
-    async def test_catalog_tag_with_long_name(self, session):
-        """Test CatalogTag with maximum length name"""
-        long_name = "a" * 255
-        tag = CatalogTag(name=long_name)
-        session.add(tag)
-        await session.commit()
-        await session.refresh(tag)
-
-        assert tag.name == long_name
-
-    @pytest.mark.asyncio
-    async def test_catalog_tag_with_special_characters(self, session):
-        """Test CatalogTag name with special characters"""
-        tag = CatalogTag(name="LSST-DP0.2_v1.0")
-        session.add(tag)
-        await session.commit()
-        await session.refresh(tag)
-
-        assert tag.name == "LSST-DP0.2_v1.0"
-
-    @pytest.mark.asyncio
-    async def test_catalog_tag_with_underscores(self, session):
-        """Test CatalogTag name with underscores"""
-        tag = CatalogTag(name="hsc_pdr_3")
-        session.add(tag)
-        await session.commit()
-        await session.refresh(tag)
-
-        assert tag.name == "hsc_pdr_3"
-
-    @pytest.mark.asyncio
-    async def test_catalog_tag_with_numbers(self, session):
-        """Test CatalogTag name with numbers"""
-        tag = CatalogTag(name="catalog2024")
-        session.add(tag)
-        await session.commit()
-        await session.refresh(tag)
-
-        assert tag.name == "catalog2024"
-
-    @pytest.mark.asyncio
-    async def test_query_nonexistent_catalog_tag(self, session):
-        """Test querying for non-existent catalog tag"""
-        result = await session.get(CatalogTag, 99999)
-        assert result is None
-
-    @pytest.mark.asyncio
-    async def test_multiple_sessions(self, engine):
-        """Test that multiple sessions work independently"""
-        from sqlalchemy.ext.asyncio import AsyncSession
-        from sqlalchemy.orm import sessionmaker
-
-        async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-
-        async with async_session() as session1:
-            tag1 = CatalogTag(name="session1_tag")
-            session1.add(tag1)
-            await session1.commit()
-            await session1.refresh(tag1)
-            tag1_id = tag1.id_
-
-        async with async_session() as session2:
-            tag2 = await session2.get(CatalogTag, tag1_id)
-            assert tag2 is not None
-            assert tag2.name == "session1_tag"
-
-    @pytest.mark.asyncio
-    async def test_rollback_on_error(self, session):
-        """Test that transaction rolls back on error"""
-        initial_count = (await session.execute(select(CatalogTag))).scalars().all()
-        initial_len = len(initial_count)
-
-        try:
-            tag = CatalogTag(name="test_rollback")
-            session.add(tag)
-            await session.flush()
-
-            # Create duplicate to force error
-            duplicate = CatalogTag(name="test_rollback")
-            session.add(duplicate)
-            await session.commit()
-        except Exception:
-            await session.rollback()
-
-        final_count = (await session.execute(select(CatalogTag))).scalars().all()
-        assert len(final_count) == initial_len
-
-    @pytest.mark.asyncio
-    async def test_catalog_tag_with_empty_string(self, session):
-        """Test CatalogTag with empty string name"""
-        tag = CatalogTag(name="")
-        session.add(tag)
-        await session.commit()
-        await session.refresh(tag)
-
-        assert tag.name == ""
-
-
-class TestConcurrentAccess:
-    """Tests for concurrent database access"""
-
-    @pytest.mark.asyncio
-    async def test_concurrent_reads(self, session, sample_catalog_tag):
-        """Test that concurrent reads work correctly"""
-        results = []
-        for _ in range(5):
-            result = await session.execute(select(CatalogTag).where(CatalogTag.id_ == sample_catalog_tag.id_))
-            results.append(result.scalar_one())
-
-        assert len(results) == 5
-        assert all(r.id_ == sample_catalog_tag.id_ for r in results)
-
-    @pytest.mark.asyncio
-    async def test_refresh_after_update(self, session, sample_catalog_tag):
-        """Test that refresh loads updated data"""
-        original_name = sample_catalog_tag.name
-
-        new_name = "updated_tag"
-        sample_catalog_tag.name = new_name
-        await session.commit()
-        await session.refresh(sample_catalog_tag)
-
-        assert sample_catalog_tag.name == new_name
-        assert sample_catalog_tag.name != original_name
 
 
 # ============================================================================
@@ -333,17 +181,6 @@ class TestCatalogTagBatch:
         for tag_id in tag_ids:
             result = await session.get(CatalogTag, tag_id)
             assert result is None
-
-
-class TestTypeAnnotations:
-    """Tests for type annotations and type hints"""
-
-    def test_catalog_tag_has_type_annotations(self):
-        """Test that CatalogTag fields have proper type annotations"""
-        assert hasattr(CatalogTag, "__annotations__")
-        annotations = CatalogTag.__annotations__
-        assert "id_" in annotations or hasattr(CatalogTag, "id_")
-        assert "name" in annotations or hasattr(CatalogTag, "name")
 
 
 class TestCatalogTagQueries:
