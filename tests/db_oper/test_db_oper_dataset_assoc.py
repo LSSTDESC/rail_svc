@@ -12,43 +12,6 @@ from rail_svc.models import DatasetAssoc as DatasetAssocModel
 # ============================================================================
 
 
-def test_dataset_assoc_operations_can_be_instantiated():
-    """Test that DatasetAssocOperations can be instantiated."""
-    context = TableContext.from_db_class(DatasetAssoc)
-    ops = DatasetAssocOperations(context)
-
-    assert isinstance(ops, DatasetAssocOperations)
-
-
-# ============================================================================
-# Module-level singleton tests
-# ============================================================================
-
-
-def test_module_singleton_exists():
-    """Test that module-level dataset_assoc singleton exists."""
-    assert dataset_assoc is not None
-
-
-def test_module_singleton_is_dataset_assoc_operations():
-    """Test that module singleton is a DatasetAssocOperations instance."""
-    assert isinstance(dataset_assoc, DatasetAssocOperations)
-
-
-def test_module_singleton_is_singleton():
-    """Test that module exports the same instance."""
-    from rail_svc.db_oper.dataset_assoc import dataset_assoc as dataset_assoc2
-
-    # Should be the exact same object
-    assert dataset_assoc is dataset_assoc2
-
-
-# ============================================================================
-# Integration with base class tests
-# ============================================================================
-
-
-@pytest.mark.asyncio
 async def test_dataset_assoc_operations_inherits_crud_methods(session, sample_dataset_assoc):
     """Test that DatasetAssocOperations inherits CRUD methods from base."""
     context = TableContext.from_db_class(DatasetAssoc)

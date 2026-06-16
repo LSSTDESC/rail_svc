@@ -1,4 +1,4 @@
-from . import catalog_funcs, estimation_funcs
+from . import catalog_funcs, estimation_funcs, wrappers
 from .algorithm import algorithm
 from .band import band
 from .catalog_band_assoc import catalog_band_assoc
@@ -21,4 +21,5 @@ __all__ = [
     "estimation_funcs",
     "estimator",
     "model",
+    "wrappers",
 ]

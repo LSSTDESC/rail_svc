@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import json
 import logging
-from pathlib import Path
 from typing import TypeVar, Any
 
 import click
 from pydantic import BaseModel, ValidationError
 
-from ...common import unexpected, LoadType
+from ...common import unexpected
 from ...models import Filter, FilterOp, OrderBy
 from ...models.utils import OutputEnum, output_pydantic
 from ...remote_sync.base import SyncRemoteOperations
 from ... import remote_sync
+from ..load_commands import make_load_command, make_read_slice_command, make_download_command
 from .. import common_options
 
 logger = logging.getLogger(__name__)
@@ -20,6 +20,34 @@ logger = logging.getLogger(__name__)
 # Type variables
 ResponseT = TypeVar("ResponseT", bound=BaseModel)
 CreateT = TypeVar("CreateT", bound=BaseModel)
+
+
+def handle_error(exc: Exception, context: str = "") -> None:
+    """Handle common errors with appropriate messages.
+
+    Parameters
+    ----------
+    exc : Exception
+        Exception that was raised
+    context : str, optional
+        Additional context about when the error occurred
+
+    Raises
+    ------
+    click.Abort
+        Always raises to terminate command
+    """
+    context_msg = f" {context}" if context else ""
+
+    if isinstance(exc, ValidationError):
+        click.echo(f"Error: Validation failed{context_msg}: {exc}", err=True)
+    elif isinstance(exc, ValueError):
+        click.echo(f"Error{context_msg}: {exc}", err=True)
+    else:  # pragma: no cover
+        logger.error(f"Unexpected error{context_msg}", exc_info=exc)
+        click.echo(f"Error{context_msg}: {exc}", err=True)
+
+    raise click.Abort()
 
 
 class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
@@ -111,11 +139,11 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
         ) -> None:
             """Get a single row by ID."""
             try:
-                row = self.sync_oper.get_row(row_id=row_id)
+                row = self.sync_oper.get_row(row_id=row_id)  # type: ignore
                 print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as exc:
-                self._handle_error(exc, f"getting {self.table_name} with ID {row_id}")
+                handle_error(exc, f"getting {self.table_name} with ID {row_id}")
 
     def register_get_row_by_name(self) -> None:
         """Register the get-row-by-name command to the group.
@@ -132,11 +160,11 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
         ) -> None:
             """Get a single row by name."""
             try:
-                row = self.sync_oper.get_row_by_name(name=name)
+                row = self.sync_oper.get_row_by_name(name=name)  # type: ignore
                 print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as exc:
-                self._handle_error(exc, f"getting {self.table_name} with name '{name}'")
+                handle_error(exc, f"getting {self.table_name} with name '{name}'")
 
     def register_get_rows(self) -> None:
         """Register the get-rows command to the group.
@@ -167,14 +195,14 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
 
             # Retrieve and display rows
             try:
-                rows = self.sync_oper.get_rows(
+                rows = self.sync_oper.get_rows(  # type: ignore
                     skip=skip,
                     limit=limit or page_size,
                 )
                 print(output_pydantic(rows, output, self.col_names_for_table))
 
             except Exception as exc:
-                self._handle_error(exc, f"listing {self.table_name} rows")
+                handle_error(exc, f"listing {self.table_name} rows")
 
     def register_get_row_or_none(self) -> None:
         """Register the get-row-or-none command to the group.
@@ -195,7 +223,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
         ) -> None:
             """Get a single row by ID, or nothing if not found."""
             try:
-                row = self.sync_oper.get_row_or_none(row_id=row_id)
+                row = self.sync_oper.get_row_or_none(row_id=row_id)  # type: ignore
 
                 if row is None:
                     click.echo(f"No {self.table_name} found with ID {row_id}")
@@ -203,7 +231,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                     print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as uexc:
-                self._handle_error(uexc, f"getting {self.table_name} with ID {row_id}")
+                handle_error(uexc, f"getting {self.table_name} with ID {row_id}")
 
     def register_count_rows(self) -> None:
         """Register the count-rows command to the group.
@@ -215,11 +243,11 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
         def command() -> None:
             """Count total rows in the table."""
             try:
-                count = self.sync_oper.count_rows()
+                count = self.sync_oper.count_rows()  # type: ignore
                 click.echo(f"Total {self.table_name} rows: {count}")
 
             except Exception as exc:
-                self._handle_error(exc, f"counting {self.table_name} rows")
+                handle_error(exc, f"counting {self.table_name} rows")
 
     def register_lookup_by_id_or_name(self) -> None:
         """Register the lookup command to the group.
@@ -243,12 +271,12 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 raise click.Abort()
 
             try:
-                _found_id, row = self.sync_oper.lookup_by_id_or_name(row_id=row_id, name=name)
+                _found_id, row = self.sync_oper.lookup_by_id_or_name(row_id=row_id, name=name)  # type: ignore
                 print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as uexc:
                 identifier = f"ID {row_id}" if row_id else f"name '{name}'"
-                self._handle_error(uexc, f"looking up {self.table_name} with {identifier}")
+                handle_error(uexc, f"looking up {self.table_name} with {identifier}")
 
     def register_all_read_commands(self) -> None:
         """Register all read commands to the group.
@@ -327,12 +355,12 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 raise click.Abort()
 
             try:
-                row = self.sync_oper.create_row(validate=not no_validate, **row_data)
+                row = self.sync_oper.create_row(validate=not no_validate, **row_data)  # type: ignore
                 click.echo(f"Created {self.table_name} row successfully")
                 print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as exc:
-                self._handle_error(exc, f"creating {self.table_name} row")
+                handle_error(exc, f"creating {self.table_name} row")
 
     def register_create_rows(self) -> None:
         """Register the create-rows command to the group.
@@ -376,12 +404,12 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 raise click.Abort()
 
             try:
-                rows = self.sync_oper.create_rows(rows_data=rows_data, validate=not no_validate)
+                rows = self.sync_oper.create_rows(rows_data=rows_data, validate=not no_validate)  # type: ignore
                 click.echo(f"Successfully created {len(rows)} {self.table_name} rows")
                 print(output_pydantic(rows, output, self.col_names_for_table))
 
             except Exception as exc:
-                self._handle_error(exc, f"creating {self.table_name} rows")
+                handle_error(exc, f"creating {self.table_name} rows")
 
     def register_create_rows_batched(self) -> None:
         """Register the create-rows-batched command to the group.
@@ -433,7 +461,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 raise click.Abort()
 
             try:
-                rows = self.sync_oper.create_rows_batched(
+                rows = self.sync_oper.create_rows_batched(  # type: ignore
                     rows_data=rows_data, validate=not no_validate, batch_size=batch_size
                 )
                 click.echo(
@@ -442,7 +470,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 print(output_pydantic(rows, output, self.col_names_for_table))
 
             except Exception as exc:
-                self._handle_error(exc, f"creating {self.table_name} rows in batches")
+                handle_error(exc, f"creating {self.table_name} rows in batches")
 
     def register_bulk_insert_rows(self) -> None:
         """Register the bulk-insert command to the group.
@@ -487,11 +515,11 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 raise click.Abort()
 
             try:
-                count = self.sync_oper.bulk_insert_rows(rows_data=rows_data, validate=not no_validate)
+                count = self.sync_oper.bulk_insert_rows(rows_data=rows_data, validate=not no_validate)  # type: ignore
                 click.echo(f"Successfully inserted {count} {self.table_name} rows")
 
             except Exception as exc:
-                self._handle_error(exc, f"bulk inserting {self.table_name} rows")
+                handle_error(exc, f"bulk inserting {self.table_name} rows")
 
     def register_all_create_commands(self) -> None:
         """Register all create commands to the group.
@@ -571,12 +599,12 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 raise click.Abort()
 
             try:
-                row = self.sync_oper.update_row(row_id=row_id, **update_data)
+                row = self.sync_oper.update_row(row_id=row_id, **update_data)  # type: ignore
                 click.echo(f"Successfully updated {self.table_name} row with ID {row_id}")
                 print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as uexc:
-                self._handle_error(uexc, f"updating {self.table_name} row with ID {row_id}")
+                handle_error(uexc, f"updating {self.table_name} row with ID {row_id}")
 
     def register_update_rows(self) -> None:
         """Register the update-rows command to the group.
@@ -634,12 +662,12 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                     raise click.Abort()
 
             try:
-                rows = self.sync_oper.update_rows(updates=updates)
+                rows = self.sync_oper.update_rows(updates=updates)  # type: ignore
                 click.echo(f"Successfully updated {len(rows)} {self.table_name} rows")
                 print(output_pydantic(rows, output, self.col_names_for_table))
 
             except Exception as exc:
-                self._handle_error(exc, f"updating {self.table_name} rows")
+                handle_error(exc, f"updating {self.table_name} rows")
 
     def register_all_update_commands(self) -> None:
         """Register all update commands to the group.
@@ -685,7 +713,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                     return
 
             try:
-                deleted_data = self.sync_oper.delete_row(row_id=row_id, capture_data=not no_capture)
+                deleted_data = self.sync_oper.delete_row(row_id=row_id, capture_data=not no_capture)  # type: ignore
 
                 click.echo(f"Successfully deleted {self.table_name} row with ID {row_id}")
 
@@ -694,7 +722,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                     print(output_pydantic([deleted_data], output, self.col_names_for_table))
 
             except Exception as uexc:
-                self._handle_error(uexc, f"deleting {self.table_name} row with ID {row_id}")
+                handle_error(uexc, f"deleting {self.table_name} row with ID {row_id}")
 
     def register_delete_rows(self) -> None:
         """Register the delete-rows command to the group.
@@ -768,7 +796,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                     return
 
             try:
-                deleted_data = self.sync_oper.delete_rows(row_ids=ids_list, capture_data=capture_data)
+                deleted_data = self.sync_oper.delete_rows(row_ids=ids_list, capture_data=capture_data)  # type: ignore
 
                 if isinstance(deleted_data, list):
                     click.echo(f"Successfully deleted {len(deleted_data)} {self.table_name} rows")
@@ -779,7 +807,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                     click.echo(f"Successfully deleted {deleted_data} {self.table_name} rows")
 
             except Exception as exc:
-                self._handle_error(exc, f"deleting {len(ids_list)} {self.table_name} rows")
+                handle_error(exc, f"deleting {len(ids_list)} {self.table_name} rows")
 
     def register_bulk_delete_rows(self) -> None:
         """Register the bulk-delete command to the group.
@@ -851,7 +879,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                     return
 
             try:
-                count = self.sync_oper.bulk_delete_rows(row_ids=ids_list)
+                count = self.sync_oper.bulk_delete_rows(row_ids=ids_list)  # type: ignore
 
                 click.echo(f"Successfully deleted {count} {self.table_name} rows")
 
@@ -859,7 +887,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                     click.echo(f"Note: {len(ids_list) - count} IDs were not found", err=True)
 
             except Exception as exc:
-                self._handle_error(exc, f"bulk deleting {len(ids_list)} {self.table_name} rows")
+                handle_error(exc, f"bulk deleting {len(ids_list)} {self.table_name} rows")
 
     def register_all_delete_commands(self) -> None:
         """Register all delete commands to the group.
@@ -991,7 +1019,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 order_by_list.append(OrderBy(field=field_name, descending=descending))
 
             try:
-                rows = self.sync_oper.filter_rows(
+                rows = self.sync_oper.filter_rows(  # type: ignore
                     filters=filters if filters else None,
                     logical_op="or" if use_or else "and",
                     order_by=order_by_list if order_by_list else None,
@@ -1002,7 +1030,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 print(output_pydantic(rows, output, self.col_names_for_table))
 
             except Exception as exc:
-                self._handle_error(exc, f"filtering {self.table_name} rows")
+                handle_error(exc, f"filtering {self.table_name} rows")
 
     def register_count_filtered_rows(self) -> None:
         """Register the count-filtered command to the group.
@@ -1062,7 +1090,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 filters.append(Filter(field=field_name, op=op, value=value))
 
             try:
-                count = self.sync_oper.count_filtered_rows(
+                count = self.sync_oper.count_filtered_rows(  # type: ignore
                     filters=filters if filters else None,
                     logical_op="or" if use_or else "and",
                 )
@@ -1071,7 +1099,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 click.echo(f"Total {filter_desc} {self.table_name} rows: {count}")
 
             except Exception as exc:
-                self._handle_error(exc, f"counting filtered {self.table_name} rows")
+                handle_error(exc, f"counting filtered {self.table_name} rows")
 
     def register_find_by(self) -> None:
         """Register the find-by command to the group.
@@ -1135,7 +1163,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 order_by_list.append(OrderBy(field=field_name, descending=descending))
 
             try:
-                rows = self.sync_oper.find_by(
+                rows = self.sync_oper.find_by(  # type: ignore
                     order_by=order_by_list if order_by_list else None,
                     skip=skip,
                     limit=limit or page_size,
@@ -1146,7 +1174,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 print(output_pydantic(rows, output, self.col_names_for_table))
 
             except Exception as exc:
-                self._handle_error(exc, f"finding {self.table_name} rows")
+                handle_error(exc, f"finding {self.table_name} rows")
 
     def register_find_one_by(self) -> None:
         """Register the find-one-by command to the group.
@@ -1188,11 +1216,11 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                 raise click.Abort()
 
             try:
-                row = self.sync_oper.find_one_by(**kwargs)
+                row = self.sync_oper.find_one_by(**kwargs)  # type: ignore
                 print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as exc:
-                self._handle_error(exc, f"finding {self.table_name}")
+                handle_error(exc, f"finding {self.table_name}")
 
     def register_all_filter_commands(self) -> None:
         """Register all filter commands to the group.
@@ -1263,255 +1291,17 @@ estimator_group = make_table_group("estimator", remote_sync.estimator, "Manage E
 model_group = make_table_group("model", remote_sync.model, "Manage Model table")
 
 # ============================================================================
-# CUSTOM COMMANDS FOR SPECIFIC TABLES
+# CUSTOM COMMANDS FOR SPECIFIC TABLES (via shared factories)
 # ============================================================================
 
-
-# Dataset custom commands
-@dataset_group.command(name="load")
-@common_options.path()
-@common_options.load_type()
-@common_options.output()
-@click.option("--from-json", type=click.Path(exists=True), help="Path to JSON file containing row data")
-@click.option("--no-validate", is_flag=True, help="Skip Pydantic validation")
-@click.argument("fields", nargs=-1)
-def dataset_load(
-    path: Path | str,
-    load_type: LoadType,
-    output: OutputEnum,
-    from_json: str | None,
-    *,
-    no_validate: bool,
-    fields: tuple[str, ...],
-) -> None:
-    """Load a dataset from a file.
-
-    Provide fields as KEY=VALUE pairs, or use --from-json to load from a file.
-    The --path option specifies the data file to load.
-    The --load-type option specifies how to handle the file (in_place, link, or copy).
-    """
-    # Parse input
-    if from_json:
-        try:
-            with open(from_json, encoding="utf-8") as f:
-                row_data = json.load(f)
-        except json.JSONDecodeError as exc:
-            click.echo(f"Error: Invalid JSON: {exc}", err=True)
-            raise click.Abort()
-        except OSError as exc:
-            click.echo(f"Error: Cannot read file: {exc}", err=True)
-            raise click.Abort()
-    else:
-        row_data = {}
-        for field in fields:
-            if "=" not in field:
-                click.echo(f"Error: Invalid field format '{field}'. Use KEY=VALUE format.", err=True)
-                raise click.Abort()
-
-            key, value = field.split("=", 1)
-            try:
-                row_data[key] = json.loads(value)
-            except json.JSONDecodeError:
-                row_data[key] = value
-
-    remote_sync_ops = remote_sync.dataset()
-    try:
-        row = remote_sync_ops.load(
-            path=path,
-            load_type=load_type,
-            validate=not no_validate,
-            **row_data,
-        )
-        click.echo(f"Successfully loaded dataset from {path}")
-        print(output_pydantic([row], output, remote_sync_ops.ctx.response_class.col_names_for_table))  # type: ignore
-
-    except Exception as exc:
-        logger.error("Error loading dataset", exc_info=True)
-        click.echo(f"Error loading dataset: {exc}", err=True)
-        raise click.Abort()
-
-
-@dataset_group.command(name="read-slice")
-@common_options.slice_option()
-@common_options.output()
-@click.argument("row_id", type=int)
-def dataset_read_slice(
-    row_id: int,
-    output: OutputEnum,
-    slice: slice | None,
-) -> None:
-    """Read a slice of data from a dataset.
-
-    Use --slice to specify a Python slice notation (e.g., '1:5', '::2', ':10').
-    If no slice is provided, reads the entire dataset.
-    """
-    remote_sync_ops = remote_sync.dataset()
-    try:
-        data = remote_sync_ops.read_slice(row_id=row_id, the_slice=slice)
-
-        if output == OutputEnum.json:
-            click.echo(json.dumps(data, indent=2, default=str))
-        else:
-            click.echo(data)
-
-    except Exception as exc:
-        logger.error(f"Error reading slice from dataset {row_id}", exc_info=True)
-        click.echo(f"Error reading slice from dataset: {exc}", err=True)
-        raise click.Abort()
-
-
-# Estimates custom commands
-@estimates_group.command(name="load")
-@common_options.path()
-@common_options.load_type()
-@common_options.output()
-@click.option("--from-json", type=click.Path(exists=True), help="Path to JSON file containing row data")
-@click.option("--no-validate", is_flag=True, help="Skip Pydantic validation")
-@click.argument("fields", nargs=-1)
-def estimates_load(
-    path: Path | str,
-    load_type: LoadType,
-    output: OutputEnum,
-    from_json: str | None,
-    *,
-    no_validate: bool,
-    fields: tuple[str, ...],
-) -> None:
-    """Load estimates from a file.
-
-    Provide fields as KEY=VALUE pairs, or use --from-json to load from a file.
-    The --path option specifies the data file to load.
-    The --load-type option specifies how to handle the file (in_place, link, or copy).
-    """
-    # Parse input
-    if from_json:
-        try:
-            with open(from_json, encoding="utf-8") as f:
-                row_data = json.load(f)
-        except json.JSONDecodeError as exc:
-            click.echo(f"Error: Invalid JSON: {exc}", err=True)
-            raise click.Abort()
-        except OSError as exc:
-            click.echo(f"Error: Cannot read file: {exc}", err=True)
-            raise click.Abort()
-    else:
-        row_data = {}
-        for field in fields:
-            if "=" not in field:
-                click.echo(f"Error: Invalid field format '{field}'. Use KEY=VALUE format.", err=True)
-                raise click.Abort()
-
-            key, value = field.split("=", 1)
-            try:
-                row_data[key] = json.loads(value)
-            except json.JSONDecodeError:
-                row_data[key] = value
-
-    remote_sync_ops = remote_sync.estimates()
-    try:
-        row = remote_sync_ops.load(
-            path=path,
-            load_type=load_type,
-            validate=not no_validate,
-            **row_data,
-        )
-        click.echo(f"Successfully loaded estimates from {path}")
-        print(output_pydantic([row], output, remote_sync_ops.ctx.response_class.col_names_for_table))  # type: ignore
-
-    except Exception as exc:
-        logger.error("Error loading estimates", exc_info=True)
-        click.echo(f"Error loading estimates: {exc}", err=True)
-        raise click.Abort()
-
-
-@estimates_group.command(name="read-slice")
-@common_options.output()
-@common_options.slice_option()
-@click.argument("row_id", type=int)
-def estimates_read_slice(
-    row_id: int,
-    output: OutputEnum,
-    slice: slice | None,
-) -> None:
-    """Read a slice of data from estimates.
-
-    Use --slice to specify a Python slice notation (e.g., '1:5', '::2', ':10').
-    If no slice is provided, reads the entire estimates data.
-    """
-    remote_sync_ops = remote_sync.estimates()
-    try:
-        data = remote_sync_ops.read_slice(row_id=row_id, the_slice=slice)
-        click.echo(data.to_json())
-
-    except Exception as exc:
-        logger.error(f"Error reading slice from estimates {row_id}", exc_info=True)
-        click.echo(f"Error reading slice from estimates: {exc}", err=True)
-        raise click.Abort()
-
-
-# Model custom commands
-@model_group.command(name="load")
-@common_options.path()
-@common_options.load_type()
-@common_options.output()
-@click.option("--from-json", type=click.Path(exists=True), help="Path to JSON file containing row data")
-@click.option("--no-validate", is_flag=True, help="Skip Pydantic validation")
-@click.argument("fields", nargs=-1)
-def model_load(
-    path: Path | str,
-    load_type: LoadType,
-    output: OutputEnum,
-    from_json: str | None,
-    *,
-    no_validate: bool,
-    fields: tuple[str, ...],
-) -> None:
-    """Load a model from a file.
-
-    Provide fields as KEY=VALUE pairs, or use --from-json to load from a file.
-    The --path option specifies the data file to load.
-    The --load-type option specifies how to handle the file (in_place, link, or copy).
-    """
-    # Parse input
-    if from_json:
-        try:
-            with open(from_json, encoding="utf-8") as f:
-                row_data = json.load(f)
-        except json.JSONDecodeError as exc:
-            click.echo(f"Error: Invalid JSON: {exc}", err=True)
-            raise click.Abort()
-        except OSError as exc:
-            click.echo(f"Error: Cannot read file: {exc}", err=True)
-            raise click.Abort()
-    else:
-        row_data = {}
-        for field in fields:
-            if "=" not in field:
-                click.echo(f"Error: Invalid field format '{field}'. Use KEY=VALUE format.", err=True)
-                raise click.Abort()
-
-            key, value = field.split("=", 1)
-            try:
-                row_data[key] = json.loads(value)
-            except json.JSONDecodeError:
-                row_data[key] = value
-
-
-    remote_sync_ops = remote_sync.model()
-    try:
-        row = remote_sync_ops.load(
-            path=path,
-            load_type=load_type,
-            validate=not no_validate,
-            **row_data,
-        )
-        click.echo(f"Successfully loaded model from {path}")
-        print(output_pydantic([row], output, remote_sync_ops.ctx.response_class.col_names_for_table))  # type: ignore
-
-    except Exception as exc:
-        logger.error("Error loading model", exc_info=True)
-        click.echo(f"Error loading model: {exc}", err=True)
-        raise click.Abort()
+make_load_command(dataset_group, "dataset", lambda: remote_sync.dataset(), handle_error)
+make_read_slice_command(dataset_group, "dataset", lambda: remote_sync.dataset(), handle_error)
+make_download_command(dataset_group, "dataset", lambda: remote_sync.dataset(), handle_error)
+make_load_command(estimates_group, "estimates", lambda: remote_sync.estimates(), handle_error)
+make_read_slice_command(estimates_group, "estimates", lambda: remote_sync.estimates(), handle_error)
+make_download_command(estimates_group, "estimates", lambda: remote_sync.estimates(), handle_error)
+make_load_command(model_group, "model", lambda: remote_sync.model(), handle_error)
+make_download_command(model_group, "model", lambda: remote_sync.model(), handle_error)
 
 
 all_table_groups = [

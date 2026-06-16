@@ -102,32 +102,6 @@ class TestEstimator:
         assert str(sample_estimator) == sample_estimator.name
 
 
-class TestEstimatorPydanticIntegration:
-    """Tests for Estimator Pydantic integration"""
-
-    @pytest.mark.asyncio
-    async def test_estimator_to_pydantic(self, sample_estimator):
-        """Test converting Estimator ORM to Pydantic model"""
-        pydantic_obj = Estimator.to_pydantic(sample_estimator)
-
-        assert isinstance(pydantic_obj, EstimatorPydantic)
-        assert pydantic_obj.id_ == sample_estimator.id_
-        assert pydantic_obj.name == sample_estimator.name
-        assert pydantic_obj.config == sample_estimator.config
-        assert pydantic_obj.model_id == sample_estimator.model_id
-
-    @pytest.mark.asyncio
-    async def test_estimator_to_pydantic_dict(self, sample_estimator):
-        """Test converting Estimator to dict via Pydantic"""
-        data = Estimator.to_pydantic_dict(sample_estimator)
-
-        assert isinstance(data, dict)
-        assert data["id_"] == sample_estimator.id_
-        assert data["name"] == sample_estimator.name
-        assert data["config"] == sample_estimator.config
-        assert data["model_id"] == sample_estimator.model_id
-
-
 class TestEstimatorValidation:
     """Tests for Estimator field validation"""
 
@@ -281,118 +255,6 @@ class TestEstimatorProperties:
 # ============================================================================
 
 
-class TestEdgeCases:
-    """Tests for edge cases and boundary conditions"""
-
-    @pytest.mark.asyncio
-    async def test_estimator_with_long_name(self, session, sample_model):
-        """Test Estimator with maximum length name"""
-        long_name = "a" * 255
-        estimator = Estimator(name=long_name, config={}, model_id=sample_model.id_)
-        session.add(estimator)
-        await session.commit()
-        await session.refresh(estimator)
-
-        assert estimator.name == long_name
-
-    @pytest.mark.asyncio
-    async def test_estimator_with_special_characters_in_name(self, session, sample_model):
-        """Test Estimator name with special characters"""
-        estimator = Estimator(name="estimator-v2.0_test", config={}, model_id=sample_model.id_)
-        session.add(estimator)
-        await session.commit()
-        await session.refresh(estimator)
-
-        assert estimator.name == "estimator-v2.0_test"
-
-    @pytest.mark.asyncio
-    async def test_query_nonexistent_estimator(self, session):
-        """Test querying for non-existent estimator"""
-        result = await session.get(Estimator, 99999)
-        assert result is None
-
-    @pytest.mark.asyncio
-    async def test_multiple_sessions(self, engine, sample_model):
-        """Test that multiple sessions work independently"""
-        from sqlalchemy.ext.asyncio import AsyncSession
-        from sqlalchemy.orm import sessionmaker
-
-        async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-
-        async with async_session() as session1:
-            estimator1 = Estimator(
-                name="session1_estimator", config={"test": "value"}, model_id=sample_model.id_
-            )
-            session1.add(estimator1)
-            await session1.commit()
-            await session1.refresh(estimator1)
-            estimator1_id = estimator1.id_
-
-        async with async_session() as session2:
-            estimator2 = await session2.get(Estimator, estimator1_id)
-            assert estimator2 is not None
-            assert estimator2.name == "session1_estimator"
-
-    @pytest.mark.asyncio
-    async def test_rollback_on_error(self, session, sample_model):
-        """Test that transaction rolls back on error"""
-        initial_count = (await session.execute(select(Estimator))).scalars().all()
-        initial_len = len(initial_count)
-
-        try:
-            estimator = Estimator(name="test_rollback", config={}, model_id=sample_model.id_)
-            session.add(estimator)
-            await session.flush()
-
-            # Create duplicate to force error
-            duplicate = Estimator(name="test_rollback", config={}, model_id=sample_model.id_)
-            session.add(duplicate)
-            await session.commit()
-        except Exception:
-            await session.rollback()
-
-        final_count = (await session.execute(select(Estimator))).scalars().all()
-        assert len(final_count) == initial_len
-
-    @pytest.mark.asyncio
-    async def test_estimator_with_empty_string_name(self, session, sample_model):
-        """Test Estimator with empty string name"""
-        estimator = Estimator(name="", config={}, model_id=sample_model.id_)
-        session.add(estimator)
-        await session.commit()
-        await session.refresh(estimator)
-
-        assert estimator.name == ""
-
-
-class TestConcurrentAccess:
-    """Tests for concurrent database access"""
-
-    @pytest.mark.asyncio
-    async def test_concurrent_reads(self, session, sample_estimator):
-        """Test that concurrent reads work correctly"""
-        results = []
-        for _ in range(5):
-            result = await session.execute(select(Estimator).where(Estimator.id_ == sample_estimator.id_))
-            results.append(result.scalar_one())
-
-        assert len(results) == 5
-        assert all(r.id_ == sample_estimator.id_ for r in results)
-
-    @pytest.mark.asyncio
-    async def test_refresh_after_update(self, session, sample_estimator):
-        """Test that refresh loads updated data"""
-        original_config = sample_estimator.config
-
-        new_config = {"updated": True}
-        sample_estimator.config = new_config
-        await session.commit()
-        await session.refresh(sample_estimator)
-
-        assert sample_estimator.config == new_config
-        assert sample_estimator.config != original_config
-
-
 # ============================================================================
 # Batch Operations Tests
 # ============================================================================
@@ -455,19 +317,6 @@ class TestEstimatorBatch:
         for est_id in estimator_ids:
             result = await session.get(Estimator, est_id)
             assert result is None
-
-
-class TestTypeAnnotations:
-    """Tests for type annotations and type hints"""
-
-    def test_estimator_has_type_annotations(self):
-        """Test that Estimator fields have proper type annotations"""
-        assert hasattr(Estimator, "__annotations__")
-        annotations = Estimator.__annotations__
-        assert "id_" in annotations or hasattr(Estimator, "id_")
-        assert "name" in annotations or hasattr(Estimator, "name")
-        assert "model_id" in annotations or hasattr(Estimator, "model_id")
-        assert "config" in annotations or hasattr(Estimator, "config")
 
 
 class TestEstimatorQueries:

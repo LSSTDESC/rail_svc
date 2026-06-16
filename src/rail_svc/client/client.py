@@ -14,6 +14,7 @@ from .base import (
     RemoteModelOperations,
     RemoteTableOperations,
 )
+from .funcs import RemoteFuncsOperations
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -54,6 +55,7 @@ class RemoteDatabase:
         self.datasets: RemoteDatasetOperations
         self.estimates: RemoteEstimatesOperations
         self.models: RemoteModelOperations
+        self.funcs: RemoteFuncsOperations
 
     async def __aenter__(self) -> RemoteDatabase:
         self._api = RemoteAPI(
@@ -95,6 +97,14 @@ class RemoteDatabase:
                 client = self._api.table(table_name, response_model, create_model)
 
             setattr(self, table_name, client)
+
+        # Setup funcs client
+        funcs_endpoint = f"{self.base_url}{self.api_prefix}/funcs"
+        assert self._api.client
+        self.funcs = RemoteFuncsOperations(
+            client=self._api.client,
+            endpoint=funcs_endpoint,
+        )
 
     def list_tables(self) -> list[str]:
         """List all available table names."""

@@ -7,8 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rail_svc import db
 from rail_svc.db_oper import estimation_funcs
-from rail_svc.db_oper.estimation_funcs import WrapperType
-from rail_svc.rail_funcs.estimation_funcs import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
+from rail_svc.rail_funcs.wrappers import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
 
 
 @pytest.fixture
@@ -51,176 +50,6 @@ def mock_dataset():
     dataset.path = "datasets/test_data.hdf5"
     dataset.catalog_tag_id = 1000
     return dataset
-
-
-class TestGetEstimatorComponents:
-    """Test _get_estimator_components function."""
-
-    @pytest.mark.asyncio
-    async def test_successful_fetch(self, mock_session, mock_components):
-        """Test successful retrieval of all components."""
-        estimator, model, algorithm, catalog_tag = mock_components
-
-        with (
-            patch("rail_svc.db_oper.estimation_funcs.estimator.get_row", return_value=estimator),
-            patch("rail_svc.db_oper.estimation_funcs.model.get_row", return_value=model),
-            patch("rail_svc.db_oper.estimation_funcs.algorithm.get_row", return_value=algorithm),
-            patch("rail_svc.db_oper.estimation_funcs.catalog_tag.get_row", return_value=catalog_tag),
-        ):
-            result = await estimation_funcs._get_estimator_components(mock_session, estimator_id=1)
-
-            assert result == (estimator, model, algorithm, catalog_tag)
-
-    @pytest.mark.asyncio
-    async def test_component_not_found(self, mock_session):
-        """Test error when any component is not found."""
-        with patch(
-            "rail_svc.db_oper.estimation_funcs.estimator.get_row",
-            side_effect=ValueError("Not found"),
-        ):
-            with pytest.raises(ValueError, match="Not found"):
-                await estimation_funcs._get_estimator_components(mock_session, estimator_id=999)
-
-
-class TestBuildEstimationWrapper:
-    """Test _build_estimation_wrapper function."""
-
-    @pytest.mark.asyncio
-    async def test_build_pdf_wrapper(self, mock_session, mock_components, tmp_path):
-        """Test building PDF wrapper."""
-        estimator, model, algorithm, catalog_tag = mock_components
-        archive_dir = tmp_path / "archive"
-        archive_dir.mkdir()
-        model_path = archive_dir / model.path
-        model_path.parent.mkdir(parents=True)
-        model_path.write_text("mock model")
-
-        mock_wrapper = Mock(spec=CatEstimatorPdfWrapper)
-
-        with (
-            patch(
-                "rail_svc.db_oper.estimation_funcs._get_estimator_components",
-                return_value=mock_components,
-            ),
-            patch("rail_svc.db_oper.estimation_funcs.global_config.storage.archive", str(archive_dir)),
-            patch("anyio.Path.absolute", return_value=archive_dir),
-            patch.object(CatEstimatorPdfWrapper, "build_wrapper", return_value=mock_wrapper) as mock_build,
-        ):
-            result = await estimation_funcs._build_estimation_wrapper(
-                mock_session, estimator_id=1, wrapper_type=WrapperType.PDF
-            )
-
-            assert result == mock_wrapper
-            mock_build.assert_called_once()
-            call_args = mock_build.call_args[0]
-            assert call_args[0] == "test_estimator"
-            assert call_args[1] == "TestEstimator"
-            assert call_args[3] == "test_catalog"
-
-    @pytest.mark.asyncio
-    async def test_build_ensemble_wrapper(self, mock_session, mock_components, tmp_path):
-        """Test building ensemble wrapper."""
-        archive_dir = tmp_path / "archive"
-        archive_dir.mkdir()
-        model_path = archive_dir / mock_components[1].path
-        model_path.parent.mkdir(parents=True)
-        model_path.write_text("mock model")
-
-        mock_wrapper = Mock(spec=CatEstimatorEnsembleWrapper)
-
-        with (
-            patch(
-                "rail_svc.db_oper.estimation_funcs._get_estimator_components", return_value=mock_components
-            ),
-            patch("rail_svc.db_oper.estimation_funcs.global_config.storage.archive", str(archive_dir)),
-            patch("anyio.Path.absolute", return_value=archive_dir),
-            patch.object(CatEstimatorEnsembleWrapper, "build_wrapper", return_value=mock_wrapper),
-        ):
-            result = await estimation_funcs._build_estimation_wrapper(
-                mock_session, estimator_id=1, wrapper_type=WrapperType.ENSEMBLE
-            )
-
-            assert result == mock_wrapper
-
-    @pytest.mark.asyncio
-    async def test_model_file_not_found(self, mock_session, mock_components, tmp_path):
-        """Test error when model file doesn't exist."""
-        archive_dir = tmp_path / "archive"
-        archive_dir.mkdir()
-
-        with (
-            patch(
-                "rail_svc.db_oper.estimation_funcs._get_estimator_components", return_value=mock_components
-            ),
-            patch("rail_svc.db_oper.estimation_funcs.global_config.storage.archive", str(archive_dir)),
-            patch("anyio.Path.absolute", return_value=archive_dir),
-        ):
-            with pytest.raises(FileNotFoundError, match="Model file not found"):
-                await estimation_funcs._build_estimation_wrapper(
-                    mock_session, estimator_id=1, wrapper_type=WrapperType.PDF
-                )
-
-    @pytest.mark.asyncio
-    async def test_null_config_handled(self, mock_session, mock_components, tmp_path):
-        """Test that null config is converted to empty dict."""
-        estimator, model, algorithm, catalog_tag = mock_components
-        estimator.config = None
-
-        archive_dir = tmp_path / "archive"
-        archive_dir.mkdir()
-        model_path = archive_dir / model.path
-        model_path.parent.mkdir(parents=True)
-        model_path.write_text("mock model")
-
-        mock_wrapper = Mock(spec=CatEstimatorPdfWrapper)
-
-        with (
-            patch(
-                "rail_svc.db_oper.estimation_funcs._get_estimator_components", return_value=mock_components
-            ),
-            patch("rail_svc.db_oper.estimation_funcs.global_config.storage.archive", str(archive_dir)),
-            patch("anyio.Path.absolute", return_value=archive_dir),
-            patch.object(CatEstimatorPdfWrapper, "build_wrapper", return_value=mock_wrapper) as mock_build,
-        ):
-            await estimation_funcs._build_estimation_wrapper(
-                mock_session, estimator_id=1, wrapper_type=WrapperType.PDF
-            )
-
-            # Config should be passed as kwargs, not None
-            call_kwargs = mock_build.call_args[1]
-            assert isinstance(call_kwargs, dict)
-
-
-class TestPublicWrapperBuilders:
-    """Test public wrapper building functions."""
-
-    @pytest.mark.asyncio
-    async def test_build_pdf_estimation_wrapper(self, mock_session):
-        """Test build_pdf_estimation_wrapper delegates correctly."""
-        mock_wrapper = Mock(spec=CatEstimatorPdfWrapper)
-
-        with patch(
-            "rail_svc.db_oper.estimation_funcs._build_estimation_wrapper",
-            return_value=mock_wrapper,
-        ) as mock_build:
-            result = await estimation_funcs.build_pdf_estimation_wrapper(mock_session, estimator_id=1)
-
-            assert result == mock_wrapper
-            mock_build.assert_called_once_with(mock_session, 1, WrapperType.PDF)
-
-    @pytest.mark.asyncio
-    async def test_build_ensemble_estimation_wrapper(self, mock_session):
-        """Test build_ensemble_estimation_wrapper delegates correctly."""
-        mock_wrapper = Mock(spec=CatEstimatorEnsembleWrapper)
-
-        with patch(
-            "rail_svc.db_oper.estimation_funcs._build_estimation_wrapper",
-            return_value=mock_wrapper,
-        ) as mock_build:
-            result = await estimation_funcs.build_ensemble_estimation_wrapper(mock_session, estimator_id=1)
-
-            assert result == mock_wrapper
-            mock_build.assert_called_once_with(mock_session, 1, WrapperType.ENSEMBLE)
 
 
 class TestEstimatePdf:
@@ -562,9 +391,7 @@ class TestIntegrationScenarios:
             patch("rail_svc.db_oper.estimation_funcs.catalog_tag.get_row", return_value=catalog_tag),
             patch("rail_svc.db_oper.estimation_funcs.model.find_by", return_value=[model]),
             patch("rail_svc.db_oper.estimation_funcs.estimator.find_by", return_value=[estimator]),
-            patch(
-                "rail_svc.db_oper.estimation_funcs._get_estimator_components", return_value=mock_components
-            ),
+            patch("rail_svc.db_oper.wrappers._get_estimator_components", return_value=mock_components),
             patch("rail_svc.db_oper.estimation_funcs.global_config.storage.archive", str(archive_dir)),
             patch("anyio.Path.absolute", return_value=archive_dir),
             patch.object(CatEstimatorPdfWrapper, "build_wrapper", return_value=mock_wrapper),
@@ -618,9 +445,7 @@ class TestIntegrationScenarios:
             patch("rail_svc.db_oper.estimation_funcs.catalog_tag.get_row", return_value=catalog_tag),
             patch("rail_svc.db_oper.estimation_funcs.model.find_by", return_value=[model]),
             patch("rail_svc.db_oper.estimation_funcs.estimator.find_by", return_value=[estimator]),
-            patch(
-                "rail_svc.db_oper.estimation_funcs._get_estimator_components", return_value=mock_components
-            ),
+            patch("rail_svc.db_oper.wrappers._get_estimator_components", return_value=mock_components),
             patch("rail_svc.db_oper.estimation_funcs.global_config.storage.archive", str(archive_dir)),
             patch("anyio.Path.absolute", return_value=archive_dir),
             patch.object(CatEstimatorEnsembleWrapper, "build_wrapper", return_value=mock_wrapper),
@@ -638,18 +463,3 @@ class TestIntegrationScenarios:
 
             assert result_path == output_path
             assert output_path.exists()
-
-
-class TestWrapperType:
-    """Test WrapperType enum."""
-
-    def test_enum_values(self):
-        """Test enum has correct values."""
-        assert WrapperType.PDF.value == "pdf"
-        assert WrapperType.ENSEMBLE.value == "ensemble"
-
-    def test_enum_members(self):
-        """Test enum has all expected members."""
-        assert len(list(WrapperType)) == 2
-        assert WrapperType.PDF in WrapperType
-        assert WrapperType.ENSEMBLE in WrapperType

@@ -4,11 +4,12 @@ import click
 
 from ... import __version__
 from .base import all_table_groups
+from .funcs import funcs_group
 
 
 @click.group(
     name="rail-svc-client-remote",
-    commands=all_table_groups,
+    commands=all_table_groups + [funcs_group],
 )
 @click.version_option(version=__version__)
 @click.option(

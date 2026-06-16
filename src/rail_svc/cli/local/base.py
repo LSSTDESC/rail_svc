@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import logging
-from pathlib import Path
 from typing import Any, TypeVar, cast
 
 import aiofiles
@@ -11,13 +10,14 @@ from pydantic import BaseModel, ValidationError
 from sqlalchemy.exc import IntegrityError
 
 from ... import local_sync
-from ...common import LoadType, unexpected
+from ...common import unexpected
 from ...db.base import Base
 from ...db.session import init_db
 from ...local_sync.base import SyncOperations
 from ...models import Filter, FilterOp, OrderBy
 from ...models.utils import OutputEnum, output_pydantic
 from .. import common_options
+from ..load_commands import make_load_command, make_read_slice_command
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +25,45 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T", bound=Base)
 ResponseT = TypeVar("ResponseT", bound=BaseModel)
 CreateT = TypeVar("CreateT", bound=BaseModel)
+
+
+def handle_database_error(exc: Exception, context: str = "") -> None:
+    """Handle common database errors with appropriate messages.
+
+    Parameters
+    ----------
+    exc : Exception
+        Exception that was raised
+    context : str, optional
+        Additional context about when the error occurred
+
+    Raises
+    ------
+    click.Abort
+        Always raises to terminate command
+    """
+    context_msg = f" {context}" if context else ""
+
+    if isinstance(exc, ValidationError):
+        click.echo(f"Error: Validation failed{context_msg}: {exc}", err=True)
+    elif isinstance(exc, IntegrityError):
+        logger.error(
+            "Integrity constraint violation",
+        )
+        click.echo(
+            f"Error: Integrity constraint violation{context_msg} "
+            f"(duplicate key, foreign key, etc.): {exc}",
+            err=True,
+        )
+    elif isinstance(exc, ValueError):
+        click.echo(f"Error{context_msg}: {exc}", err=True)
+    else:
+        logger.error(
+            "Unexpected error",
+        )
+        click.echo(f"Error{context_msg}: {exc}", err=True)
+
+    raise click.Abort()
 
 
 class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
@@ -105,44 +144,6 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
 
         return rows_data
 
-    def _handle_database_error(self, exc: Exception, context: str = "") -> None:
-        """Handle common database errors with appropriate messages.
-
-        Parameters
-        ----------
-        exc : Exception
-            Exception that was raised
-        context : str, optional
-            Additional context about when the error occurred
-
-        Raises
-        ------
-        click.Abort
-            Always raises to terminate command
-        """
-        context_msg = f" {context}" if context else ""
-
-        if isinstance(exc, ValidationError):
-            click.echo(f"Error: Validation failed{context_msg}: {exc}", err=True)
-        elif isinstance(exc, IntegrityError):
-            logger.error(
-                "Integrity constraint violation",
-            )
-            click.echo(
-                f"Error: Integrity constraint violation{context_msg} "
-                f"(duplicate key, foreign key, etc.): {exc}",
-                err=True,
-            )
-        elif isinstance(exc, ValueError):
-            click.echo(f"Error{context_msg}: {exc}", err=True)
-        else:
-            logger.error(
-                "Unexpected error",
-            )
-            click.echo(f"Error{context_msg}: {exc}", err=True)
-
-        raise click.Abort()
-
     # ========================================================================
     # READ COMMAND REGISTRATION
     # ========================================================================
@@ -170,7 +171,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as exc:
-                self._handle_database_error(exc, f"getting {self.ctx.class_string} with ID {row_id}")
+                handle_database_error(exc, f"getting {self.ctx.class_string} with ID {row_id}")
 
     def register_get_row_by_name(self) -> None:
         """Register the get-row-by-name command to the group.
@@ -195,7 +196,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as uexc:
-                self._handle_database_error(uexc, f"getting {self.ctx.class_string} with name '{name}'")
+                handle_database_error(uexc, f"getting {self.ctx.class_string} with name '{name}'")
 
     def register_get_rows(self) -> None:
         """Register the get-rows command to the group.
@@ -237,7 +238,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 print(output_pydantic(rows, output, self.col_names_for_table))
 
             except Exception as uexc:
-                self._handle_database_error(uexc, f"listing {self.ctx.class_string} rows")
+                handle_database_error(uexc, f"listing {self.ctx.class_string} rows")
 
     def register_get_row_or_none(self) -> None:
         """Register the get-row-or-none command to the group.
@@ -269,7 +270,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                     print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as uexc:
-                self._handle_database_error(uexc, f"getting {self.ctx.class_string} with ID {row_id}")
+                handle_database_error(uexc, f"getting {self.ctx.class_string} with ID {row_id}")
 
     def register_count_rows(self) -> None:
         """Register the count-rows command to the group.
@@ -289,7 +290,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 click.echo(f"Total {self.ctx.class_string} rows: {count}")
 
             except Exception as uexc:
-                self._handle_database_error(uexc, f"counting {self.ctx.class_string} rows")
+                handle_database_error(uexc, f"counting {self.ctx.class_string} rows")
 
     def register_lookup_by_id_or_name(self) -> None:
         """Register the lookup command to the group.
@@ -322,7 +323,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
 
             except Exception as uexc:
                 identifier = f"ID {row_id}" if row_id else f"name '{name}'"
-                self._handle_database_error(uexc, f"looking up {self.ctx.class_string} with {identifier}")
+                handle_database_error(uexc, f"looking up {self.ctx.class_string} with {identifier}")
 
     def register_all_read_commands(self) -> None:
         """Register all read commands to the group.
@@ -410,7 +411,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as exc:
-                self._handle_database_error(exc, f"creating {self.ctx.class_string}")
+                handle_database_error(exc, f"creating {self.ctx.class_string}")
 
     def register_create_rows(self) -> None:
         """Register the create-rows command to the group.
@@ -465,7 +466,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 print(output_pydantic(rows, output, self.col_names_for_table))
 
             except Exception as uexc:
-                self._handle_database_error(uexc, f"creating {self.ctx.class_string} rows")
+                handle_database_error(uexc, f"creating {self.ctx.class_string} rows")
 
     def register_create_rows_batched(self) -> None:
         """Register the create-rows-batched command to the group.
@@ -533,7 +534,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 print(output_pydantic(rows, output, self.col_names_for_table))
 
             except Exception as uexc:
-                self._handle_database_error(uexc, f"creating {self.ctx.class_string} rows in batches")
+                handle_database_error(uexc, f"creating {self.ctx.class_string} rows in batches")
 
     def register_bulk_insert_rows(self) -> None:
         """Register the bulk-insert command to the group.
@@ -586,7 +587,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 click.echo(f"Successfully inserted {count} {self.ctx.class_string} rows")
 
             except Exception as uexc:
-                self._handle_database_error(uexc, f"bulk inserting {self.ctx.class_string} rows")
+                handle_database_error(uexc, f"bulk inserting {self.ctx.class_string} rows")
 
     def register_all_create_commands(self) -> None:
         """Register all create commands to the group.
@@ -675,7 +676,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as exc:
-                self._handle_database_error(exc, f"updating {self.ctx.class_string} with ID {row_id}")
+                handle_database_error(exc, f"updating {self.ctx.class_string} with ID {row_id}")
 
     def register_update_rows(self) -> None:
         """Register the update-rows command to the group.
@@ -744,7 +745,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 print(output_pydantic(rows, output, self.col_names_for_table))
 
             except Exception as uexc:
-                self._handle_database_error(uexc, f"updating {self.ctx.class_string} rows")
+                handle_database_error(uexc, f"updating {self.ctx.class_string} rows")
 
     def register_all_update_commands(self) -> None:
         """Register all update commands to the group.
@@ -811,7 +812,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                     )
 
             except Exception as uexc:
-                self._handle_database_error(uexc, f"deleting {self.ctx.class_string} with ID {row_id}")
+                handle_database_error(uexc, f"deleting {self.ctx.class_string} with ID {row_id}")
 
     def register_delete_rows(self) -> None:
         """Register the delete-rows command to the group.
@@ -904,7 +905,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                     )
 
             except Exception as uexc:
-                self._handle_database_error(uexc, f"deleting {len(ids_list)} {self.ctx.class_string} rows")
+                handle_database_error(uexc, f"deleting {len(ids_list)} {self.ctx.class_string} rows")
 
     def register_bulk_delete_rows(self) -> None:
         """Register the bulk-delete command to the group.
@@ -988,9 +989,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                     click.echo(f"Note: {len(ids_list) - count} IDs were not found", err=True)
 
             except Exception as uexc:
-                self._handle_database_error(
-                    uexc, f"bulk deleting {len(ids_list)} {self.ctx.class_string} rows"
-                )
+                handle_database_error(uexc, f"bulk deleting {len(ids_list)} {self.ctx.class_string} rows")
 
     def register_all_delete_commands(self) -> None:
         """Register all delete commands to the group.
@@ -1138,7 +1137,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 print(output_pydantic(rows, output, self.col_names_for_table))
 
             except Exception as exc:
-                self._handle_database_error(exc, f"filtering {self.ctx.class_string} rows")
+                handle_database_error(exc, f"filtering {self.ctx.class_string} rows")
 
     def register_count_filtered_rows(self) -> None:
         """Register the count-filtered command to the group.
@@ -1213,7 +1212,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 click.echo(f"Total {filter_desc} {self.ctx.class_string} rows: {count}")
 
             except Exception as uexc:
-                self._handle_database_error(uexc, f"counting filtered {self.ctx.class_string} rows")
+                handle_database_error(uexc, f"counting filtered {self.ctx.class_string} rows")
 
     def register_find_by(self) -> None:
         """Register the find-by command to the group.
@@ -1292,7 +1291,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 print(output_pydantic(rows, output, self.col_names_for_table))
 
             except Exception as uexc:
-                self._handle_database_error(uexc, f"finding {self.ctx.class_string} rows")
+                handle_database_error(uexc, f"finding {self.ctx.class_string} rows")
 
     def register_find_one_by(self) -> None:
         """Register the find-one-by command to the group.
@@ -1342,7 +1341,7 @@ class CliOperations[T: Base, ResponseT: BaseModel, CreateT: BaseModel]:
                 print(output_pydantic([row], output, self.col_names_for_table))
 
             except Exception as exc:
-                self._handle_database_error(exc, f"finding {self.ctx.class_string}")
+                handle_database_error(exc, f"finding {self.ctx.class_string}")
 
     def register_all_filter_commands(self) -> None:
         """Register all filter commands to the group.
@@ -1392,279 +1391,19 @@ estimator_group = make_table_group("estimator", local_sync.estimator, "Manage Es
 
 model_group = make_table_group("model", local_sync.model, "Manage Model table")
 
-
-@dataset_group.command(
-    name="load",
+make_load_command(
+    dataset_group, "dataset", lambda: local_sync.dataset, handle_database_error, init_hook=init_db
 )
-@common_options.path()
-@common_options.load_type()
-@common_options.output()
-@click.option("--from-json", type=click.Path(exists=True), help="Path to JSON file containing row data")
-@click.option("--no-validate", is_flag=True, help="Skip Pydantic validation")
-@click.argument("fields", nargs=-1)
-def dataset_load(
-    path: Path | str,
-    load_type: LoadType,
-    output: OutputEnum,
-    from_json: str | None,
-    *,
-    no_validate: bool,
-    fields: tuple[str, ...],
-) -> None:
-    """Load a dataset from a file.
-
-    Provide fields as KEY=VALUE pairs, or use --from-json to load from a file.
-    The --path option specifies the data file to load.
-    The --load-type option specifies how to handle the file (in_place, link, or copy).
-    """
-    # Ensure database engine is initialized
-    init_db()
-
-    # Parse input (same pattern as create_row)
-    if from_json:
-        try:
-            with open(from_json, encoding="utf-8") as f:
-                row_data = json.load(f)
-        except json.JSONDecodeError as exc:
-            click.echo(f"Error: Invalid JSON: {exc}", err=True)
-            raise click.Abort()
-        except OSError as exc:
-            click.echo(f"Error: Cannot read file: {exc}", err=True)
-            raise click.Abort()
-    else:
-        # Parse KEY=VALUE arguments
-        row_data = {}
-        for field in fields:
-            if "=" not in field:
-                click.echo(f"Error: Invalid field format '{field}'. Use KEY=VALUE format.", err=True)
-                raise click.Abort()
-
-            key, value = field.split("=", 1)
-            # Try to parse as JSON for complex types
-            try:
-                row_data[key] = json.loads(value)
-            except json.JSONDecodeError:
-                # Keep as string if not valid JSON
-                row_data[key] = value
-
-    try:
-        row = local_sync.dataset.load(
-            path=path,
-            load_type=load_type,
-            validate=not no_validate,
-            **row_data,
-        )
-        click.echo(f"Successfully loaded dataset from {path}")
-        print(output_pydantic([row], output, local_sync.dataset.ctx.response_class.col_names_for_table))  # type: ignore
-
-    except Exception as exc:
-        logger.error("Error loading dataset", exc_info=True)
-        click.echo(f"Error loading dataset: {exc}", err=True)
-        raise click.Abort()
-
-
-@dataset_group.command(
-    name="read-slice",
+make_read_slice_command(
+    dataset_group, "dataset", lambda: local_sync.dataset, handle_database_error, init_hook=init_db
 )
-@common_options.slice_option()
-@common_options.output()
-@click.argument("row_id", type=int)
-def dataset_read_slice(
-    row_id: int,
-    output: OutputEnum,
-    slice: slice | None,
-) -> None:
-    """Read a slice of data from a dataset.
-
-    Use --slice to specify a Python slice notation (e.g., '1:5', '::2', ':10').
-    If no slice is provided, reads the entire dataset.
-    """
-    # Ensure database engine is initialized
-    init_db()
-
-    try:
-        data = local_sync.dataset.read_slice(row=row_id, the_slice=slice)
-
-        # Output the data (this will depend on what format read_slice returns)
-        # Assuming it returns something that can be displayed
-        if output == OutputEnum.json:
-            click.echo(json.dumps(data, indent=2, default=str))
-        else:
-            click.echo(data)
-
-    except Exception as exc:
-        logger.error(f"Error reading slice from dataset {row_id}", exc_info=True)
-        click.echo(f"Error reading slice from dataset: {exc}", err=True)
-        raise click.Abort()
-
-
-@estimates_group.command(
-    name="load",
+make_load_command(
+    estimates_group, "estimates", lambda: local_sync.estimates, handle_database_error, init_hook=init_db
 )
-@common_options.path()
-@common_options.load_type()
-@common_options.output()
-@click.option("--from-json", type=click.Path(exists=True), help="Path to JSON file containing row data")
-@click.option("--no-validate", is_flag=True, help="Skip Pydantic validation")
-@click.argument("fields", nargs=-1)
-def estimates_load(
-    path: Path | str,
-    load_type: LoadType,
-    output: OutputEnum,
-    from_json: str | None,
-    *,
-    no_validate: bool,
-    fields: tuple[str, ...],
-) -> None:
-    """Load estimates from a file.
-
-    Provide fields as KEY=VALUE pairs, or use --from-json to load from a file.
-    The --path option specifies the data file to load.
-    The --load-type option specifies how to handle the file (in_place, link, or copy).
-    """
-    # Ensure database engine is initialized
-    init_db()
-
-    # Parse input
-    if from_json:
-        try:
-            with open(from_json, encoding="utf-8") as f:
-                row_data = json.load(f)
-        except json.JSONDecodeError as exc:
-            click.echo(f"Error: Invalid JSON: {exc}", err=True)
-            raise click.Abort()
-        except OSError as exc:
-            click.echo(f"Error: Cannot read file: {exc}", err=True)
-            raise click.Abort()
-    else:
-        # Parse KEY=VALUE arguments
-        row_data = {}
-        for field in fields:
-            if "=" not in field:
-                click.echo(f"Error: Invalid field format '{field}'. Use KEY=VALUE format.", err=True)
-                raise click.Abort()
-
-            key, value = field.split("=", 1)
-            try:
-                row_data[key] = json.loads(value)
-            except json.JSONDecodeError:
-                row_data[key] = value
-
-    try:
-        row = local_sync.estimates.load(
-            path=path,
-            load_type=load_type,
-            validate=not no_validate,
-            **row_data,
-        )
-        click.echo(f"Successfully loaded estimates from {path}")
-        print(output_pydantic([row], output, local_sync.estimates.ctx.response_class.col_names_for_table))  # type: ignore
-
-    except Exception as exc:
-        logger.error("Error loading estimates", exc_info=True)
-        click.echo(f"Error loading estimates: {exc}", err=True)
-        raise click.Abort()
-
-
-@estimates_group.command(
-    name="read-slice",
+make_read_slice_command(
+    estimates_group, "estimates", lambda: local_sync.estimates, handle_database_error, init_hook=init_db
 )
-@common_options.output()
-@common_options.slice_option()
-@click.argument("row_id", type=int)
-def estimates_read_slice(
-    row_id: int,
-    output: OutputEnum,
-    slice: slice | None,
-) -> None:
-    """Read a slice of data from estimates.
-
-    Use --slice to specify a Python slice notation (e.g., '1:5', '::2', ':10').
-    If no slice is provided, reads the entire estimates data.
-    """
-    # Ensure database engine is initialized
-    init_db()
-
-    try:
-        data = local_sync.estimates.read_slice(row=row_id, the_slice=slice)
-        # Output the data
-        if output == OutputEnum.json:
-            click.echo(json.dumps(data, indent=2, default=str))
-        else:
-            click.echo(data)
-
-    except Exception as exc:
-        logger.error(f"Error reading slice from estimates {row_id}", exc_info=True)
-        click.echo(f"Error reading slice from estimates: {exc}", err=True)
-        raise click.Abort()
-
-
-@model_group.command(
-    name="load",
-)
-@common_options.path()
-@common_options.load_type()
-@common_options.output()
-@click.option("--from-json", type=click.Path(exists=True), help="Path to JSON file containing row data")
-@click.option("--no-validate", is_flag=True, help="Skip Pydantic validation")
-@click.argument("fields", nargs=-1)
-def model_load(
-    path: Path | str,
-    load_type: LoadType,
-    output: OutputEnum,
-    from_json: str | None,
-    *,
-    no_validate: bool,
-    fields: tuple[str, ...],
-) -> None:
-    """Load a model from a file.
-
-    Provide fields as KEY=VALUE pairs, or use --from-json to load from a file.
-    The --path option specifies the data file to load.
-    The --load-type option specifies how to handle the file (in_place, link, or copy).
-    """
-    # Ensure database engine is initialized
-    init_db()
-
-    # Parse input
-    if from_json:
-        try:
-            with open(from_json, encoding="utf-8") as f:
-                row_data = json.load(f)
-        except json.JSONDecodeError as exc:
-            click.echo(f"Error: Invalid JSON: {exc}", err=True)
-            raise click.Abort()
-        except OSError as exc:
-            click.echo(f"Error: Cannot read file: {exc}", err=True)
-            raise click.Abort()
-    else:
-        # Parse KEY=VALUE arguments
-        row_data = {}
-        for field in fields:
-            if "=" not in field:
-                click.echo(f"Error: Invalid field format '{field}'. Use KEY=VALUE format.", err=True)
-                raise click.Abort()
-
-            key, value = field.split("=", 1)
-            try:
-                row_data[key] = json.loads(value)
-            except json.JSONDecodeError:
-                row_data[key] = value
-
-    try:
-        row = local_sync.model.load(
-            path=path,
-            load_type=load_type,
-            validate=not no_validate,
-            **row_data,
-        )
-        click.echo(f"Successfully loaded model from {path}")
-        print(output_pydantic([row], output, local_sync.model.ctx.response_class.col_names_for_table))  # type: ignore
-
-    except Exception as exc:
-        logger.error("Error loading model", exc_info=True)
-        click.echo(f"Error loading model: {exc}", err=True)
-        raise click.Abort()
+make_load_command(model_group, "model", lambda: local_sync.model, handle_database_error, init_hook=init_db)
 
 
 all_table_groups = [

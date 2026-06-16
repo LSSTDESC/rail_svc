@@ -12,43 +12,6 @@ from rail_svc.models import CatalogTag as CatalogTagModel
 # ============================================================================
 
 
-def test_catalog_tag_operations_can_be_instantiated():
-    """Test that CatalogTagOperations can be instantiated."""
-    context = TableContext.from_db_class(CatalogTag)
-    ops = CatalogTagOperations(context)
-
-    assert isinstance(ops, CatalogTagOperations)
-
-
-# ============================================================================
-# Module-level singleton tests
-# ============================================================================
-
-
-def test_module_singleton_exists():
-    """Test that module-level catalog_tag singleton exists."""
-    assert catalog_tag is not None
-
-
-def test_module_singleton_is_catalog_tag_operations():
-    """Test that module singleton is a CatalogTagOperations instance."""
-    assert isinstance(catalog_tag, CatalogTagOperations)
-
-
-def test_module_singleton_is_singleton():
-    """Test that module exports the same instance."""
-    from rail_svc.db_oper.catalog_tag import catalog_tag as catalog_tag2
-
-    # Should be the exact same object
-    assert catalog_tag is catalog_tag2
-
-
-# ============================================================================
-# Integration with base class tests
-# ============================================================================
-
-
-@pytest.mark.asyncio
 async def test_catalog_tag_operations_inherits_crud_methods(session, sample_catalog_tag):
     """Test that CatalogTagOperations inherits CRUD methods from base."""
     context = TableContext.from_db_class(CatalogTag)

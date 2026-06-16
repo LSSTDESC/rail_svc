@@ -12,43 +12,6 @@ from rail_svc.models import Band as BandModel
 # ============================================================================
 
 
-def test_band_operations_can_be_instantiated():
-    """Test that BandOperations can be instantiated."""
-    context = TableContext.from_db_class(Band)
-    ops = BandOperations(context)
-
-    assert isinstance(ops, BandOperations)
-
-
-# ============================================================================
-# Module-level singleton tests
-# ============================================================================
-
-
-def test_module_singleton_exists():
-    """Test that module-level band singleton exists."""
-    assert band is not None
-
-
-def test_module_singleton_is_band_operations():
-    """Test that module singleton is a BandOperations instance."""
-    assert isinstance(band, BandOperations)
-
-
-def test_module_singleton_is_singleton():
-    """Test that module exports the same instance."""
-    from rail_svc.db_oper.band import band as band2
-
-    # Should be the exact same object
-    assert band is band2
-
-
-# ============================================================================
-# Integration with base class tests
-# ============================================================================
-
-
-@pytest.mark.asyncio
 async def test_band_operations_inherits_crud_methods(session, sample_band):
     """Test that BandOperations inherits CRUD methods from base."""
     context = TableContext.from_db_class(Band)

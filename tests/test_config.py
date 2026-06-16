@@ -301,10 +301,12 @@ class TestConfiguration:
 
         archive_path = tmp_path / "existing_archive"
         import_path = tmp_path / "existing_import"
+        download_path = tmp_path / "existing_downloads"
 
         # Create paths
         archive_path.mkdir()
         import_path.mkdir()
+        download_path.mkdir()
 
         env_vars = {
             "ASGI__PORT": "9000",
@@ -314,6 +316,7 @@ class TestConfiguration:
             "DAEMON__PROCESSING_INTERVAL": "60",
             "STORAGE__ARCHIVE": str(archive_path),
             "STORAGE__IMPORT_AREA": str(import_path),
+            "STORAGE__DOWNLOAD_AREA": str(download_path),
         }
 
         with patch.dict(os.environ, env_vars, clear=False):
@@ -365,10 +368,12 @@ class TestConfiguration:
         """Test realistic production configuration"""
         archive_path = tmp_path / "existing_archive"
         import_path = tmp_path / "existing_import"
+        download_path = tmp_path / "existing_downloads"
 
         # Create paths
         archive_path.mkdir()
         import_path.mkdir()
+        download_path.mkdir()
 
         config = Configuration(
             asgi={
@@ -392,6 +397,7 @@ class TestConfiguration:
             storage={
                 "archive": str(archive_path),
                 "import_area": str(import_path),
+                "download_area": str(download_path),
             },
         )
 

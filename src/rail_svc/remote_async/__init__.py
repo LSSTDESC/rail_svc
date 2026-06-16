@@ -31,6 +31,7 @@ from .base import (
     AsyncRemoteModelOperations,
     AsyncRemoteOperations,
 )
+from .funcs import AsyncRemoteFuncs
 
 BASE_URL = global_config.client.service_url
 
@@ -72,6 +73,11 @@ model: AsyncRemoteModelOperations = AsyncRemoteModelOperations(
     BASE_URL, "model", models.Model, models.ModelCreate, client_class=RemoteModelOperations
 )
 
+funcs: AsyncRemoteFuncs = AsyncRemoteFuncs(
+    BASE_URL,
+)
+
+
 __all__ = [
     "algorithm",
     "band",
@@ -82,4 +88,5 @@ __all__ = [
     "estimates",
     "estimator",
     "model",
+    "funcs",
 ]

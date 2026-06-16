@@ -4,6 +4,7 @@ import types
 import warnings
 from collections.abc import Callable
 from functools import wraps
+from pathlib import Path
 from typing import Any, TypeVar
 
 from pydantic import BaseModel
@@ -473,6 +474,15 @@ class AsyncRemoteDatasetOperations(AsyncRemoteOperations[models.Dataset, models.
     ) -> Any:
         return await client.read_slice(*args, **kwargs)
 
+    @with_client
+    async def download(
+        self,
+        client: RemoteDatasetOperations,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Path:
+        return await client.download(*args, **kwargs)
+
 
 class AsyncRemoteEstimatesOperations(AsyncRemoteOperations[models.Estimates, models.EstimatesCreate]):
     """Extended async remote operations for Estimates table with custom operations."""
@@ -495,6 +505,15 @@ class AsyncRemoteEstimatesOperations(AsyncRemoteOperations[models.Estimates, mod
     ) -> Any:
         return await client.read_slice(*args, **kwargs)
 
+    @with_client
+    async def download(
+        self,
+        client: RemoteEstimatesOperations,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Path:
+        return await client.download(*args, **kwargs)
+
 
 class AsyncRemoteModelOperations(AsyncRemoteOperations[models.Model, models.ModelCreate]):
     """Extended async remote operations for Model table with custom operations."""
@@ -507,3 +526,12 @@ class AsyncRemoteModelOperations(AsyncRemoteOperations[models.Model, models.Mode
         **kwargs: Any,
     ) -> models.Model:
         return await client.load(*args, **kwargs)
+
+    @with_client
+    async def download(
+        self,
+        client: RemoteModelOperations,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Path:
+        return await client.download(*args, **kwargs)

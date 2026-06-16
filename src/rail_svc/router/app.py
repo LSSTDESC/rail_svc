@@ -13,6 +13,7 @@ from slowapi.util import get_remote_address
 
 from ..db.session import init_db
 from .base import all_routers
+from .funcs import funcs_router
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -38,6 +39,9 @@ def register_all_routers(app: FastAPI, prefix: str = "/api/v1") -> None:
         # Include router with the API version prefix
         app.include_router(router, prefix=prefix)
         logger.info(f"Registered router: {router.prefix} at {prefix}{router.prefix}")
+
+    app.include_router(funcs_router, prefix=prefix)
+    logger.info(f"Registered router: {funcs_router.prefix} at {prefix}{funcs_router.prefix}")
 
 
 def add_rate_limiting(

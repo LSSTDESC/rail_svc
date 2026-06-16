@@ -171,7 +171,7 @@ class DatasetOperations(FileValidatedOperations[db.Dataset, models.Dataset, mode
         if the_dataset.is_collection:
             dataset_assocs = await dataset_assoc.find_by(session, matched_dataset_id=the_dataset.id_)
             for dataset_assoc_ in dataset_assocs:
-                component_dataset = await dataset.get_row(session, row=dataset_assoc_.component_dataset_id)
+                component_dataset = await dataset.get_row(session, dataset_assoc_.component_dataset_id)
                 the_compontent_paths[component_dataset.name] = component_dataset.path
             return read_multi_catalog_slice(the_dataset.path, the_compontent_paths, the_slice)
         return read_single_catalog_slice(the_dataset.path, the_slice)

@@ -12,6 +12,7 @@ from ... import __version__, db
 from ...config import config
 from ...db.base import Base
 from .base import all_table_groups
+from .funcs import funcs_group
 
 T = TypeVar("T", bound=Base)
 ResponseT = TypeVar("ResponseT", bound=BaseModel)
@@ -55,7 +56,7 @@ def init(*, reset: bool) -> None:
     _init_db_sync()
 
 
-@click.group(name="rail-svc-client", commands=[init] + all_table_groups)
+@click.group(name="rail-svc-client", commands=[init] + all_table_groups + [funcs_group])
 @click.version_option(version=__version__)
 def cli() -> None:
     """Administrative CLI for rail-svc."""

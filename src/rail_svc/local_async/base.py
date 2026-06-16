@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import AsyncIterator, Callable
 from functools import wraps
 from typing import Any, cast
@@ -19,55 +20,78 @@ from ..db_oper.estimates import EstimatesOperations
 from ..db_oper.model import ModelOperations
 
 
+def _is_method(func: Callable[..., Any]) -> bool:
+    """Check if a function's first parameter is 'self' (i.e., it's a method)."""
+    params = list(inspect.signature(func).parameters.keys())
+    return len(params) > 0 and params[0] == "self"
+
+
 def with_session[F: Callable[..., Any]](func: F) -> F:
-    """Decorator that wraps a method with session management.
+    """Decorator that wraps a method or function with session management.
 
     Opens a session context and passes it as the first argument to the
-    wrapped table operations method.
+    wrapped table operations method or function.
 
     Parameters
     ----------
     func : Callable
-        Method that calls a table operations method
+        Method or function that calls a table operations method
 
     Returns
     -------
     Callable
-        Wrapped method with session management
+        Wrapped method/function with session management
     """
+    if _is_method(func):
+
+        @wraps(func)
+        async def method_wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+            async with get_session() as session:
+                return await func(self, session, *args, **kwargs)
+
+        return method_wrapper  # type: ignore
 
     @wraps(func)
-    async def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+    async def func_wrapper(*args: Any, **kwargs: Any) -> Any:
         async with get_session() as session:
-            return await func(self, session, *args, **kwargs)
+            return await func(session, *args, **kwargs)
 
-    return wrapper  # type: ignore
+    return func_wrapper  # type: ignore
 
 
 def with_session_transaction[F: Callable[..., Any]](func: F) -> F:
-    """Decorator that wraps a method with session and transaction management.
+    """Decorator that wraps a method or function with session and transaction management.
 
     Opens a session context with a transaction and passes the session as
-    the first argument to the wrapped table operations method.
+    the first argument to the wrapped table operations method or function.
 
     Parameters
     ----------
     func : Callable
-        Method that calls a table operations method
+        Method or function that calls a table operations method
 
     Returns
     -------
     Callable
-        Wrapped method with session and transaction management
+        Wrapped method/function with session and transaction management
     """
+    if _is_method(func):
+
+        @wraps(func)
+        async def method_wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+            async with get_session() as session:
+                async with session.begin():
+                    return await func(self, session, *args, **kwargs)
+
+        return method_wrapper  # type: ignore
 
     @wraps(func)
-    async def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+    async def func_wrapper(*args: Any, **kwargs: Any) -> Any:
         async with get_session() as session:
             async with session.begin():
-                return await func(self, session, *args, **kwargs)
+                return await func(session, *args, **kwargs)
 
-    return wrapper  # type: ignore
+    return func_wrapper  # type: ignore
 
 
 def to_pydantic[F: Callable[..., Any]](func: F) -> F:
