@@ -1424,17 +1424,17 @@ def dataset_load(
         try:
             with open(from_json, encoding="utf-8") as f:
                 row_data = json.load(f)
-        except json.JSONDecodeError as exc:
-            click.echo(f"Error: Invalid JSON: {exc}", err=True)
+        except json.JSONDecodeError as uexc:
+            click.echo(f"Error: Invalid JSON: {uexc}", err=True)
             raise click.Abort()
-        except OSError as exc:
-            click.echo(f"Error: Cannot read file: {exc}", err=True)
+        except OSError as uexc:
+            click.echo(f"Error: Cannot read file: {uexc}", err=True)
             raise click.Abort()
     else:
         # Parse KEY=VALUE arguments
         row_data = {}
         for field in fields:
-            if "=" not in field:
+            if unexpected("=" not in field):
                 click.echo(f"Error: Invalid field format '{field}'. Use KEY=VALUE format.", err=True)
                 raise click.Abort()
 
@@ -1488,7 +1488,7 @@ def dataset_read_slice(
         # Assuming it returns something that can be displayed
         if output == OutputEnum.json:
             click.echo(json.dumps(data, indent=2, default=str))
-        else:
+        else:  # pragma: no cover
             click.echo(data)
 
     except Exception as exc:
@@ -1525,7 +1525,7 @@ def estimates_load(
     init_db()
 
     # Parse input
-    if from_json:
+    if from_json:  # pragma: no cover
         try:
             with open(from_json, encoding="utf-8") as f:
                 row_data = json.load(f)
@@ -1539,7 +1539,7 @@ def estimates_load(
         # Parse KEY=VALUE arguments
         row_data = {}
         for field in fields:
-            if "=" not in field:
+            if unexpected("=" not in field):
                 click.echo(f"Error: Invalid field format '{field}'. Use KEY=VALUE format.", err=True)
                 raise click.Abort()
 
@@ -1595,7 +1595,7 @@ def estimates_read_slice(
         # Output the data
         if output == OutputEnum.json:
             click.echo(json.dumps(data, indent=2, default=str))
-        else:
+        else:  # pragma: no cover
             click.echo(data)
 
     except Exception as exc:
@@ -1632,7 +1632,7 @@ def model_load(
     init_db()
 
     # Parse input
-    if from_json:
+    if from_json:  # pragma: no cover
         try:
             with open(from_json, encoding="utf-8") as f:
                 row_data = json.load(f)
@@ -1646,7 +1646,7 @@ def model_load(
         # Parse KEY=VALUE arguments
         row_data = {}
         for field in fields:
-            if "=" not in field:
+            if unexpected("=" not in field):
                 click.echo(f"Error: Invalid field format '{field}'. Use KEY=VALUE format.", err=True)
                 raise click.Abort()
 

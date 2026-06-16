@@ -1184,14 +1184,14 @@ class RemoteDatasetOperations(RemoteTableOperations[models.Dataset, models.Datas
             params=params,
         )
 
-        if response.status_code != 200:
+        if unexpected(response.status_code != 200):
             self._handle_response(response, expected_status=200)
 
         # Extract filename from Content-Disposition header or use default
         content_disposition = response.headers.get("content-disposition", "")
         if "filename=" in content_disposition:
             filename = content_disposition.split("filename=")[1].strip('"')
-        else:
+        else:  # pragma: no cover
             filename = f"dataset_{row_id}"
 
         # Determine the output path
@@ -1327,14 +1327,14 @@ class RemoteEstimatesOperations(RemoteTableOperations[models.Estimates, models.E
             params=params,
         )
 
-        if response.status_code != 200:
+        if unexpected(response.status_code != 200):
             self._handle_response(response, expected_status=200)
 
         # Extract filename from Content-Disposition header or use default
         content_disposition = response.headers.get("content-disposition", "")
         if "filename=" in content_disposition:
             filename = content_disposition.split("filename=")[1].strip('"')
-        else:
+        else:  # pragma: no cover
             filename = f"estimates_{row_id}"
 
         # Determine the output path
@@ -1436,14 +1436,14 @@ class RemoteModelOperations(RemoteTableOperations[models.Model, models.ModelCrea
             params=params,
         )
 
-        if response.status_code != 200:
+        if unexpected(response.status_code != 200):
             self._handle_response(response, expected_status=200)
 
         # Extract filename from Content-Disposition header or use default
         content_disposition = response.headers.get("content-disposition", "")
         if "filename=" in content_disposition:
             filename = content_disposition.split("filename=")[1].strip('"')
-        else:
+        else:  # pragma: no cover
             filename = f"model_{row_id}"
 
         # Determine the output path

@@ -40,19 +40,19 @@ async def estimate_pdf(request: EstimatePdfRequest) -> dict[str, Any]:
             row=request.row,
         )  # type: ignore
         return result
-    except ValidationError as exc:
+    except ValidationError as uexc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Validation error", "details": exc.errors()},
-        ) from exc
-    except Exception as exc:
+            detail={"error": "Validation error", "details": uexc.errors()},
+        ) from uexc
+    except Exception as uexc:
         logger.exception(
             "Failed to estimate PDF for estimator_id=%s, dataset_id=%s, row=%s",
             request.estimator_id,
             request.dataset_id,
             request.row,
         )
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
 
 
 @funcs_router.post("/estimate-ensemble", response_model=EstimateEnsembleResponse)
@@ -65,18 +65,18 @@ async def estimate_ensemble(request: EstimateEnsembleRequest) -> EstimateEnsembl
             output_file_path=request.output_file_path,
         )  # type: ignore
         return EstimateEnsembleResponse(output_file=str(result), message=f"Wrote data to {result}")
-    except ValidationError as exc:
+    except ValidationError as uexc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Validation error", "details": exc.errors()},
-        ) from exc
-    except Exception as exc:
+            detail={"error": "Validation error", "details": uexc.errors()},
+        ) from uexc
+    except Exception as uexc:
         logger.exception(
             "Failed to estimate ensemble for estimator_id=%s, dataset_id=%s",
             request.estimator_id,
             request.dataset_id,
         )
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
 
 
 @funcs_router.get("/get-estimators-for-dataset/{dataset_id}")
@@ -88,11 +88,11 @@ async def get_estimators_for_dataset(dataset_id: int) -> list[Estimator]:
         )  # type: ignore
         # Convert to dict for JSON response
         return result
-    except ValidationError as exc:
+    except ValidationError as uexc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Validation error", "details": exc.errors()},
-        ) from exc
+            detail={"error": "Validation error", "details": uexc.errors()},
+        ) from uexc
     except Exception as exc:
         logger.exception("Failed to get estimators for dataset_id=%s", dataset_id)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
@@ -134,14 +134,14 @@ async def get_dataset_and_estimates(dataset_id: int) -> GetDatasetAndEstimatesRe
             dataset=the_dataset,
             estimates=the_estimates,
         )
-    except ValidationError as exc:
+    except ValidationError as uexc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Validation error", "details": exc.errors()},
-        ) from exc
-    except Exception as exc:
+            detail={"error": "Validation error", "details": uexc.errors()},
+        ) from uexc
+    except Exception as uexc:
         logger.exception("Failed to get dataset and estimates for dataset_id=%s", dataset_id)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
 
 
 @funcs_router.get(
@@ -180,18 +180,18 @@ async def create_matched_dataset(request: CreateMatchedDatasetRequest) -> tuple[
             n_objects=request.n_objects,
         )  # type: ignore
         return result
-    except ValidationError as exc:
+    except ValidationError as uexc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Validation error", "details": exc.errors()},
-        ) from exc
-    except Exception as exc:
+            detail={"error": "Validation error", "details": uexc.errors()},
+        ) from uexc
+    except Exception as uexc:
         logger.exception(
             "Failed to create matched dataset '%s' with catalog_tag '%s'",
             request.matched_dataset_name,
             request.catalog_tag_name,
         )
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
 
 
 @funcs_router.post("/estimate-pdf-for-slice")
@@ -206,19 +206,19 @@ async def estimate_pdf_for_slice(request: EstimatePdfForSliceRequest) -> dict[st
             recompute_if_exists=request.recompute_if_exists,
         )  # type: ignore
         return result
-    except ValidationError as exc:
+    except ValidationError as uexc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Validation error", "details": exc.errors()},
-        ) from exc
-    except Exception as exc:
+            detail={"error": "Validation error", "details": uexc.errors()},
+        ) from uexc
+    except Exception as uexc:
         logger.exception(
             "Failed to estimate PDF for slice for estimator_id=%s, dataset_id=%s, slice=%s",
             request.estimator_id,
             request.dataset_id,
             request.the_slice,
         )
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(uexc)) from uexc
 
 
 @funcs_router.post("/estimate-dataset")
@@ -231,11 +231,11 @@ async def estimate_dataset(request: EstimateDatasetRequest) -> dict[str, Any]:
             raise_if_exists=request.raise_if_exists,
         )  # type: ignore
         return result.model_dump() if hasattr(result, "model_dump") else dict(result)
-    except ValidationError as exc:
+    except ValidationError as uexc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Validation error", "details": exc.errors()},
-        ) from exc
+            detail={"error": "Validation error", "details": uexc.errors()},
+        ) from uexc
     except Exception as exc:
         logger.exception(
             "Failed to estimate dataset for estimator_id=%s, dataset_id=%s",

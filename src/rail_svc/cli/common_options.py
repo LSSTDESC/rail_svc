@@ -271,7 +271,7 @@ output_path = PartialOption(
 
 
 slice_option = PartialOption(
-    "--slice", type=str, default=None, callback=parse_slice, help="Slice notation (e.g., '1:5', '::2', ':10')"
+    "--slice", "slice_option", type=str, default=None, callback=parse_slice, help="Slice notation (e.g., '1:5', '::2', ':10')"
 )
 
 

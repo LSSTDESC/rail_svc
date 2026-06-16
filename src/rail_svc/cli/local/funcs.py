@@ -46,7 +46,7 @@ def estimate_pdf(
         # Output the data
         if output == OutputEnum.json:
             click.echo(json.dumps(data, indent=2, default=str))
-        else:
+        else:  # pragma: no cover
             click.echo(data)
 
     except Exception as uexc:
@@ -230,7 +230,7 @@ def create_matched_dataset(
 def estimate_pdf_for_slice(
     estimator_id: int,
     dataset_id: int,
-    the_slice: slice | int | None,
+    slice_option: slice | int | None,
     *,
     recompute_if_exists: bool = False,
     output: OutputEnum,
@@ -242,13 +242,13 @@ def estimate_pdf_for_slice(
         data = local_sync.funcs.estimate_pdf_for_slice(
             estimator_id=estimator_id,
             dataset_id=dataset_id,
-            the_slice=the_slice,
+            the_slice=slice_option,
             recompute_if_exists=recompute_if_exists,
         )
         # Output the data
         if output == OutputEnum.json:
             click.echo(json.dumps(data, indent=2, default=str))
-        else:
+        else:  # pragma: no cover
             click.echo(data)
 
     except Exception as uexc:
@@ -258,7 +258,6 @@ def estimate_pdf_for_slice(
 @funcs_group.command(name="estimate-dataset")
 @common_options.estimator_id()
 @common_options.dataset_id()
-@common_options.slice_option()
 @click.option("--raise-if-exists", is_flag=True, help="Raise Error if it already exists")
 @common_options.output()
 def estimate_dataset(

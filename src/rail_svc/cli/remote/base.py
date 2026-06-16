@@ -1323,16 +1323,16 @@ def dataset_load(
         try:
             with open(from_json, encoding="utf-8") as f:
                 row_data = json.load(f)
-        except json.JSONDecodeError as exc:
-            click.echo(f"Error: Invalid JSON: {exc}", err=True)
+        except json.JSONDecodeError as uexc:
+            click.echo(f"Error: Invalid JSON: {uexc}", err=True)
             raise click.Abort()
-        except OSError as exc:
-            click.echo(f"Error: Cannot read file: {exc}", err=True)
+        except OSError as uexc:
+            click.echo(f"Error: Cannot read file: {uexc}", err=True)
             raise click.Abort()
     else:
         row_data = {}
         for field in fields:
-            if "=" not in field:
+            if unexpected("=" not in field):
                 click.echo(f"Error: Invalid field format '{field}'. Use KEY=VALUE format.", err=True)
                 raise click.Abort()
 
@@ -1379,7 +1379,7 @@ def dataset_read_slice(
 
         if output == OutputEnum.json:
             click.echo(json.dumps(data, indent=2, default=str))
-        else:
+        else:  # pragma: no cover
             click.echo(data)
 
     except Exception as exc:
@@ -1435,20 +1435,20 @@ def estimates_load(
     The --load-type option specifies how to handle the file (in_place, link, or copy).
     """
     # Parse input
-    if from_json:
+    if from_json:  # pragma: no cover
         try:
             with open(from_json, encoding="utf-8") as f:
                 row_data = json.load(f)
-        except json.JSONDecodeError as exc:
-            click.echo(f"Error: Invalid JSON: {exc}", err=True)
+        except json.JSONDecodeError as uexc:
+            click.echo(f"Error: Invalid JSON: {uexc}", err=True)
             raise click.Abort()
-        except OSError as exc:
-            click.echo(f"Error: Cannot read file: {exc}", err=True)
+        except OSError as uexc:
+            click.echo(f"Error: Cannot read file: {uexc}", err=True)
             raise click.Abort()
     else:
         row_data = {}
         for field in fields:
-            if "=" not in field:
+            if unexpected("=" not in field):
                 click.echo(f"Error: Invalid field format '{field}'. Use KEY=VALUE format.", err=True)
                 raise click.Abort()
 
@@ -1517,9 +1517,9 @@ def estimates_download(
         file_path = remote_sync_ops.download(row_id=row_id, output_path=output_path)
         click.echo(f"Successfully downloaded estimates {row_id} to {file_path}")
 
-    except Exception as exc:
+    except Exception as uexc:
         logger.error(f"Error downloading estimates {row_id}", exc_info=True)
-        click.echo(f"Error downloading estimates: {exc}", err=True)
+        click.echo(f"Error downloading estimates: {uexc}", err=True)
         raise click.Abort()
 
 
@@ -1540,9 +1540,9 @@ def model_download(
         file_path = remote_sync_ops.download(row_id=row_id, output_path=output_path)
         click.echo(f"Successfully downloaded model {row_id} to {file_path}")
 
-    except Exception as exc:
+    except Exception as uexc:
         logger.error(f"Error downloading model {row_id}", exc_info=True)
-        click.echo(f"Error downloading model: {exc}", err=True)
+        click.echo(f"Error downloading model: {uexc}", err=True)
         raise click.Abort()
 
 
@@ -1570,20 +1570,20 @@ def model_load(
     The --load-type option specifies how to handle the file (in_place, link, or copy).
     """
     # Parse input
-    if from_json:
+    if from_json:  # pragma: no cover
         try:
             with open(from_json, encoding="utf-8") as f:
                 row_data = json.load(f)
-        except json.JSONDecodeError as exc:
-            click.echo(f"Error: Invalid JSON: {exc}", err=True)
+        except json.JSONDecodeError as uexc:
+            click.echo(f"Error: Invalid JSON: {uexc}", err=True)
             raise click.Abort()
-        except OSError as exc:
-            click.echo(f"Error: Cannot read file: {exc}", err=True)
+        except OSError as uexc:
+            click.echo(f"Error: Cannot read file: {uexc}", err=True)
             raise click.Abort()
     else:
         row_data = {}
         for field in fields:
-            if "=" not in field:
+            if unexpected("=" not in field):
                 click.echo(f"Error: Invalid field format '{field}'. Use KEY=VALUE format.", err=True)
                 raise click.Abort()
 

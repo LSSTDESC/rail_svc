@@ -224,14 +224,14 @@ def create_matched_dataset(
 def estimate_pdf_for_slice(
     estimator_id: int,
     dataset_id: int,
-    the_slice: slice | int | None,
+    slice_option: slice | int | None,
     *,
     recompute_if_exists: bool = False,
     output: OutputEnum,
 ) -> None:
     try:
         sync_funcs = remote_sync.funcs()
-        slice_str = slice_to_str(the_slice) if the_slice is not None else "None"
+        slice_str = slice_to_str(slice_option) if slice_option is not None else "None"
 
         data = sync_funcs.estimate_pdf_for_slice(
             estimator_id=estimator_id,
