@@ -215,9 +215,9 @@ async def test_update_rows_atomic(session, multiple_algorithms):
     for algo_id, original_name in original_names.items():
         result = await session.execute(select(Algorithm).where(Algorithm.id_ == algo_id))
         fresh_algo = result.scalar_one()
-        assert (
-            fresh_algo.name == original_name
-        ), f"Expected {original_name}, got {fresh_algo.name} for id {algo_id}"
+        assert fresh_algo.name == original_name, (
+            f"Expected {original_name}, got {fresh_algo.name} for id {algo_id}"
+        )
 
 
 @pytest.mark.asyncio
@@ -628,7 +628,10 @@ async def test_update_row_with_same_value(session, sample_algorithm):
     original_name = sample_algorithm.name
 
     updated = await update_row(
-        Algorithm, session, row_id=sample_algorithm.id_, name=original_name  # Same value
+        Algorithm,
+        session,
+        row_id=sample_algorithm.id_,
+        name=original_name,  # Same value
     )
 
     assert updated.name == original_name

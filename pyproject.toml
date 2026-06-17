@@ -12,17 +12,21 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
     "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
     "Natural Language :: English",
     "Operating System :: POSIX",
     "Typing :: Typed",
 ]
 requires-python = ">=3.13"
 dynamic = ["version"]
+authors = [
+    { name = "The LSST DESC PZ WG", email = "echarles@slac.stanford.edu" },
+]
 
 dependencies = [
     "pydantic",
     "pydantic_settings",
-    "dotenv",
+    "python-dotenv",
     "tabulate",
     "pyyaml",
     "numpy",
@@ -34,11 +38,10 @@ dependencies = [
 
 [project.optional-dependencies]
 db = [
-    "pz-rail-svc",
     "sqlalchemy",
     "structlog",
+    "greenlet",
     "anyio",
-    "asyncio",
     "aiosqlite",
     "aiofiles",
 ]
@@ -50,9 +53,7 @@ server = [
     "uvicorn",
 ]
 
-
 client = [
-    "pz-rail-svc",
     "httpx",
 ]
 
@@ -60,30 +61,30 @@ dev = [
     "pz-rail-svc[db]",
     "pz-rail-svc[server]",
     "pz-rail-svc[client]",
-    "pytest-async",
+    "pytest",
     "pytest-asyncio",
     "pytest-cov>=6.0.0",
     "pytest-timeout>=2.3.1",
     "mypy",
     "ruff>=0.8.0",
+    "pylint",
     "types-pyyaml>=6.0.12.20240917",
     "types-tabulate>=0.9.0.20240106",
 ]
 
 docs = [
     "nbsphinx",
-    "sphinx", # Used to automatically generate documentation
+    "sphinx",
     "sphinx-autodoc-typehints",
-    "sphinx_rtd_theme", # Used to render documentation
-    "sphinx-autoapi", # Used to automatically generate api documentation
-    "sphinx-tabs", # Used to create tabbed content within the docs
-    "sphinx-click", # Used for command line interface docs
+    "sphinx_rtd_theme",
+    "sphinx-autoapi",
+    "sphinx-tabs",
+    "sphinx-click",
 ]
 
 all = [
-    "pz-rail-svc",
     "pz-rail-svc[server]",
-    "pz-rail-svc[client]",    
+    "pz-rail-svc[client]",
     "pz-rail-svc[dev]",
     "pz-rail-svc[docs]",
 ]
@@ -98,8 +99,6 @@ pz-rail-svc-remote = "rail_svc.cli.remote.top:cli"
 [project.urls]
 Source = "https://github.com/LSSTDESC/rail_pz_svc"
 
-[tool.uv]
-
 [build-system]
 requires = ["setuptools>=62", "wheel", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
@@ -109,17 +108,12 @@ write_to = "src/rail_svc/_version.py"
 
 [tool.coverage.run]
 parallel = true
-#branch = true
 source = ["rail_svc"]
-#concurrency = ['greenlet', 'thread']
 omit = [
-    # omit everything in web_app, worker, main
     "web_app.py",
     "worker.py",
     "main.py",
-    # omit test_files
     "test_files.py",
-    # omit healthz
     "healthz.py",
 ]
 
@@ -185,28 +179,17 @@ convention = "numpy"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope="function"
+asyncio_default_fixture_loop_scope = "function"
 filterwarnings = [
     "ignore:coroutine.*was never awaited:RuntimeWarning",
     "ignore::ResourceWarning",
     "ignore:.*HTTP_422_UNPROCESSABLE_CONTENT:DeprecationWarning",
 ]
-# The python_files setting is not for test detection (pytest will pick up any
-# test files named *_test.py without this setting) but to enable special
-# assert processing in any non-test supporting files under tests.  We
-# conventionally put test support functions under tests.support and may
-# sometimes use assert in test fixtures in conftest.py, and pytest only
-# enables magical assert processing (showing a full diff on assert failures
-# with complex data structures rather than only the assert message) in files
-# listed in python_files.
 python_files = ["tests/*.py", "tests/*/*.py"]
 addopts = [
     "--cov=src",
     "--cov-report=html",
 ]
-
-[tool.black]
-line-length = 110
 
 [tool.mypy]
 disallow_untyped_defs = true
@@ -224,23 +207,18 @@ plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
 [tool.pydocstyle]
 convention = "numpy"
 add_select = [
-    "D212" # Multi-line docstring summary should start at the first line
+    "D212",
 ]
 add-ignore = [
-    "D105", # Missing docstring in magic method
-    "D102", # Missing docstring in public method (needed for docstring inheritance)
-    "D100", # Missing docstring in public module
-    # Below are required to allow multi-line summaries.
-    "D200", # One-line docstring should fit on one line with quotes
-    "D205", # 1 blank line required between summary line and description
-    "D400", # First line should end with a period
-    # Properties shouldn't be written in imperative mode. This will be fixed
-    # post 6.1.1, see https://github.com/PyCQA/pydocstyle/pull/546
+    "D105",
+    "D102",
+    "D100",
+    "D200",
+    "D205",
+    "D400",
     "D401",
-    # To avoid all the pydantic config class giving errors
     "D106",
 ]
-
 
 [tool.pylint.'MESSAGES CONTROL']
 max-line-length = 120

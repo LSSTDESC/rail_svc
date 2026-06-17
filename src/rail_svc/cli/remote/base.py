@@ -465,7 +465,7 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
                     rows_data=rows_data, validate=not no_validate, batch_size=batch_size
                 )
                 click.echo(
-                    f"Successfully created {len(rows)} {self.table_name} rows " f"in batches of {batch_size}"
+                    f"Successfully created {len(rows)} {self.table_name} rows in batches of {batch_size}"
                 )
                 print(output_pydantic(rows, output, self.col_names_for_table))
 

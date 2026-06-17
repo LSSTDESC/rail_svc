@@ -486,6 +486,7 @@ class TestCatEstimatorEnsembleWrapper:
         """Test successful catalog processing"""
         mock_estimator = self.create_mock_estimator()
         mock_output_handle = Mock()
+        mock_output_handle.path = "output.hdf5"
         mock_estimator._output_handle = mock_output_handle
 
         wrapper = wrappers.CatEstimatorEnsembleWrapper(estim_name="test", cat_estimator=mock_estimator)
@@ -498,13 +499,14 @@ class TestCatEstimatorEnsembleWrapper:
         assert result == mock_output_handle
         mock_estimator.data_store.clear.assert_called_once()
         mock_estimator.add_handle.assert_called_once_with("input", path=str(input_file))
-        assert mock_estimator.config.output == str(output_file)
         mock_estimator.run.assert_called_once()
+        mock_estimator.finalize.assert_called_once()
 
     def test_call_with_string_paths(self):
         """Test calling with string paths instead of Path objects"""
         mock_estimator = self.create_mock_estimator()
         mock_output_handle = Mock()
+        mock_output_handle.path = "output.hdf5"
         mock_estimator._output_handle = mock_output_handle
 
         wrapper = wrappers.CatEstimatorEnsembleWrapper(estim_name="test", cat_estimator=mock_estimator)
@@ -516,7 +518,6 @@ class TestCatEstimatorEnsembleWrapper:
 
         assert result == mock_output_handle
         mock_estimator.add_handle.assert_called_once_with("input", path=input_file)
-        assert mock_estimator.config.output == output_file
 
     def test_build_wrapper_successful(self):
         """Test successful wrapper building"""
@@ -606,6 +607,7 @@ class TestEdgeCases:
     def test_ensemble_wrapper_with_path_objects(self):
         """Test ensemble wrapper explicitly with Path objects"""
         mock_estimator = self.create_mock_estimator()
+        mock_estimator._output_handle.path = "output.hdf5"
 
         wrapper = wrappers.CatEstimatorEnsembleWrapper(estim_name="test", cat_estimator=mock_estimator)
 
@@ -614,9 +616,9 @@ class TestEdgeCases:
 
         wrapper(input_path, output_path)
 
-        # Paths should be converted to strings
         mock_estimator.add_handle.assert_called_with("input", path=str(input_path))
-        assert mock_estimator.config.output == str(output_path)
+        mock_estimator.run.assert_called_once()
+        mock_estimator.finalize.assert_called_once()
 
     def test_pdf_wrapper_array_conversion_preserves_data(self):
         """Test that array to dict conversion preserves data correctly"""
@@ -1155,6 +1157,7 @@ class TestSpecialCases:
         mock_estimator.config.items = Mock(return_value=[])
         mock_estimator.data_store = Mock()
         mock_estimator._output_handle = Mock()
+        mock_estimator._output_handle.path = "output.hdf5"
 
         wrapper = wrappers.CatEstimatorEnsembleWrapper(estim_name="test", cat_estimator=mock_estimator)
 
@@ -1162,7 +1165,8 @@ class TestSpecialCases:
         wrapper(input_file="./data/input.hdf5", output_file="../results/output.hdf5")
 
         mock_estimator.add_handle.assert_called_with("input", path="./data/input.hdf5")
-        assert mock_estimator.config.output == "../results/output.hdf5"
+        mock_estimator.run.assert_called_once()
+        mock_estimator.finalize.assert_called_once()
 
     def test_build_wrapper_with_empty_kwargs(self):
         """Test building wrapper with no additional kwargs"""

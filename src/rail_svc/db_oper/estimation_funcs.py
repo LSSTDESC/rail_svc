@@ -64,7 +64,7 @@ async def estimate_pdf(
     This function is suitable for interactive analysis or small batches.
     For processing entire catalogs, use estimate_ensemble instead.
     """
-    logger.info(f"Estimating PDF for dataset {dataset_id}, row {row} " f"using estimator {estimator_id}")
+    logger.info(f"Estimating PDF for dataset {dataset_id}, row {row} using estimator {estimator_id}")
 
     try:
         # Build the wrapper
@@ -201,7 +201,7 @@ async def estimate_ensemble(
 
         file_size = final_output_path.stat().st_size
         logger.info(
-            f"Successfully created estimates file: {final_output_path} " f"({file_size / 1024 / 1024:.2f} MB)"
+            f"Successfully created estimates file: {final_output_path} ({file_size / 1024 / 1024:.2f} MB)"
         )
 
         return final_output_path
@@ -282,13 +282,11 @@ async def estimate_pdf_for_slice(
     recompute_if_exists: bool = False,
 ) -> qp.Ensemble:
 
-    existing_estimates = await dataset.filter_one_or_none(session, estimator_id, dataset_id=dataset_id)
-    if existing_estimates and not recompute_if_exists:
-        return rail_funcs.catalog_funcs.read_estimates_slice(existing_estimates.path, the_slice)
+    existing = await estimates.find_by(session, estimator_id=estimator_id, dataset_id=dataset_id)
+    if existing and not recompute_if_exists:
+        return rail_funcs.catalog_funcs.read_estimates_slice(existing[0].path, the_slice)
 
-    logger.info(
-        f"Estimating PDF for dataset {dataset_id}, slice {the_slice} " f"using estimator {estimator_id}"
-    )
+    logger.info(f"Estimating PDF for dataset {dataset_id}, slice {the_slice} using estimator {estimator_id}")
 
     try:
         # Build the wrapper
@@ -320,25 +318,28 @@ async def estimate_dataset(
     raise_if_exists: bool = False,
 ) -> db.Estimates:
 
-    existing_estimates = await dataset.filter_one_or_none(session, estimator_id, dataset_id=dataset_id)
-    if existing_estimates and raise_if_exists:
+    existing = await estimates.find_by(session, estimator_id=estimator_id, dataset_id=dataset_id)
+    if existing and raise_if_exists:
         raise ValueError(
-            f"Esimates for dataset {dataset_id} and estimator_id {estimator_id} "
-            "already exist: {existing_estimates}."
+            f"Estimates for dataset {dataset_id} and estimator_id {estimator_id} "
+            f"already exist: {existing[0]}."
         )
+    if existing:
+        return existing[0]
 
     estimator_obj = await estimator.get_row(session, estimator_id)
-    dataset_obj = await estimator.get_row(session, dataset_id)
+    dataset_obj = await dataset.get_row(session, dataset_id)
 
-    estimates_name = f"{dataset_obj.name}__{estimator_obj}"
-    estiamtes_path = Path(global_config.storage.archive) / "estimates" / f"{estimates_name}.hdf5"
+    estimates_name = f"{dataset_obj.name}__{estimator_obj.name}"
+    estimates_path = Path(global_config.storage.archive) / "estimates" / f"{estimates_name}.hdf5"
 
-    _output_ensemble = estimate_ensemble(session, estimator_id, dataset_id, output_file_path=estiamtes_path)
+    await estimate_ensemble(session, estimator_id, dataset_id, output_file_path=estimates_path)
     output_estimates = await estimates.create_row(
         session,
         name=estimates_name,
-        path=estiamtes_path,
-        estimator_id=estimator_id,
-        dataset_id=dataset_id,
+        path=str(estimates_path),
+        n_objects=dataset_obj.n_objects,
+        estimator_name=estimator_obj.name,
+        dataset_name=dataset_obj.name,
     )
     return output_estimates
