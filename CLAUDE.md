@@ -94,11 +94,12 @@ Environment variables with `__` as nested delimiter:
 
 ## Code Style
 
-- Line length: 110 (ruff + black)
+- Line length: 110 (ruff)
 - Ruff with pycodestyle, pyflakes, pep8-naming, pyupgrade, flake8-async rules
 - Naming conventions relaxed: camelCase in variables and non-lowercase function names are allowed (N802, N803, N806, N815, N816 ignored)
 - Python 3.13+ required (uses PEP 695 generics syntax)
 - Docstrings: numpy convention
+- mypy strict mode with sqlalchemy and pydantic plugins
 
 ## Key Patterns for New Code
 
@@ -109,3 +110,6 @@ Environment variables with `__` as nested delimiter:
 - **Remote sync operations**: `_make_sync_method` + `__init_subclass__` in `remote_sync/base.py` auto-generates sync wrappers. Add extra methods via `_extra_methods` class variable.
 - **Parametrized tests**: `tests/db/test_db_shared.py`, `tests/db_oper/test_db_oper_shared.py`, and `tests/models/test_models_shared.py` test common entity patterns. Add new entities to `ENTITY_CONFIGS` rather than creating new test files.
 
+## Related Projects
+
+- **`live-rail`** (`/Users/echarles/software/DESC/live-rail`) — Unified Dash dashboard that uses `pz-rail-svc` for data access. Provides CRUD management, estimation workflows, and interactive visualizations.
