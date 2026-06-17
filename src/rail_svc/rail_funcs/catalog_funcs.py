@@ -193,13 +193,12 @@ def make_band_create_model(band_name: str, filter_dir: Path | str | None) -> Ban
         band_data = read_band_res_file(band_name, filter_dir)
     except FileNotFoundError:
         logger.warning(
-            f"Filter response file not found for band '{band_name}'. " f"Creating band with empty data."
+            f"Filter response file not found for band '{band_name}'. Creating band with empty data."
         )
         band_data = np.empty((0, 2))
     except ValueError as e:
         logger.warning(
-            f"Invalid data format in filter file for band '{band_name}': {e}. "
-            f"Creating band with empty data."
+            f"Invalid data format in filter file for band '{band_name}': {e}. Creating band with empty data."
         )
         band_data = np.empty((0, 2))
     except Exception as uexc:
@@ -421,7 +420,7 @@ def make_catalog_band_assoc_create_models(
 
         except Exception as e:
             logger.error(
-                f"Failed to create association for band '{band_key}' " f"in catalog '{catalog_name}': {e}"
+                f"Failed to create association for band '{band_key}' in catalog '{catalog_name}': {e}"
             )
             continue
         logger.info(f"Successfully created {len(associations)} band associations for '{catalog_name}'")

@@ -51,8 +51,7 @@ def handle_database_error(exc: Exception, context: str = "") -> None:
             "Integrity constraint violation",
         )
         click.echo(
-            f"Error: Integrity constraint violation{context_msg} "
-            f"(duplicate key, foreign key, etc.): {exc}",
+            f"Error: Integrity constraint violation{context_msg} (duplicate key, foreign key, etc.): {exc}",
             err=True,
         )
     elif isinstance(exc, ValueError):

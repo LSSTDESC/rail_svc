@@ -420,18 +420,43 @@ class CatEstimatorEnsembleWrapper(CatEstimatorWrapperBase):
         ...     output_file="results/output.hdf5"
         ... )
         """
+        import shutil
+
         # Clear any previous data
         self._estimator.data_store.clear()
 
         # Configure input and output
         self._estimator.add_handle("input", path=str(input_file))
-        self._estimator.config.output = str(output_file)
+        self._estimator.config.hdf5_groupname = ""
 
         # Run the estimator
         logger.info(f"Processing catalog: {input_file} -> {output_file}")
         self._estimator.run()
+        self._estimator.finalize()
 
-        return self._estimator._output_handle
+        # RAIL writes output to cwd — find and move it to the requested path
+        output_handle = self._estimator._output_handle
+
+        try:
+            output_dest = Path(output_file)
+            output_dest.parent.mkdir(parents=True, exist_ok=True)
+
+            rail_output = Path(output_handle.path)
+            if not rail_output.is_absolute():
+                rail_output = Path.cwd() / rail_output
+
+            if rail_output.exists() and rail_output != output_dest:
+                shutil.move(str(rail_output), str(output_dest))
+                logger.info(f"Moved output: {rail_output} -> {output_dest}")
+            elif not output_dest.exists():
+                inprogress = Path.cwd() / f"inprogress_{rail_output.name}"
+                if inprogress.exists():
+                    shutil.move(str(inprogress), str(output_dest))
+                    logger.info(f"Moved inprogress output: {inprogress} -> {output_dest}")
+        except (TypeError, ValueError, OSError) as exc:
+            logger.warning(f"Could not move output to {output_file}: {exc}")
+
+        return output_handle
 
     @classmethod
     def _build_wrapper(
