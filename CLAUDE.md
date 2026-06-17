@@ -35,6 +35,9 @@ pz-rail-svc-local --help
 
 # CLI (remote server operations)
 pz-rail-svc-remote --help
+
+# Build documentation
+cd docs && make html
 ```
 
 ## Architecture
@@ -109,6 +112,22 @@ Environment variables with `__` as nested delimiter:
 - **Remote client extended ops**: `RemoteFileOperations` base class in `client/base.py` provides `load()` and `download()`. Subclasses only override `read_slice()`.
 - **Remote sync operations**: `_make_sync_method` + `__init_subclass__` in `remote_sync/base.py` auto-generates sync wrappers. Add extra methods via `_extra_methods` class variable.
 - **Parametrized tests**: `tests/db/test_db_shared.py`, `tests/db_oper/test_db_oper_shared.py`, and `tests/models/test_models_shared.py` test common entity patterns. Add new entities to `ENTITY_CONFIGS` rather than creating new test files.
+
+## Documentation
+
+Docs are built with Sphinx and hosted on ReadTheDocs.
+
+```bash
+# Build docs locally
+cd docs && make html
+
+# Output goes to docs/_build/html/
+```
+
+- **Config**: `docs/conf.py` — uses sphinx-autoapi, sphinx-click, sphinx_rtd_theme
+- **ReadTheDocs**: `.readthedocs.yaml` — builds on RTD with Python 3.13
+- **CI**: `.github/workflows/docs.yml` — test-builds docs on PRs touching `docs/`, `src/`, or config
+- **Auto-generated**: `docs/autoapi/` is generated at build time and gitignored
 
 ## Related Projects
 
