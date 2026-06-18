@@ -46,10 +46,10 @@ class FilterAB(Base):
         ForeignKey("sed.id_", ondelete="CASCADE"),
         index=True,
     )
-    
+
     # Redshift grid
     redshifts: Mapped[list[float]] = mapped_column(JSON)
-    
+
     # Fluxes at given redshifts
     fluxes: Mapped[list[float]] = mapped_column(JSON)
 

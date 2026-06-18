@@ -58,7 +58,7 @@ class Band(Base):
         back_populates="band",
         viewonly=True,
     )
-    
+
     # Pydantic integration
     @classmethod
     def pydantic_create_class(cls) -> type[BaseModel]:

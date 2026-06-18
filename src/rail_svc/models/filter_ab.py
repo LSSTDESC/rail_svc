@@ -44,7 +44,7 @@ class FilterABCreate(FilterABBase):
 
     #: Name of the Sed
     sed_name: str = Field(..., description="Name of the sed Band")
-    
+
 
 class FilterAB(FilterABBase):
     """Information about a particular filter AB fluxes as function of redshift
@@ -69,4 +69,4 @@ class FilterAB(FilterABBase):
     #: foreign key into sed table
     sed_id: int = Field(..., gt=0, description="Foreign key referencing Sed.id_")
 
-    
+

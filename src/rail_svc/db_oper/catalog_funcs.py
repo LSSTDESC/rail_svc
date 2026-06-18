@@ -13,7 +13,7 @@ import numpy as np
 import qp
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .. import db, models, rail_funcs
+from .. import db, rail_funcs
 from ..config import config as global_config
 from .band import band
 from .catalog_band_assoc import catalog_band_assoc
