@@ -31,7 +31,9 @@ TABLE_CONFIGS: Final[
     "datasets": (models.Dataset, models.DatasetCreate, RemoteDatasetOperations),
     "estimates": (models.Estimates, models.EstimatesCreate, RemoteEstimatesOperations),
     "estimators": (models.Estimator, models.EstimatorCreate, None),
+    "filter_abs": (models.FilterAB, models.FilterABCreate, None),
     "models": (models.Model, models.ModelCreate, RemoteModelOperations),
+    "seds": (models.Sed, models.SedCreate, None),
 }
 
 

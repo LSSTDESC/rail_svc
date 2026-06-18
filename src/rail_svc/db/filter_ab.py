@@ -1,20 +1,21 @@
-"""Database model for Band table"""
+"""Database model for FilterAB table"""
 
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
-from sqlalchemy import JSON, String
+from sqlalchemy import JSON, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .. import models
 from .base import Base
 
 if TYPE_CHECKING:
-    from .catalog_band_assoc import CatalogBandAssoc
-    from .filter_ab import FilterAB
+    from .band import Band
+    from .sed import Sed
 
-class Band(Base):
-    """Catalog tag
+
+class FilterAB(Base):
+    """Filter fluxes
 
 
     Attributes
@@ -22,17 +23,11 @@ class Band(Base):
     id_ : int
         Primary key, auto-incrementing unique identifier
     name : str
-        Unique name for this base tag (e.g., 'lsst_u')
+        Unique name for this set of fliterAB fluexes
 
-    Examples
-    --------
-    >>> tag = Band(
-    ...     name="production_models",
-    ...     metadata={"environment": "prod", "team": "ml-ops"}
-    ... )
     """
 
-    __tablename__ = "band"
+    __tablename__ = "filter_ab"
 
     # Primary key
     id_: Mapped[int] = mapped_column(primary_key=True)
@@ -40,25 +35,38 @@ class Band(Base):
     # Unique name for this catalog tag
     name: Mapped[str] = mapped_column(String(255), index=True, unique=True)
 
-    # Wavelength grid
-    band_wavelengths: Mapped[list[float]] = mapped_column(JSON)
-
-    #: Transmission at given wavelengths
-    band_transmission: Mapped[list[float]] = mapped_column(JSON)
-
-    # Relationships - read-only access to tagged objects
-    catalog_assocs: Mapped[list["CatalogBandAssoc"]] = relationship(
-        "CatalogBandAssoc",
-        back_populates="band",
-        viewonly=True,
+    #: foreign key into band table
+    band_id: Mapped[int] = mapped_column(
+        ForeignKey("band.id_", ondelete="CASCADE"),
+        index=True,
     )
 
-    filter_abs: Mapped[list["FilterAB"]] = relationship(
-        "FilterAB",
-        back_populates="band",
-        viewonly=True,
+    #: foreign key into sed table
+    sed_id: Mapped[int] = mapped_column(
+        ForeignKey("sed.id_", ondelete="CASCADE"),
+        index=True,
     )
     
+    # Redshift grid
+    redshifts: Mapped[list[float]] = mapped_column(JSON)
+    
+    # Fluxes at given redshifts
+    fluxes: Mapped[list[float]] = mapped_column(JSON)
+
+    # Relationships - read-only access to tagged objects
+    band: Mapped["Band"] = relationship(
+        "Band",
+        back_populates="filter_abs",
+        viewonly=True,
+    )
+
+    sed: Mapped["Sed"] = relationship(
+        "Sed",
+        back_populates="filter_abs",
+        viewonly=True,
+    )
+
+
     # Pydantic integration
     @classmethod
     def pydantic_create_class(cls) -> type[BaseModel]:
@@ -72,7 +80,7 @@ class Band(Base):
         type[BaseModel]
             The Pydantic model class
         """
-        return models.BandCreate
+        return models.FilterABCreate
 
     @classmethod
     def pydantic_model_class(cls) -> type[BaseModel]:
@@ -81,9 +89,9 @@ class Band(Base):
         Returns
         -------
         type[BaseModel]
-            The Pydantic model class for Band
+            The Pydantic model class for FilterAB
         """
-        return models.Band
+        return models.FilterAB
 
     @classmethod
     def class_string(cls) -> str:
@@ -92,26 +100,26 @@ class Band(Base):
         Returns
         -------
         str
-            The string 'band' for use in help functions and descriptions
+            The string 'filter_ab' for use in help functions and descriptions
         """
         return cls.__tablename__
 
     def __repr__(self) -> str:
-        """Return a detailed string representation of the Band.
+        """Return a detailed string representation of the FilterAB.
 
         Returns
         -------
         str
             String showing id_, name, and description
         """
-        return f"Band(id_={self.id_}, name='{self.name}')"
+        return f"FilterAB(id_={self.id_}, name='{self.name}')"
 
     def __str__(self) -> str:
-        """Return a simple string representation of the Band.
+        """Return a simple string representation of the FilterAB.
 
         Returns
         -------
         str
-            Just the bad name
+            Just the name
         """
         return self.name

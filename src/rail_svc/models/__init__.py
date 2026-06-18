@@ -6,8 +6,10 @@ from .dataset import Dataset, DatasetCreate
 from .dataset_assoc import DatasetAssoc, DatasetAssocCreate
 from .estimates import Estimates, EstimatesCreate
 from .estimator import Estimator, EstimatorCreate
+from .filter_ab import FilterAB, FilterABCreate
 from .filtering import Filter, FilterOp, OrderBy
 from .model import Model, ModelCreate
+from .sed import Sed, SedCreate
 from .web import (
     AsyncRouteError,
     CountResponse,
@@ -46,10 +48,14 @@ __all__ = [
     "Estimator",
     "EstimatorCreate",
     "Filter",
+    "FilterAB",
+    "FilterABCreate",
     "FilterOp",
     "Model",
     "ModelCreate",
     "OrderBy",
+    "Sed",
+    "SedCreate",
     "AsyncRouteError",
     "RemoteAPIError",
     "CountResponse",

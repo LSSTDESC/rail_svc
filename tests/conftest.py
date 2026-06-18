@@ -13,7 +13,9 @@ from rail_svc.db import (
     DatasetAssoc,
     Estimates,
     Estimator,
+    FilterAB,
     Model,
+    Sed,
 )
 from rail_svc.db.base import Base
 
@@ -491,3 +493,109 @@ async def multiple_models(session, sample_algorithm, sample_catalog_tag):
         await session.refresh(model)
 
     return models
+
+
+# ============================================================================
+# Sed Fixtures
+# ============================================================================
+
+
+@pytest.fixture
+async def sample_sed(session):
+    """Create a sample SED for testing."""
+    sed = Sed(
+        name="elliptical_01",
+        sed_wavelengths=[300.0, 400.0, 500.0, 600.0, 700.0],
+        sed_values=[0.1, 0.3, 0.5, 0.4, 0.2],
+    )
+    session.add(sed)
+    await session.commit()
+    await session.refresh(sed)
+    return sed
+
+
+@pytest.fixture
+async def multiple_seds(session):
+    """Create multiple SEDs for testing."""
+    seds = [
+        Sed(
+            name="spiral_01",
+            sed_wavelengths=[300.0, 400.0, 500.0, 600.0],
+            sed_values=[0.2, 0.5, 0.8, 0.6],
+        ),
+        Sed(
+            name="starburst_01",
+            sed_wavelengths=[300.0, 400.0, 500.0, 600.0],
+            sed_values=[0.8, 0.6, 0.3, 0.1],
+        ),
+        Sed(
+            name="quiescent_01",
+            sed_wavelengths=[300.0, 400.0, 500.0, 600.0],
+            sed_values=[0.05, 0.1, 0.3, 0.5],
+        ),
+    ]
+    for sed in seds:
+        session.add(sed)
+    await session.commit()
+
+    for sed in seds:
+        await session.refresh(sed)
+
+    return seds
+
+
+# ============================================================================
+# FilterAB Fixtures
+# ============================================================================
+
+
+@pytest.fixture
+async def sample_filter_ab(session, sample_band, sample_sed):
+    """Create a sample FilterAB for testing."""
+    filter_ab = FilterAB(
+        name="g_band_elliptical_01",
+        band_id=sample_band.id_,
+        sed_id=sample_sed.id_,
+        redshifts=[0.0, 0.5, 1.0, 1.5, 2.0],
+        fluxes=[1.0, 0.8, 0.5, 0.3, 0.1],
+    )
+    session.add(filter_ab)
+    await session.commit()
+    await session.refresh(filter_ab)
+    return filter_ab
+
+
+@pytest.fixture
+async def multiple_filter_abs(session, sample_band, multiple_seds):
+    """Create multiple FilterABs for testing."""
+    filter_abs = [
+        FilterAB(
+            name="g_band_spiral_01",
+            band_id=sample_band.id_,
+            sed_id=multiple_seds[0].id_,
+            redshifts=[0.0, 0.5, 1.0],
+            fluxes=[1.2, 0.9, 0.4],
+        ),
+        FilterAB(
+            name="g_band_starburst_01",
+            band_id=sample_band.id_,
+            sed_id=multiple_seds[1].id_,
+            redshifts=[0.0, 0.5, 1.0],
+            fluxes=[2.0, 1.5, 0.8],
+        ),
+        FilterAB(
+            name="g_band_quiescent_01",
+            band_id=sample_band.id_,
+            sed_id=multiple_seds[2].id_,
+            redshifts=[0.0, 0.5, 1.0],
+            fluxes=[0.5, 0.3, 0.1],
+        ),
+    ]
+    for fab in filter_abs:
+        session.add(fab)
+    await session.commit()
+
+    for fab in filter_abs:
+        await session.refresh(fab)
+
+    return filter_abs

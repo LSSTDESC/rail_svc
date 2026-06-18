@@ -73,6 +73,14 @@ model: AsyncRemoteModelOperations = AsyncRemoteModelOperations(
     BASE_URL, "model", models.Model, models.ModelCreate, client_class=RemoteModelOperations
 )
 
+filter_ab: AsyncRemoteOperations[models.FilterAB, models.FilterABCreate] = AsyncRemoteOperations(
+    BASE_URL, "filter_ab", models.FilterAB, models.FilterABCreate
+)
+
+sed: AsyncRemoteOperations[models.Sed, models.SedCreate] = AsyncRemoteOperations(
+    BASE_URL, "sed", models.Sed, models.SedCreate
+)
+
 funcs: AsyncRemoteFuncs = AsyncRemoteFuncs(
     BASE_URL,
 )
@@ -87,6 +95,8 @@ __all__ = [
     "dataset_assoc",
     "estimates",
     "estimator",
+    "filter_ab",
     "model",
+    "sed",
     "funcs",
 ]

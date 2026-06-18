@@ -97,6 +97,27 @@ async def create_matched_dataset(
     )
 
 
+@with_session_transaction
+async def load_seds(
+    session: AsyncSession,
+    sed_dir: Path,
+    names: list[str] | None = None,
+    names_file: Path | None = None,
+) -> list[models.Sed]:
+    db_seds = await db_oper.catalog_funcs.load_seds(session, sed_dir, names=names, names_file=names_file)
+    return db_oper.sed.to_pydantic_list(db_seds)
+
+
+@with_session_transaction
+async def load_filter_abs(
+    session: AsyncSession,
+    filter_ab_dir: Path,
+    names: list[str] | None = None,
+) -> list[models.FilterAB]:
+    db_filter_abs = await db_oper.catalog_funcs.load_filter_abs(session, filter_ab_dir, names=names)
+    return db_oper.filter_ab.to_pydantic_list(db_filter_abs)
+
+
 @with_session
 async def build_cat_estimator_pdf_wrappers_for_dataset(
     session: AsyncSession, *args: Any, **kwargs: Any

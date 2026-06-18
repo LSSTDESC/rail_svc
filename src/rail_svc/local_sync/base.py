@@ -246,3 +246,11 @@ class ModelSyncOperations(SyncOperations[db.Model, models.Model, models.ModelCre
     @sync_wrapper(ModelLocalOperations.load)
     def load(self, *args: Any, **kwargs: Any) -> models.Model:
         return cast(ModelLocalOperations, self.async_ops).load(*args, **kwargs)  # type: ignore
+
+
+class FilterABSyncOperations(SyncOperations[db.FilterAB, models.FilterAB, models.FilterABCreate]):
+    """Operations on local DB for FilterAB table."""
+
+
+class SedSyncOperations(SyncOperations[db.Sed, models.Sed, models.SedCreate]):
+    """Operations on local DB for Sed table."""

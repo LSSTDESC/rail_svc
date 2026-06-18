@@ -35,8 +35,10 @@ from .base import (
     DatasetLocalOperations,
     EstimatesLocalOperations,
     EstimatorLocalOperations,
+    FilterABLocalOperations,
     LocalOperations,
     ModelLocalOperations,
+    SedLocalOperations,
 )
 
 # Create local operations - each has all methods via dynamic binding
@@ -49,6 +51,8 @@ dataset_assoc = DatasetAssocLocalOperations(db_oper.dataset_assoc)
 estimates = EstimatesLocalOperations(db_oper.estimates)
 estimator = EstimatorLocalOperations(db_oper.estimator)
 model = ModelLocalOperations(db_oper.model)
+filter_ab = FilterABLocalOperations(db_oper.filter_ab)
+sed = SedLocalOperations(db_oper.sed)
 
 __all__ = [
     "LocalOperations",
@@ -60,6 +64,8 @@ __all__ = [
     "dataset_assoc",
     "estimates",
     "estimator",
+    "filter_ab",
     "funcs",
     "model",
+    "sed",
 ]

@@ -1390,6 +1390,10 @@ estimator_group = make_table_group("estimator", local_sync.estimator, "Manage Es
 
 model_group = make_table_group("model", local_sync.model, "Manage Model table")
 
+filter_ab_group = make_table_group("filter-ab", local_sync.filter_ab, "Manage FilterAB table")
+
+sed_group = make_table_group("sed", local_sync.sed, "Manage Sed table")
+
 make_load_command(
     dataset_group, "dataset", lambda: local_sync.dataset, handle_database_error, init_hook=init_db
 )
@@ -1414,5 +1418,7 @@ all_table_groups = [
     dataset_assoc_group,
     estimates_group,
     estimator_group,
+    filter_ab_group,
     model_group,
+    sed_group,
 ]

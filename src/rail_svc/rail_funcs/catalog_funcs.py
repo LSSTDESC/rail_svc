@@ -8,7 +8,8 @@ from rail.utils import catalog_utils
 
 from ..common import unexpected
 from ..config import config as global_config
-from ..models import BandCreate, CatalogBandAssocCreate, CatalogTagCreate
+from ..models import (BandCreate, CatalogBandAssocCreate, CatalogTagCreate,
+                      FilterABCreate, SedCreate)
 
 logger = logging.getLogger(__name__)
 
@@ -257,6 +258,325 @@ def make_band_create_models(filter_dir: Path | str | None = None) -> list[BandCr
 
     logger.info(f"Successfully created {len(bands)} band models")
     return bands
+
+
+def read_sed_file(file_path: Path | str) -> np.ndarray:
+    """Read a SED file containing two columns: wavelength and SED values.
+
+    Parameters
+    ----------
+    file_path : Path or str
+        Path to the SED text file. The file should contain two
+        whitespace-separated columns of numbers (wavelength, sed_value).
+
+    Returns
+    -------
+    np.ndarray
+        A 2D array with shape (n, 2) containing wavelengths and SED values.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the file does not exist.
+    ValueError
+        If the file contains invalid data format or does not have 2 columns.
+    """
+    if not isinstance(file_path, Path):
+        file_path = Path(file_path)
+
+    if not file_path.exists():
+        logger.error(f"SED file not found: {file_path}")
+        raise FileNotFoundError(f"SED file not found: {file_path}")
+
+    logger.info(f"Reading SED file: {file_path}")
+
+    try:
+        full_array = np.loadtxt(file_path)
+    except Exception as e:
+        logger.error(f"Failed to load SED file {file_path}: {e}")
+        raise ValueError(f"Invalid data format in {file_path}") from e
+
+    if full_array.ndim != 2 or full_array.shape[1] != 2:
+        logger.error(f"Expected 2-column data in {file_path}, got shape {full_array.shape}")
+        raise ValueError(f"Invalid data shape in {file_path}")
+
+    return full_array
+
+
+def make_sed_create_model(name: str, file_path: Path | str) -> SedCreate:
+    """Create a SedCreate model from a SED text file.
+
+    Parameters
+    ----------
+    name : str
+        Name for this SED entry.
+    file_path : Path or str
+        Path to the SED text file containing two columns
+        (wavelength, sed_value).
+
+    Returns
+    -------
+    SedCreate
+        A model containing the SED name, wavelengths, and values.
+
+    Raises
+    ------
+    ValueError
+        If name is empty or the file has invalid format.
+    FileNotFoundError
+        If the file does not exist.
+    """
+    if not isinstance(name, str) or not name.strip():
+        logger.error(f"Invalid SED name: {name}")
+        raise ValueError("name must be a non-empty string")
+
+    sed_data = read_sed_file(file_path)
+
+    return SedCreate(
+        name=name,
+        sed_wavelengths=sed_data[:, 0].tolist(),
+        sed_values=sed_data[:, 1].tolist(),
+    )
+
+
+def make_sed_create_models(
+    sed_dir: Path | str,
+    names: list[str] | None = None,
+    names_file: Path | str | None = None,
+) -> list[SedCreate]:
+    """Create SedCreate models from .sed files in a directory.
+
+    Parameters
+    ----------
+    sed_dir : Path or str
+        Directory containing SED text files. Files are expected to have
+        a .sed extension and contain two columns (wavelength, sed_value).
+    names : list[str] | None
+        Optional list of SED names (without extension) to load.
+        If None and names_file is also None, all .sed files in the
+        directory are loaded.
+    names_file : Path or str | None
+        Optional path to a text file listing SED filenames (one per line)
+        relative to sed_dir. Lines are stripped of whitespace; blank lines
+        and lines starting with ``#`` are skipped. The .sed extension is
+        stripped to derive the entry name. Takes precedence over globbing
+        but is ignored if ``names`` is provided.
+
+    Returns
+    -------
+    list[SedCreate]
+        A list of SedCreate models, one per file.
+
+    Raises
+    ------
+    FileNotFoundError
+        If sed_dir or names_file does not exist.
+    """
+    if not isinstance(sed_dir, Path):
+        sed_dir = Path(sed_dir)
+
+    if not sed_dir.exists():
+        logger.error(f"SED directory does not exist: {sed_dir}")
+        raise FileNotFoundError(f"SED directory not found: {sed_dir}")
+
+    if names is not None:
+        files = [sed_dir / f"{n}.sed" for n in names]
+    elif names_file is not None:
+        if not isinstance(names_file, Path):
+            names_file = Path(names_file)
+        if not names_file.exists():
+            logger.error(f"SED names file not found: {names_file}")
+            raise FileNotFoundError(f"SED names file not found: {names_file}")
+        lines = names_file.read_text().splitlines()
+        filenames = [ln.strip() for ln in lines if ln.strip() and not ln.strip().startswith("#")]
+        files = [sed_dir / fn for fn in filenames]
+    else:
+        files = sorted(sed_dir.glob("*.sed"))
+
+    if not files:
+        logger.warning(f"No .sed files found in {sed_dir}")
+        return []
+
+    logger.info(f"Creating models for {len(files)} SED files from {sed_dir}")
+
+    seds: list[SedCreate] = []
+    for file_path in files:
+        try:
+            name = file_path.stem
+            sed = make_sed_create_model(name, file_path)
+            seds.append(sed)
+        except Exception as e:
+            logger.error(f"Failed to create SED model from '{file_path}': {e}")
+            continue
+
+    logger.info(f"Successfully created {len(seds)} SED models")
+    return seds
+
+
+def read_filter_ab_file(file_path: Path | str) -> np.ndarray:
+    """Read a FilterAB file containing two columns: redshift and flux.
+
+    Parameters
+    ----------
+    file_path : Path or str
+        Path to the FilterAB text file. The file should contain two
+        whitespace-separated columns of numbers (redshift, flux).
+
+    Returns
+    -------
+    np.ndarray
+        A 2D array with shape (n, 2) containing redshifts and fluxes.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the file does not exist.
+    ValueError
+        If the file contains invalid data format or does not have 2 columns.
+    """
+    if not isinstance(file_path, Path):
+        file_path = Path(file_path)
+
+    if not file_path.exists():
+        logger.error(f"FilterAB file not found: {file_path}")
+        raise FileNotFoundError(f"FilterAB file not found: {file_path}")
+
+    logger.info(f"Reading FilterAB file: {file_path}")
+
+    try:
+        full_array = np.loadtxt(file_path)
+    except Exception as e:
+        logger.error(f"Failed to load FilterAB file {file_path}: {e}")
+        raise ValueError(f"Invalid data format in {file_path}") from e
+
+    if full_array.ndim != 2 or full_array.shape[1] != 2:
+        logger.error(f"Expected 2-column data in {file_path}, got shape {full_array.shape}")
+        raise ValueError(f"Invalid data shape in {file_path}")
+
+    return full_array
+
+
+def make_filter_ab_create_model(
+    name: str, file_path: Path | str, band_name: str, sed_name: str
+) -> FilterABCreate:
+    """Create a FilterABCreate model from a FilterAB text file.
+
+    Parameters
+    ----------
+    name : str
+        Name for this FilterAB entry.
+    file_path : Path or str
+        Path to the FilterAB text file containing two columns
+        (redshift, flux).
+    band_name : str
+        Name of the associated Band (resolved to band_id at DB level).
+    sed_name : str
+        Name of the associated Sed (resolved to sed_id at DB level).
+
+    Returns
+    -------
+    FilterABCreate
+        A model containing the name, redshifts, fluxes, and foreign
+        key names for Band and Sed.
+
+    Raises
+    ------
+    ValueError
+        If name, band_name, or sed_name is empty, or the file has
+        invalid format.
+    FileNotFoundError
+        If the file does not exist.
+    """
+    if not isinstance(name, str) or not name.strip():
+        logger.error(f"Invalid FilterAB name: {name}")
+        raise ValueError("name must be a non-empty string")
+
+    if not isinstance(band_name, str) or not band_name.strip():
+        raise ValueError("band_name must be a non-empty string")
+
+    if not isinstance(sed_name, str) or not sed_name.strip():
+        raise ValueError("sed_name must be a non-empty string")
+
+    filter_ab_data = read_filter_ab_file(file_path)
+
+    return FilterABCreate(
+        name=name,
+        redshifts=filter_ab_data[:, 0].tolist(),
+        fluxes=filter_ab_data[:, 1].tolist(),
+        band_name=band_name,
+        sed_name=sed_name,
+    )
+
+
+def make_filter_ab_create_models(
+    filter_ab_dir: Path | str,
+    names: list[str] | None = None,
+) -> list[FilterABCreate]:
+    """Create FilterABCreate models from .AB files in a directory.
+
+    Files follow the naming convention ``{sed}.{band}.AB``. The band and
+    sed names are extracted from the filename. The entry name is set to
+    the full stem (``{sed}.{band}``).
+
+    Parameters
+    ----------
+    filter_ab_dir : Path or str
+        Directory containing FilterAB text files with .AB extension,
+        each containing two columns (redshift, flux).
+    names : list[str] | None
+        Optional list of file stems (e.g. ``["elliptical.g"]``) to load.
+        If None, all .AB files in the directory are loaded.
+
+    Returns
+    -------
+    list[FilterABCreate]
+        A list of FilterABCreate models, one per file.
+
+    Raises
+    ------
+    FileNotFoundError
+        If filter_ab_dir does not exist.
+    """
+    if not isinstance(filter_ab_dir, Path):
+        filter_ab_dir = Path(filter_ab_dir)
+
+    if not filter_ab_dir.exists():
+        logger.error(f"FilterAB directory does not exist: {filter_ab_dir}")
+        raise FileNotFoundError(f"FilterAB directory not found: {filter_ab_dir}")
+
+    if names is not None:
+        files = [filter_ab_dir / f"{n}.AB" for n in names]
+    else:
+        files = sorted(filter_ab_dir.glob("*.AB"))
+
+    if not files:
+        logger.warning(f"No .AB files found in {filter_ab_dir}")
+        return []
+
+    logger.info(f"Creating models for {len(files)} FilterAB files from {filter_ab_dir}")
+
+    filter_abs: list[FilterABCreate] = []
+    for file_path in files:
+        try:
+            # Filename is {sed}.{band}.AB — strip .AB to get stem, then split
+            stem = file_path.name.removesuffix(".AB")
+            parts = stem.rsplit(".", 1)
+            if len(parts) != 2:
+                logger.error(
+                    f"FilterAB filename '{file_path.name}' does not match "
+                    f"expected pattern '{{sed}}.{{band}}.AB'"
+                )
+                continue
+            sed_name, band_name = parts
+            entry_name = stem
+            fab = make_filter_ab_create_model(entry_name, file_path, band_name, sed_name)
+            filter_abs.append(fab)
+        except Exception as e:
+            logger.error(f"Failed to create FilterAB model from '{file_path}': {e}")
+            continue
+
+    logger.info(f"Successfully created {len(filter_abs)} FilterAB models")
+    return filter_abs
 
 
 def make_catalog_tag_create_model(catalog_tag_name: str) -> CatalogTagCreate:

@@ -1290,6 +1290,10 @@ estimator_group = make_table_group("estimator", remote_sync.estimator, "Manage E
 
 model_group = make_table_group("model", remote_sync.model, "Manage Model table")
 
+filter_ab_group = make_table_group("filter-ab", remote_sync.filter_ab, "Manage FilterAB table")
+
+sed_group = make_table_group("sed", remote_sync.sed, "Manage Sed table")
+
 # ============================================================================
 # CUSTOM COMMANDS FOR SPECIFIC TABLES (via shared factories)
 # ============================================================================
@@ -1313,5 +1317,7 @@ all_table_groups = [
     dataset_assoc_group,
     estimates_group,
     estimator_group,
+    filter_ab_group,
     model_group,
+    sed_group,
 ]

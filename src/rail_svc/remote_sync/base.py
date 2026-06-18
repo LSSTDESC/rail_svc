@@ -124,3 +124,11 @@ class ModelSyncRemoteOperations(SyncRemoteOperations[models.Model, models.ModelC
     """Sync wrapper for remote operations on Model table."""
 
     _extra_methods: ClassVar[list[str]] = ["load", "download"]
+
+
+class FilterABSyncRemoteOperations(SyncRemoteOperations[models.FilterAB, models.FilterABCreate]):
+    """Sync wrapper for remote operations on FilterAB table."""
+
+
+class SedSyncRemoteOperations(SyncRemoteOperations[models.Sed, models.SedCreate]):
+    """Sync wrapper for remote operations on Sed table."""

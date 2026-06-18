@@ -7,7 +7,9 @@ from .dataset import Dataset
 from .dataset_assoc import DatasetAssoc
 from .estimates import Estimates
 from .estimator import Estimator
+from .filter_ab import FilterAB
 from .model import Model
+from .sed import Sed
 from .session import close_db, get_session, init_db
 
 __all__ = [
@@ -20,7 +22,9 @@ __all__ = [
     "DatasetAssoc",
     "Estimates",
     "Estimator",
+    "FilterAB",
     "Model",
+    "Sed",
     "init_db",
     "get_session",
     "close_db",

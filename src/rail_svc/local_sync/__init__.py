@@ -9,7 +9,9 @@ from .base import (
     DatasetSyncOperations,
     EstimatesSyncOperations,
     EstimatorSyncOperations,
+    FilterABSyncOperations,
     ModelSyncOperations,
+    SedSyncOperations,
 )
 
 algorithm = AlgorithmSyncOperations(local_async.algorithm)
@@ -21,6 +23,8 @@ dataset_assoc = DatasetAssocSyncOperations(local_async.dataset_assoc)
 estimates = EstimatesSyncOperations(local_async.estimates)
 estimator = EstimatorSyncOperations(local_async.estimator)
 model = ModelSyncOperations(local_async.model)
+filter_ab = FilterABSyncOperations(local_async.filter_ab)
+sed = SedSyncOperations(local_async.sed)
 
 __all__ = [
     "algorithm",
@@ -31,6 +35,8 @@ __all__ = [
     "dataset_assoc",
     "estimates",
     "estimator",
+    "filter_ab",
     "funcs",
     "model",
+    "sed",
 ]

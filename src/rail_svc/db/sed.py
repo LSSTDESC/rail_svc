@@ -1,4 +1,4 @@
-"""Database model for Band table"""
+"""Database model for Sed table"""
 
 from typing import TYPE_CHECKING
 
@@ -10,10 +10,10 @@ from .. import models
 from .base import Base
 
 if TYPE_CHECKING:
-    from .catalog_band_assoc import CatalogBandAssoc
     from .filter_ab import FilterAB
 
-class Band(Base):
+
+class Sed(Base):
     """Catalog tag
 
 
@@ -26,13 +26,13 @@ class Band(Base):
 
     Examples
     --------
-    >>> tag = Band(
+    >>> tag = Sed(
     ...     name="production_models",
     ...     metadata={"environment": "prod", "team": "ml-ops"}
     ... )
     """
 
-    __tablename__ = "band"
+    __tablename__ = "sed"
 
     # Primary key
     id_: Mapped[int] = mapped_column(primary_key=True)
@@ -41,24 +41,18 @@ class Band(Base):
     name: Mapped[str] = mapped_column(String(255), index=True, unique=True)
 
     # Wavelength grid
-    band_wavelengths: Mapped[list[float]] = mapped_column(JSON)
+    sed_wavelengths: Mapped[list[float]] = mapped_column(JSON)
 
-    #: Transmission at given wavelengths
-    band_transmission: Mapped[list[float]] = mapped_column(JSON)
+    #: SED at given wavelengths
+    sed_values: Mapped[list[float]] = mapped_column(JSON)
 
     # Relationships - read-only access to tagged objects
-    catalog_assocs: Mapped[list["CatalogBandAssoc"]] = relationship(
-        "CatalogBandAssoc",
-        back_populates="band",
+    filter_abs: Mapped[list["FilterAB"]] = relationship(
+        "FilterAB",
+        back_populates="sed",
         viewonly=True,
     )
 
-    filter_abs: Mapped[list["FilterAB"]] = relationship(
-        "FilterAB",
-        back_populates="band",
-        viewonly=True,
-    )
-    
     # Pydantic integration
     @classmethod
     def pydantic_create_class(cls) -> type[BaseModel]:
@@ -72,7 +66,7 @@ class Band(Base):
         type[BaseModel]
             The Pydantic model class
         """
-        return models.BandCreate
+        return models.SedCreate
 
     @classmethod
     def pydantic_model_class(cls) -> type[BaseModel]:
@@ -81,9 +75,9 @@ class Band(Base):
         Returns
         -------
         type[BaseModel]
-            The Pydantic model class for Band
+            The Pydantic model class for Sed
         """
-        return models.Band
+        return models.Sed
 
     @classmethod
     def class_string(cls) -> str:
@@ -97,17 +91,17 @@ class Band(Base):
         return cls.__tablename__
 
     def __repr__(self) -> str:
-        """Return a detailed string representation of the Band.
+        """Return a detailed string representation of the Sed.
 
         Returns
         -------
         str
             String showing id_, name, and description
         """
-        return f"Band(id_={self.id_}, name='{self.name}')"
+        return f"Sed(id_={self.id_}, name='{self.name}')"
 
     def __str__(self) -> str:
-        """Return a simple string representation of the Band.
+        """Return a simple string representation of the Sed.
 
         Returns
         -------

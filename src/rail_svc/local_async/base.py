@@ -380,3 +380,11 @@ class ModelLocalOperations(LocalOperations[db.Model, models.Model, models.ModelC
     @to_pydantic
     async def load(self, session: Any, *args: Any, **kwargs: Any) -> Any:
         return await cast(ModelOperations, self._table_ops).load(session, *args, **kwargs)
+
+
+class FilterABLocalOperations(LocalOperations[db.FilterAB, models.FilterAB, models.FilterABCreate]):
+    """Operations on local DB for FilterAB table."""
+
+
+class SedLocalOperations(LocalOperations[db.Sed, models.Sed, models.SedCreate]):
+    """Operations on local DB for Sed table."""

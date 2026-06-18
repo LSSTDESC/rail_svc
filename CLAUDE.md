@@ -77,7 +77,21 @@ The codebase has a layered architecture with parallel sync/async and local/remot
 
 ### Domain Tables
 
-Algorithm, Band, CatalogTag, CatalogBandAssoc, Dataset, DatasetAssoc, Estimates, Estimator, Model. The `Dataset`, `Estimates`, and `Model` tables have extended operations for file handling (load, read_slice, download).
+Algorithm, Band, CatalogTag, CatalogBandAssoc, Dataset, DatasetAssoc, Estimates, Estimator, FilterAB, Model, Sed. The `Dataset`, `Estimates`, and `Model` tables have extended operations for file handling (load, read_slice, download). The `FilterAB` table has a `get_create_kwargs` that resolves Band and Sed by name or ID.
+
+### Spectral Data Tables
+
+- **`Band`** — Filter transmission curves. Loaded from two-column `.res` files (wavelength, transmission) via `rail_funcs.catalog_funcs.read_band_res_file()`.
+- **`Sed`** — Spectral energy distributions. Loaded from two-column `.sed` files (wavelength, sed_value) via `rail_funcs.catalog_funcs.read_sed_file()`. Batch loading via `make_sed_create_models(sed_dir, names_file=...)`.
+- **`FilterAB`** — Redshift-dependent AB fluxes for a (band, sed) pair. Loaded from two-column `.AB` files (redshift, flux) with naming convention `{sed}.{band}.AB`. Batch loading via `make_filter_ab_create_models(filter_ab_dir)`. Foreign keys to Band and Sed are resolved by name at creation time.
+
+### Composite Operations (`db_oper/catalog_funcs.py`, `local_async/funcs.py`, `local_sync/funcs.py`)
+
+- `load_catalog_yaml(catalog_yaml, filter_dir)` — loads bands, catalog tags, and associations from YAML
+- `load_seds(sed_dir, names=, names_file=)` — loads .sed files into Sed table
+- `load_filter_abs(filter_ab_dir, names=)` — loads .AB files into FilterAB table
+- `create_matched_dataset(...)` — creates a collection dataset with component associations
+- `get_data_and_estimates_data(dataset_id, row)` — retrieves catalog + all photo-z estimates for one object
 
 ## Configuration
 
@@ -112,6 +126,8 @@ Environment variables with `__` as nested delimiter:
 - **Remote client extended ops**: `RemoteFileOperations` base class in `client/base.py` provides `load()` and `download()`. Subclasses only override `read_slice()`.
 - **Remote sync operations**: `_make_sync_method` + `__init_subclass__` in `remote_sync/base.py` auto-generates sync wrappers. Add extra methods via `_extra_methods` class variable.
 - **Parametrized tests**: `tests/db/test_db_shared.py`, `tests/db_oper/test_db_oper_shared.py`, and `tests/models/test_models_shared.py` test common entity patterns. Add new entities to `ENTITY_CONFIGS` rather than creating new test files.
+- **Adding a new table**: Add `db/{name}.py`, `models/{name}.py`, `db_oper/{name}.py` (with singleton), then register in: `db/__init__`, `models/__init__`, `db_oper/__init__`, `local_async/base.py` (LocalOperations subclass), `local_async/__init__`, `local_sync/base.py` (SyncOperations subclass), `local_sync/__init__`, `router/app.py`, `client/client.py` (TABLE_CONFIGS), `remote_async/__init__`, `remote_sync/base.py` (SyncRemoteOperations subclass), `remote_sync/__init__`, and both CLI `top.py` files. Add fixtures in `tests/conftest.py`.
+- **Foreign key resolution at create time**: Tables with foreign keys (e.g., FilterAB, CatalogBandAssoc) implement `get_create_kwargs()` in their `db_oper` module. This allows callers to pass `band_name=` or `band_id=` and the method resolves via `db_funcs.read.lookup_by_id_or_name()`.
 
 ## Documentation
 

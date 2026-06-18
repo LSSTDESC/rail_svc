@@ -249,7 +249,9 @@ class TestRemoteDatabaseIntegration:
             "datasets",
             "estimates",
             "estimators",
+            "filter_abs",
             "models",
+            "seds",
         }
 
         actual_tables = set(TABLE_CONFIGS.keys())

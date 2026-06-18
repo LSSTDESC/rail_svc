@@ -25,7 +25,9 @@ from .base import (
     DatasetSyncRemoteOperations,
     EstimatesSyncRemoteOperations,
     EstimatorSyncRemoteOperations,
+    FilterABSyncRemoteOperations,
     ModelSyncRemoteOperations,
+    SedSyncRemoteOperations,
 )
 from .funcs import SyncRemoteFuncs
 
@@ -75,6 +77,16 @@ def model() -> ModelSyncRemoteOperations:
     return ModelSyncRemoteOperations(remote_async.model)
 
 
+def filter_ab() -> FilterABSyncRemoteOperations:
+    """Create sync remote operations for filter_ab table."""
+    return FilterABSyncRemoteOperations(remote_async.filter_ab)
+
+
+def sed() -> SedSyncRemoteOperations:
+    """Create sync remote operations for sed table."""
+    return SedSyncRemoteOperations(remote_async.sed)
+
+
 def funcs() -> SyncRemoteFuncs:
     """Create sync remote operations for fuctions."""
     return SyncRemoteFuncs(remote_async.funcs)
@@ -89,6 +101,8 @@ __all__ = [
     "dataset_assoc",
     "estimates",
     "estimator",
+    "filter_ab",
     "model",
+    "sed",
     "funcs",
 ]

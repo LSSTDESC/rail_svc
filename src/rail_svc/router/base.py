@@ -955,6 +955,10 @@ estimator_router = create_table_router("estimator", local_async.estimator)
 
 model_router = create_table_router("model", local_async.model)
 
+filter_ab_router = create_table_router("filter_ab", local_async.filter_ab)
+
+sed_router = create_table_router("sed", local_async.sed)
+
 
 @dataset_router.post("/load", response_model=models.Dataset, status_code=status.HTTP_201_CREATED)
 async def dataset_load(
@@ -1332,5 +1336,7 @@ all_routers = [
     dataset_router,
     estimates_router,
     estimator_router,
+    filter_ab_router,
     model_router,
+    sed_router,
 ]

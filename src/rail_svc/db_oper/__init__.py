@@ -7,7 +7,9 @@ from .dataset import dataset
 from .dataset_assoc import dataset_assoc
 from .estimates import estimates
 from .estimator import estimator
+from .filter_ab import filter_ab
 from .model import model
+from .sed import sed
 
 __all__ = [
     "algorithm",
@@ -20,6 +22,8 @@ __all__ = [
     "estimates",
     "estimation_funcs",
     "estimator",
+    "filter_ab",
     "model",
+    "sed",
     "wrappers",
 ]
