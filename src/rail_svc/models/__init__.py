@@ -7,7 +7,7 @@ from .dataset_assoc import DatasetAssoc, DatasetAssocCreate
 from .estimates import Estimates, EstimatesCreate
 from .estimator import Estimator, EstimatorCreate
 from .filter_ab import FilterAB, FilterABCreate
-from .filtering import Filter, FilterOp, OrderBy
+from macon.models.filtering import Filter, FilterOp, OrderBy
 from .model import Model, ModelCreate
 from .sed import Sed, SedCreate
 from .web import (

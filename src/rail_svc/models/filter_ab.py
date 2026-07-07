@@ -2,8 +2,7 @@
 
 from typing import ClassVar
 
-from pydantic import (BaseModel, ConfigDict, Field, ValidationInfo,
-                      field_validator)
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 
 
 class FilterABBase(BaseModel):
@@ -68,5 +67,3 @@ class FilterAB(FilterABBase):
 
     #: foreign key into sed table
     sed_id: int = Field(..., gt=0, description="Foreign key referencing Sed.id_")
-
-

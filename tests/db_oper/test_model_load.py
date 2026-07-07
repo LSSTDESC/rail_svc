@@ -4,11 +4,11 @@ from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from macon.common import LoadType
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 from rail_svc import models
-from rail_svc.common import LoadType
 from rail_svc.db_oper.model import model
 
 
@@ -64,7 +64,7 @@ class TestModelLoad:
 
         with (
             patch("rail_svc.db_oper.model.get_session", mock_get_session),
-            patch("rail_svc.common.global_config.storage.archive", str(archive_dir)),
+            patch("macon.config.config.storage.archive", str(archive_dir)),
         ):
             result = await model.load(
                 name="copied_model",
@@ -92,7 +92,7 @@ class TestModelLoad:
 
         with (
             patch("rail_svc.db_oper.model.get_session", mock_get_session),
-            patch("rail_svc.common.global_config.storage.archive", str(archive_dir)),
+            patch("macon.config.config.storage.archive", str(archive_dir)),
         ):
             result = await model.load(
                 name="linked_model",

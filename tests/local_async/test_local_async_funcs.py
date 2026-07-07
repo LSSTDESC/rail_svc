@@ -30,7 +30,7 @@ def patch_session(engine):
         async with async_session_factory() as sess:
             yield sess
 
-    with patch("rail_svc.local_async.base.get_session", _mock_get_session):
+    with patch("macon.local_async.base.get_session", _mock_get_session):
         yield
 
 

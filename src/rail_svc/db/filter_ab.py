@@ -2,12 +2,12 @@
 
 from typing import TYPE_CHECKING
 
+from macon.db.base import Base
 from pydantic import BaseModel
 from sqlalchemy import JSON, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .. import models
-from .base import Base
 
 if TYPE_CHECKING:
     from .band import Band
@@ -65,7 +65,6 @@ class FilterAB(Base):
         back_populates="filter_abs",
         viewonly=True,
     )
-
 
     # Pydantic integration
     @classmethod

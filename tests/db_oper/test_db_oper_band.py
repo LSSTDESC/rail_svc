@@ -1,10 +1,10 @@
 """Unit tests for Band table operations."""
 
 import pytest
+from macon.db_oper.base import TableContext
 
 from rail_svc.db import Band
 from rail_svc.db_oper.band import BandOperations, band
-from rail_svc.db_oper.base import TableContext
 from rail_svc.models import Band as BandModel
 
 # ============================================================================
@@ -25,7 +25,7 @@ async def test_band_operations_inherits_crud_methods(session, sample_band):
 @pytest.mark.asyncio
 async def test_band_operations_inherits_filter_methods(session, multiple_bands):
     """Test that BandOperations inherits filter methods from base."""
-    from rail_svc.models.filtering import Filter, FilterOp
+    from macon.models.filtering import Filter, FilterOp
 
     context = TableContext.from_db_class(Band)
     ops = BandOperations(context)
@@ -85,7 +85,7 @@ async def test_module_singleton_create_row(session):
 @pytest.mark.asyncio
 async def test_module_singleton_filter_rows(session, multiple_bands):
     """Test that module singleton can filter rows."""
-    from rail_svc.models.filtering import Filter, FilterOp
+    from macon.models.filtering import Filter, FilterOp
 
     filters = [Filter(field="name", op=FilterOp.IN, value=["u_band", "r_band"])]
     results = await band.filter_rows(session, filters=filters)

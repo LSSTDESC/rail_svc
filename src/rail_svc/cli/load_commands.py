@@ -14,8 +14,8 @@ from pathlib import Path
 from typing import Any
 
 import click
+from macon.common import LoadType
 
-from ..common import LoadType
 from ..models.utils import OutputEnum, output_pydantic
 from . import common_options
 

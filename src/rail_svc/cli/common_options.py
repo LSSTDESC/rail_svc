@@ -8,9 +8,9 @@ from typing import Any
 
 import click
 from click.decorators import FC
+from macon.common import LoadType, str_to_slice, unexpected
+from macon.config import config as global_config
 
-from ..common import LoadType, unexpected, str_to_slice
-from ..config import config as global_config
 from ..models.utils import OutputEnum
 
 # Configuration defaults

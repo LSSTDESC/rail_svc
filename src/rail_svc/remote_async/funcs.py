@@ -6,9 +6,9 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Any, TypeVar
 
-from ..client.base import RemoteAPI
-from ..client.funcs import RemoteFuncsOperations
 from .. import models
+from ..client.funcs import RemoteFuncsOperations
+from ..client.rail_svc import RemoteAPI
 
 # Type variable
 F = TypeVar("F", bound=Callable[..., Any])

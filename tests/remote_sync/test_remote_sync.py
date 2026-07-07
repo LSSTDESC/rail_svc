@@ -8,7 +8,7 @@ from rail_svc.remote_sync import (
     dataset,
     model,
 )
-from rail_svc.remote_sync.base import SyncRemoteOperations
+from rail_svc.remote_sync.rail_svc import SyncRemoteOperations
 
 
 class TestFactoryWrapsAsyncOperations:

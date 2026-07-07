@@ -20,7 +20,7 @@ def runner():
 class TestEstimatePdf:
     """Test estimate-pdf CLI command."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.local_sync.funcs.estimate_pdf")
     def test_success_json(self, mock_estimate, mock_init, runner):
         """Test successful PDF estimation with JSON output."""
@@ -34,7 +34,7 @@ class TestEstimatePdf:
         assert result.exit_code == 0
         mock_estimate.assert_called_once()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.local_sync.funcs.estimate_pdf")
     def test_error_handling(self, mock_estimate, mock_init, runner):
         """Test error handling."""
@@ -51,7 +51,7 @@ class TestEstimatePdf:
 class TestEstimateEnsemble:
     """Test estimate-ensemble CLI command."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.local_sync.funcs.estimate_ensemble")
     def test_success(self, mock_estimate, mock_init, runner, tmp_path):
         """Test successful ensemble estimation."""
@@ -77,7 +77,7 @@ class TestEstimateEnsemble:
 class TestGetEstimatorsForDataset:
     """Test get-estimators-for-dataest CLI command."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.local_sync.funcs.get_estimators_for_dataest")
     def test_success(self, mock_get, mock_init, runner):
         """Test successful estimator retrieval."""
@@ -98,7 +98,7 @@ class TestGetEstimatorsForDataset:
 class TestGetDatasetAndEstimates:
     """Test get-dataset-and-estimates CLI command."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.local_sync.funcs.get_dataset_and_estimates")
     def test_success(self, mock_get, mock_init, runner):
         """Test successful dataset+estimates retrieval."""
@@ -123,7 +123,7 @@ class TestGetDatasetAndEstimates:
 class TestCreateMatchedDataset:
     """Test create-matched-dataset CLI command."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.local_sync.funcs.create_matched_dataset")
     def test_success(self, mock_create, mock_init, runner, tmp_path):
         """Test successful matched dataset creation."""
@@ -167,7 +167,7 @@ class TestCreateMatchedDataset:
 class TestLoadCatalogYaml:
     """Test load-catalog-yaml CLI command."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.local_sync.funcs.load_catalog_yaml")
     def test_success(self, mock_load, mock_init, runner, tmp_path):
         """Test successful catalog YAML loading."""
@@ -188,7 +188,7 @@ class TestLoadCatalogYaml:
 class TestGetDataAndEstimatesData:
     """Test get-data-and-estimates-data CLI command."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.local_sync.funcs.get_data_and_estimates_data")
     def test_success_json(self, mock_get, mock_init, runner):
         """Test successful retrieval with JSON output."""
@@ -201,7 +201,7 @@ class TestGetDataAndEstimatesData:
 
         assert result.exit_code == 0
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.local_sync.funcs.get_data_and_estimates_data")
     def test_success_table(self, mock_get, mock_init, runner):
         """Test successful retrieval with table output."""
@@ -218,7 +218,7 @@ class TestGetDataAndEstimatesData:
 class TestEstimatePdfForSlice:
     """Test estimate-pdf-for-slice CLI command."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.local_sync.funcs.estimate_pdf_for_slice")
     def test_success(self, mock_est, mock_init, runner):
         """Test successful slice estimation."""
@@ -246,7 +246,7 @@ class TestEstimatePdfForSlice:
 class TestEstimateDataset:
     """Test estimate-dataset CLI command."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.local_sync.funcs.estimate_dataset")
     def test_success(self, mock_est, mock_init, runner):
         """Test successful dataset estimation."""

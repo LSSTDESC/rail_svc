@@ -7,10 +7,11 @@ lookup of the associated Model by ID or name.
 
 from typing import Any
 
+from macon import db_funcs
+from macon.db_oper.base import TableContext, TableOperations
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .. import db, db_funcs, models
-from .base import TableContext, TableOperations
+from .. import db, models
 
 __all__ = ["EstimatorOperations", "estimator"]
 

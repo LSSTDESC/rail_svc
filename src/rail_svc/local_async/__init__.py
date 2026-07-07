@@ -18,7 +18,7 @@ Examples
 ... )
 >>>
 >>> # Filter rows
->>> from rail_svc.db_funcs.filter import Filter, FilterOp
+>>> from macon.models.filtering import Filter, FilterOp
 >>> active_algos = await algorithm.filter_rows(
 ...     filters=[Filter("active", FilterOp.EQ, True)]
 ... )
@@ -26,7 +26,7 @@ Examples
 
 from .. import db_oper
 from . import funcs
-from .base import (
+from .rail_svc import (
     AlgorithmLocalOperations,
     BandLocalOperations,
     CatalogBandAssocLocalOperations,

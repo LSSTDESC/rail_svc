@@ -9,7 +9,7 @@ import pytest
 from click.testing import CliRunner
 
 from rail_svc import __version__
-from rail_svc.cli.local.base import make_table_group
+from rail_svc.cli.local.rail_svc import make_table_group
 from rail_svc.cli.local.top import cli, init
 
 

@@ -3,13 +3,13 @@
 from typing import TYPE_CHECKING
 
 import structlog
+from macon.db.base import Base
 from pydantic import BaseModel
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.schema import ForeignKey
 
 from .. import models
-from .base import Base
 
 if TYPE_CHECKING:
     from .catalog_tag import CatalogTag

@@ -7,13 +7,13 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from macon.db.session import init_db
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from ..db.session import init_db
-from .base import all_routers
 from .funcs import funcs_router
+from .rail_svc import all_routers
 
 # Configure logging
 logger = logging.getLogger(__name__)

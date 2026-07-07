@@ -4,8 +4,9 @@ Band table operations.
 Provides CRUD operations and Pydantic conversions for the Band table.
 """
 
+from macon.db_oper.base import TableContext, TableOperations
+
 from .. import db, models
-from .base import TableContext, TableOperations
 
 
 class BandOperations(TableOperations[db.Band, models.Band, models.BandCreate]):

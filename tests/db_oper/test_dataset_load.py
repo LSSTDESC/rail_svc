@@ -5,11 +5,11 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
+from macon.common import LoadType
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 from rail_svc import db, models
-from rail_svc.common import LoadType
 from rail_svc.db_oper.dataset import dataset
 
 
@@ -143,7 +143,7 @@ class TestDatasetLoad:
         source_file = tmp_path / "catalog.hdf5"
         source_file.write_bytes(b"fake hdf5 data")
 
-        with patch("rail_svc.db_oper.base.get_session", mock_get_session):
+        with patch("macon.db.session.get_session", mock_get_session):
             result = await dataset.load(
                 name="test_catalog",
                 orig_path=str(source_file),
@@ -170,8 +170,8 @@ class TestDatasetLoad:
         (archive_dir / "datasets").mkdir()
 
         with (
-            patch("rail_svc.db_oper.base.get_session", mock_get_session),
-            patch("rail_svc.common.global_config.storage.archive", str(archive_dir)),
+            patch("macon.db.session.get_session", mock_get_session),
+            patch("macon.config.config.storage.archive", str(archive_dir)),
         ):
             result = await dataset.load(
                 name="copied_ds",

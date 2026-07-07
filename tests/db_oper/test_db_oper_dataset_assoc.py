@@ -1,9 +1,9 @@
 """Unit tests for DatasetAssoc table operations."""
 
 import pytest
+from macon.db_oper.base import TableContext
 
 from rail_svc.db import DatasetAssoc
-from rail_svc.db_oper.base import TableContext
 from rail_svc.db_oper.dataset_assoc import DatasetAssocOperations, dataset_assoc
 from rail_svc.models import DatasetAssoc as DatasetAssocModel
 
@@ -25,7 +25,7 @@ async def test_dataset_assoc_operations_inherits_crud_methods(session, sample_da
 @pytest.mark.asyncio
 async def test_dataset_assoc_operations_inherits_filter_methods(session, multiple_dataset_assocs):
     """Test that DatasetAssocOperations inherits filter methods from base."""
-    from rail_svc.models.filtering import Filter, FilterOp
+    from macon.models.filtering import Filter, FilterOp
 
     context = TableContext.from_db_class(DatasetAssoc)
     ops = DatasetAssocOperations(context)
@@ -68,7 +68,7 @@ async def test_module_singleton_get_row(session, sample_dataset_assoc):
 @pytest.mark.asyncio
 async def test_module_singleton_filter_rows(session, multiple_dataset_assocs):
     """Test that module singleton can filter rows."""
-    from rail_svc.models.filtering import Filter, FilterOp
+    from macon.models.filtering import Filter, FilterOp
 
     filters = [Filter(field="name", op=FilterOp.IN, value=["gaia_to_match", "sdss_to_match"])]
     results = await dataset_assoc.filter_rows(session, filters=filters)

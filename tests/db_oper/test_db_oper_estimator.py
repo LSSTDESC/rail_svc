@@ -1,9 +1,9 @@
 """Unit tests for Estimator table operations."""
 
 import pytest
+from macon.db_oper.base import TableContext
 
 from rail_svc.db import Estimator
-from rail_svc.db_oper.base import TableContext
 from rail_svc.db_oper.estimator import EstimatorOperations, estimator
 from rail_svc.models import Estimator as EstimatorModel
 
@@ -62,7 +62,7 @@ async def test_estimator_operations_inherits_crud_methods(session, sample_estima
 @pytest.mark.asyncio
 async def test_estimator_operations_inherits_filter_methods(session, multiple_estimators):
     """Test that EstimatorOperations inherits filter methods from base."""
-    from rail_svc.models.filtering import Filter, FilterOp
+    from macon.models.filtering import Filter, FilterOp
 
     context = TableContext.from_db_class(Estimator)
     ops = EstimatorOperations(context)
@@ -105,7 +105,7 @@ async def test_module_singleton_get_row(session, sample_estimator):
 @pytest.mark.asyncio
 async def test_module_singleton_filter_rows(session, multiple_estimators):
     """Test that module singleton can filter rows."""
-    from rail_svc.models.filtering import Filter, FilterOp
+    from macon.models.filtering import Filter, FilterOp
 
     filters = [Filter(field="name", op=FilterOp.IN, value=["estimator_v1", "estimator_v2"])]
     results = await estimator.filter_rows(session, filters=filters)

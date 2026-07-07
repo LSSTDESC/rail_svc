@@ -11,7 +11,7 @@ import pytest
 from click.testing import CliRunner
 
 from rail_svc import models
-from rail_svc.cli.remote.base import dataset_group, estimates_group, model_group
+from rail_svc.cli.remote.rail_svc import dataset_group, estimates_group, model_group
 
 
 @pytest.fixture
@@ -24,7 +24,7 @@ def mock_dataset_ops():
     """Mock remote_sync.dataset() to return a mock ops object."""
     mock_ops = MagicMock()
     mock_ops.ctx.response_class.col_names_for_table = ["id_", "name", "path"]
-    with patch("rail_svc.cli.remote.base.remote_sync.dataset", return_value=mock_ops):
+    with patch("rail_svc.cli.remote.rail_svc.remote_sync.dataset", return_value=mock_ops):
         yield mock_ops
 
 
@@ -33,7 +33,7 @@ def mock_estimates_ops():
     """Mock remote_sync.estimates() to return a mock ops object."""
     mock_ops = MagicMock()
     mock_ops.ctx.response_class.col_names_for_table = ["id_", "name", "path"]
-    with patch("rail_svc.cli.remote.base.remote_sync.estimates", return_value=mock_ops):
+    with patch("rail_svc.cli.remote.rail_svc.remote_sync.estimates", return_value=mock_ops):
         yield mock_ops
 
 
@@ -42,7 +42,7 @@ def mock_model_ops():
     """Mock remote_sync.model() to return a mock ops object."""
     mock_ops = MagicMock()
     mock_ops.ctx.response_class.col_names_for_table = ["id_", "name", "path"]
-    with patch("rail_svc.cli.remote.base.remote_sync.model", return_value=mock_ops):
+    with patch("rail_svc.cli.remote.rail_svc.remote_sync.model", return_value=mock_ops):
         yield mock_ops
 
 

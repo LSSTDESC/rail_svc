@@ -6,11 +6,11 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 import qp
+from macon.common import LoadType
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 from rail_svc import models
-from rail_svc.common import LoadType
 from rail_svc.db_oper.estimates import estimates
 
 
@@ -84,7 +84,7 @@ class TestEstimatesLoad:
         source_file = tmp_path / "estimates.hdf5"
         source_file.write_bytes(b"fake qp data")
 
-        with patch("rail_svc.db_oper.base.get_session", mock_get_session):
+        with patch("macon.db.session.get_session", mock_get_session):
             result = await estimates.load(
                 name="test_estimates",
                 orig_path=str(source_file),
@@ -112,8 +112,8 @@ class TestEstimatesLoad:
         (archive_dir / "estimates").mkdir()
 
         with (
-            patch("rail_svc.db_oper.base.get_session", mock_get_session),
-            patch("rail_svc.common.global_config.storage.archive", str(archive_dir)),
+            patch("macon.db.session.get_session", mock_get_session),
+            patch("macon.config.config.storage.archive", str(archive_dir)),
         ):
             result = await estimates.load(
                 name="copied_est",
@@ -135,7 +135,7 @@ class TestEstimatesLoad:
         source_file = tmp_path / "by_name.hdf5"
         source_file.write_bytes(b"data")
 
-        with patch("rail_svc.db_oper.base.get_session", mock_get_session):
+        with patch("macon.db.session.get_session", mock_get_session):
             result = await estimates.load(
                 name="by_name_est",
                 orig_path=str(source_file),

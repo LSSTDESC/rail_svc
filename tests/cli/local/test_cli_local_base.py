@@ -14,8 +14,8 @@ from click.testing import CliRunner
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.exc import IntegrityError
 
-from rail_svc.cli.local.base import CliOperations, handle_database_error
-from rail_svc.local_sync.base import SyncOperations
+from rail_svc.cli.local.rail_svc import CliOperations, handle_database_error
+from rail_svc.local_sync.rail_svc import SyncOperations
 from rail_svc.models import FilterOp
 from rail_svc.models.utils import OutputEnum
 
@@ -195,7 +195,7 @@ class TestUtilityMethods:
 class TestReadCommands:
     """Tests for read command registration."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_get_row_success(
         self,
         mock_init_db: MagicMock,
@@ -215,7 +215,7 @@ class TestReadCommands:
         mock_sync_ops.get_row.assert_called_once_with(row_id=1)
         mock_init_db.called
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_get_row_not_found(
         self,
         mock_init_db: MagicMock,
@@ -234,7 +234,7 @@ class TestReadCommands:
         assert result.exit_code != 0
         assert "Error" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_get_row_by_name_success(
         self,
         mock_init_db: MagicMock,
@@ -253,7 +253,7 @@ class TestReadCommands:
         assert result.exit_code == 0
         mock_sync_ops.get_row_by_name.assert_called_once_with(name="test")
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_get_rows_success(
         self,
         mock_init_db: MagicMock,
@@ -275,7 +275,7 @@ class TestReadCommands:
         assert result.exit_code == 0
         mock_sync_ops.get_rows.assert_called_once()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_get_rows_with_pagination(
         self,
         mock_init_db: MagicMock,
@@ -294,7 +294,7 @@ class TestReadCommands:
         assert result.exit_code == 0
         mock_sync_ops.get_rows.assert_called_once_with(skip=10, limit=20)
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_get_row_or_none_found(
         self,
         mock_init_db: MagicMock,
@@ -311,7 +311,7 @@ class TestReadCommands:
         result = runner.invoke(cli_group, ["get-row-if-exists", "1"])
         assert result.exit_code == 0
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_get_row_or_none_not_found(
         self,
         mock_init_db: MagicMock,
@@ -330,7 +330,7 @@ class TestReadCommands:
         assert result.exit_code == 0
         assert "No" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_count_rows_success(
         self,
         mock_init_db: MagicMock,
@@ -349,7 +349,7 @@ class TestReadCommands:
         assert result.exit_code == 0
         assert "42" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_lookup_by_id_success(
         self,
         mock_init_db: MagicMock,
@@ -368,7 +368,7 @@ class TestReadCommands:
         assert result.exit_code == 0
         mock_sync_ops.lookup_by_id_or_name.assert_called_once_with(row_id=1, name=None)
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_lookup_by_name_success(
         self,
         mock_init_db: MagicMock,
@@ -387,7 +387,7 @@ class TestReadCommands:
         assert result.exit_code == 0
         mock_sync_ops.lookup_by_id_or_name.assert_called_once_with(row_id=None, name="test")
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_lookup_without_params(
         self, mock_init_db: MagicMock, cli_ops: CliOperations, cli_group: click.Group, runner: CliRunner
     ) -> None:
@@ -399,7 +399,7 @@ class TestReadCommands:
         assert result.exit_code != 0
         assert "Error" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_lookup_with_both_params(
         self, mock_init_db: MagicMock, cli_ops: CliOperations, cli_group: click.Group, runner: CliRunner
     ) -> None:
@@ -428,7 +428,7 @@ class TestReadCommands:
 class TestCreateCommands:
     """Tests for create command registration."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_create_row_with_args(
         self,
         mock_init_db: MagicMock,
@@ -447,7 +447,7 @@ class TestCreateCommands:
         assert result.exit_code == 0
         mock_sync_ops.create_row.assert_called_once_with(validate=True, name="test", value=100)
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_create_row_from_json(
         self,
         mock_init_db: MagicMock,
@@ -473,7 +473,7 @@ class TestCreateCommands:
         finally:
             Path(temp_path).unlink()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_create_row_no_validate(
         self,
         mock_init_db: MagicMock,
@@ -492,7 +492,7 @@ class TestCreateCommands:
         assert result.exit_code == 0
         mock_sync_ops.create_row.assert_called_once_with(validate=False, name="test", value=100)
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_create_row_invalid_format(
         self, mock_init_db: MagicMock, cli_ops: CliOperations, cli_group: click.Group, runner: CliRunner
     ) -> None:
@@ -504,7 +504,7 @@ class TestCreateCommands:
         assert result.exit_code != 0
         assert "Invalid field format" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_create_row_no_data(
         self, mock_init_db: MagicMock, cli_ops: CliOperations, cli_group: click.Group, runner: CliRunner
     ) -> None:
@@ -516,7 +516,7 @@ class TestCreateCommands:
         assert result.exit_code != 0
         assert "No data provided" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_create_rows_success(
         self,
         mock_init_db: MagicMock,
@@ -546,7 +546,7 @@ class TestCreateCommands:
         finally:
             Path(temp_path).unlink()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_create_rows_not_array(
         self, mock_init_db: MagicMock, cli_ops: CliOperations, cli_group: click.Group, runner: CliRunner
     ) -> None:
@@ -565,7 +565,7 @@ class TestCreateCommands:
         finally:
             Path(temp_path).unlink()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_create_rows_batched_success(
         self,
         mock_init_db: MagicMock,
@@ -593,7 +593,7 @@ class TestCreateCommands:
         finally:
             Path(temp_path).unlink()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_create_rows_batched_invalid_size(
         self, mock_init_db: MagicMock, cli_ops: CliOperations, cli_group: click.Group, runner: CliRunner
     ) -> None:
@@ -612,7 +612,7 @@ class TestCreateCommands:
         finally:
             Path(temp_path).unlink()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_bulk_insert_rows_success(
         self,
         mock_init_db: MagicMock,
@@ -652,7 +652,7 @@ class TestCreateCommands:
 class TestUpdateCommands:
     """Tests for update command registration."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_update_row_with_args(
         self,
         mock_init_db: MagicMock,
@@ -671,7 +671,7 @@ class TestUpdateCommands:
         assert result.exit_code == 0
         mock_sync_ops.update_row.assert_called_once_with(row_id=1, name="updated", value=200)
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_update_row_from_json(
         self,
         mock_init_db: MagicMock,
@@ -696,7 +696,7 @@ class TestUpdateCommands:
         finally:
             Path(temp_path).unlink()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_update_row_no_data(
         self, mock_init_db: MagicMock, cli_ops: CliOperations, cli_group: click.Group, runner: CliRunner
     ) -> None:
@@ -708,7 +708,7 @@ class TestUpdateCommands:
         assert result.exit_code != 0
         assert "No update data" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_update_row_prevent_id_change(
         self, mock_init_db: MagicMock, cli_ops: CliOperations, cli_group: click.Group, runner: CliRunner
     ) -> None:
@@ -720,7 +720,7 @@ class TestUpdateCommands:
         assert result.exit_code != 0
         assert "Cannot change row ID" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_update_rows_success(
         self,
         mock_init_db: MagicMock,
@@ -749,7 +749,7 @@ class TestUpdateCommands:
         finally:
             Path(temp_path).unlink()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_update_rows_missing_id(
         self, mock_init_db: MagicMock, cli_ops: CliOperations, cli_group: click.Group, runner: CliRunner
     ) -> None:
@@ -780,7 +780,7 @@ class TestUpdateCommands:
 class TestDeleteCommands:
     """Tests for delete command registration."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_delete_row_with_confirmation(
         self,
         mock_init_db: MagicMock,
@@ -798,7 +798,7 @@ class TestDeleteCommands:
         assert result.exit_code == 0
         mock_sync_ops.delete_row.assert_called_once_with(row_id=1, capture_data=True)
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_delete_row_with_prompt_yes(
         self,
         mock_init_db: MagicMock,
@@ -817,7 +817,7 @@ class TestDeleteCommands:
         assert result.exit_code == 0
         mock_sync_ops.delete_row.assert_called_once()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_delete_row_with_prompt_no(
         self,
         mock_init_db: MagicMock,
@@ -835,7 +835,7 @@ class TestDeleteCommands:
         assert "cancelled" in result.output
         mock_sync_ops.delete_row.assert_not_called()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_delete_row_no_capture(
         self,
         mock_init_db: MagicMock,
@@ -854,7 +854,7 @@ class TestDeleteCommands:
         assert result.exit_code == 0
         mock_sync_ops.delete_row.assert_called_once_with(row_id=1, capture_data=False)
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_delete_rows_with_args(
         self,
         mock_init_db: MagicMock,
@@ -873,7 +873,7 @@ class TestDeleteCommands:
         assert result.exit_code == 0
         mock_sync_ops.delete_rows.assert_called_once_with(row_ids=[1, 2, 3], capture_data=False)
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_delete_rows_from_file_json(
         self,
         mock_init_db: MagicMock,
@@ -899,7 +899,7 @@ class TestDeleteCommands:
         finally:
             Path(temp_path).unlink()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_delete_rows_from_file_text(
         self,
         mock_init_db: MagicMock,
@@ -925,7 +925,7 @@ class TestDeleteCommands:
         finally:
             Path(temp_path).unlink()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_delete_rows_no_ids(
         self, mock_init_db: MagicMock, cli_ops: CliOperations, cli_group: click.Group, runner: CliRunner
     ) -> None:
@@ -937,7 +937,7 @@ class TestDeleteCommands:
         assert result.exit_code != 0
         assert "No IDs provided" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_delete_rows_with_capture(
         self,
         mock_init_db: MagicMock,
@@ -959,7 +959,7 @@ class TestDeleteCommands:
         assert result.exit_code == 0
         mock_sync_ops.delete_rows.assert_called_once_with(row_ids=[1, 2], capture_data=True)
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_bulk_delete_rows_success(
         self,
         mock_init_db: MagicMock,
@@ -978,7 +978,7 @@ class TestDeleteCommands:
         assert result.exit_code == 0
         assert "3" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_bulk_delete_rows_partial_success(
         self,
         mock_init_db: MagicMock,
@@ -1011,7 +1011,7 @@ class TestDeleteCommands:
 class TestFilterCommands:
     """Tests for filter command registration."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_filter_rows_single_condition(
         self,
         mock_init_db: MagicMock,
@@ -1039,7 +1039,7 @@ class TestFilterCommands:
         assert filters[0].field == "name"
         assert filters[0].op == FilterOp.EQ
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_filter_rows_multiple_conditions_and(
         self,
         mock_init_db: MagicMock,
@@ -1059,7 +1059,7 @@ class TestFilterCommands:
         call_args = mock_sync_ops.filter_rows.call_args
         assert call_args.kwargs["logical_op"] == "and"
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_filter_rows_multiple_conditions_or(
         self,
         mock_init_db: MagicMock,
@@ -1079,7 +1079,7 @@ class TestFilterCommands:
         call_args = mock_sync_ops.filter_rows.call_args
         assert call_args.kwargs["logical_op"] == "or"
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_filter_rows_with_order_by(
         self,
         mock_init_db: MagicMock,
@@ -1102,7 +1102,7 @@ class TestFilterCommands:
         assert order_by[0].field == "created_at"
         assert order_by[0].descending is True
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_filter_rows_invalid_format(
         self, mock_init_db: MagicMock, cli_ops: CliOperations, cli_group: click.Group, runner: CliRunner
     ) -> None:
@@ -1114,7 +1114,7 @@ class TestFilterCommands:
         assert result.exit_code != 0
         assert "Invalid filter format" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_filter_rows_invalid_operator(
         self, mock_init_db: MagicMock, cli_ops: CliOperations, cli_group: click.Group, runner: CliRunner
     ) -> None:
@@ -1125,7 +1125,7 @@ class TestFilterCommands:
         assert result.exit_code != 0
         assert "Unknown operator" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_filter_rows_in_operator(
         self,
         mock_init_db: MagicMock,
@@ -1147,7 +1147,7 @@ class TestFilterCommands:
         assert filters[0].op == FilterOp.IN
         assert filters[0].value == ["active", "pending", "done"]
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_count_filtered_rows_success(
         self,
         mock_init_db: MagicMock,
@@ -1166,7 +1166,7 @@ class TestFilterCommands:
         assert result.exit_code == 0
         assert "42" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_count_filtered_rows_no_filters(
         self,
         mock_init_db: MagicMock,
@@ -1185,7 +1185,7 @@ class TestFilterCommands:
         assert result.exit_code == 0
         assert "100" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_find_by_success(
         self,
         mock_init_db: MagicMock,
@@ -1206,7 +1206,7 @@ class TestFilterCommands:
         assert result.exit_code == 0
         mock_sync_ops.find_by.assert_called_once()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_find_by_no_conditions(
         self, mock_init_db: MagicMock, cli_ops: CliOperations, cli_group: click.Group, runner: CliRunner
     ) -> None:
@@ -1218,7 +1218,7 @@ class TestFilterCommands:
         assert result.exit_code != 0
         assert "No conditions provided" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_find_by_invalid_format(
         self, mock_init_db: MagicMock, cli_ops: CliOperations, cli_group: click.Group, runner: CliRunner
     ) -> None:
@@ -1230,7 +1230,7 @@ class TestFilterCommands:
         assert result.exit_code != 0
         assert "Invalid condition format" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_find_by_with_order_by(
         self,
         mock_init_db: MagicMock,
@@ -1253,7 +1253,7 @@ class TestFilterCommands:
         order_by = call_args.kwargs["order_by"]
         assert len(order_by) == 2
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_find_one_by_success(
         self,
         mock_init_db: MagicMock,
@@ -1272,7 +1272,7 @@ class TestFilterCommands:
         assert result.exit_code == 0
         mock_sync_ops.find_one_by.assert_called_once()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_find_one_by_no_conditions(
         self, mock_init_db: MagicMock, cli_ops: CliOperations, cli_group: click.Group, runner: CliRunner
     ) -> None:
@@ -1284,7 +1284,7 @@ class TestFilterCommands:
         assert result.exit_code != 0
         assert "No conditions provided" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_find_one_by_not_found(
         self,
         mock_init_db: MagicMock,
@@ -1317,7 +1317,7 @@ class TestFilterCommands:
 class TestJSONValueParsing:
     """Tests for JSON value parsing in commands."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_create_with_json_values(
         self,
         mock_init_db: MagicMock,
@@ -1338,7 +1338,7 @@ class TestJSONValueParsing:
         call_args = mock_sync_ops.create_row.call_args
         assert call_args.kwargs["active"] is True
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_create_with_string_values(
         self,
         mock_init_db: MagicMock,
@@ -1358,7 +1358,7 @@ class TestJSONValueParsing:
         call_args = mock_sync_ops.create_row.call_args
         assert call_args.kwargs["name"] == "test name"
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_filter_with_numeric_value(
         self,
         mock_init_db: MagicMock,
@@ -1385,8 +1385,8 @@ class TestJSONValueParsing:
 class TestOutputFormats:
     """Tests for different output format options."""
 
-    @patch("rail_svc.db.session.init_db")
-    @patch("rail_svc.cli.local.base.output_pydantic")
+    @patch("macon.db.session.init_db")
+    @patch("rail_svc.cli.local.rail_svc.output_pydantic")
     def test_get_rows_json_output(
         self,
         mock_output: MagicMock,
@@ -1408,8 +1408,8 @@ class TestOutputFormats:
         mock_output.assert_called_once()
         assert mock_output.call_args[0][1] == OutputEnum.json
 
-    @patch("rail_svc.db.session.init_db")
-    @patch("rail_svc.cli.local.base.output_pydantic")
+    @patch("macon.db.session.init_db")
+    @patch("rail_svc.cli.local.rail_svc.output_pydantic")
     def test_get_rows_table_output(
         self,
         mock_output: MagicMock,
@@ -1430,8 +1430,8 @@ class TestOutputFormats:
         assert result.exit_code == 0
         assert mock_output.call_args[0][1] == OutputEnum.table
 
-    @patch("rail_svc.db.session.init_db")
-    @patch("rail_svc.cli.local.base.output_pydantic")
+    @patch("macon.db.session.init_db")
+    @patch("rail_svc.cli.local.rail_svc.output_pydantic")
     def test_get_rows_yaml_output(
         self,
         mock_output: MagicMock,
@@ -1457,7 +1457,7 @@ class TestOutputFormats:
 class TestErrorHandling:
     """Tests for error handling in various scenarios."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_create_with_validation_error(
         self,
         mock_init_db: MagicMock,
@@ -1478,7 +1478,7 @@ class TestErrorHandling:
         assert result.exit_code != 0
         assert "Validation failed" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_create_with_integrity_error(
         self,
         mock_init_db: MagicMock,
@@ -1497,7 +1497,7 @@ class TestErrorHandling:
         assert result.exit_code != 0
         assert "Integrity constraint" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_update_with_value_error(
         self,
         mock_init_db: MagicMock,
@@ -1516,7 +1516,7 @@ class TestErrorHandling:
         assert result.exit_code != 0
         assert "Error" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_filter_with_generic_error(
         self,
         mock_init_db: MagicMock,
@@ -1540,7 +1540,7 @@ class TestErrorHandling:
 class TestFileOperations:
     """Tests for file-based operations."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_create_from_json_invalid_file(
         self, mock_init_db: MagicMock, cli_ops: CliOperations, cli_group: click.Group, runner: CliRunner
     ) -> None:
@@ -1552,7 +1552,7 @@ class TestFileOperations:
         assert result.exit_code != 0
         assert "Usage" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_create_rows_invalid_json(
         self, mock_init_db: MagicMock, cli_ops: CliOperations, cli_group: click.Group, runner: CliRunner
     ) -> None:
@@ -1571,7 +1571,7 @@ class TestFileOperations:
         finally:
             Path(temp_path).unlink()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_delete_from_file_mixed_format(
         self,
         mock_init_db: MagicMock,
@@ -1599,7 +1599,7 @@ class TestFileOperations:
         finally:
             Path(temp_path).unlink()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_update_from_json_not_dict(
         self, mock_init_db: MagicMock, cli_ops: CliOperations, cli_group: click.Group, runner: CliRunner
     ) -> None:
@@ -1623,7 +1623,7 @@ class TestFileOperations:
 class TestPagination:
     """Tests for pagination parameters."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_get_rows_negative_skip(
         self, mock_init_db: MagicMock, cli_ops: CliOperations, cli_group: click.Group, runner: CliRunner
     ) -> None:
@@ -1635,7 +1635,7 @@ class TestPagination:
         # Click should validate this before our code
         assert result.exit_code != 0
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_get_rows_with_page_size(
         self,
         mock_init_db: MagicMock,
@@ -1656,7 +1656,7 @@ class TestPagination:
         call_args = mock_sync_ops.get_rows.call_args
         assert call_args.kwargs["limit"] == 50
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_filter_rows_pagination(
         self,
         mock_init_db: MagicMock,
@@ -1703,7 +1703,7 @@ class TestInitialization:
 class TestSpecialCases:
     """Tests for special cases and edge conditions."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_delete_with_empty_file(
         self, mock_init_db: MagicMock, cli_ops: CliOperations, cli_group: click.Group, runner: CliRunner
     ) -> None:
@@ -1722,7 +1722,7 @@ class TestSpecialCases:
         finally:
             Path(temp_path).unlink()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_bulk_delete_from_json_not_array(
         self, mock_init_db: MagicMock, cli_ops: CliOperations, cli_group: click.Group, runner: CliRunner
     ) -> None:
@@ -1741,7 +1741,7 @@ class TestSpecialCases:
         finally:
             Path(temp_path).unlink()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_filter_with_like_operator(
         self,
         mock_init_db: MagicMock,
@@ -1763,7 +1763,7 @@ class TestSpecialCases:
         assert filters[0].op == FilterOp.LIKE
         assert filters[0].value == ["%test%"]
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_find_by_with_json_array_value(
         self,
         mock_init_db: MagicMock,
@@ -1784,7 +1784,7 @@ class TestSpecialCases:
         # Should parse as JSON array
         assert isinstance(call_args.kwargs["tags"], list)
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_create_with_null_value(
         self,
         mock_init_db: MagicMock,
@@ -1850,7 +1850,7 @@ class TestCommandRegistrationGroups:
 class TestOrderByParsing:
     """Tests for order by parameter parsing."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_filter_order_by_ascending(
         self,
         mock_init_db: MagicMock,
@@ -1872,7 +1872,7 @@ class TestOrderByParsing:
         assert order_by[0].field == "name"
         assert order_by[0].descending is False
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_filter_order_by_descending(
         self,
         mock_init_db: MagicMock,
@@ -1894,7 +1894,7 @@ class TestOrderByParsing:
         assert order_by[0].field == "created_at"
         assert order_by[0].descending is True
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_find_by_multiple_order_by(
         self,
         mock_init_db: MagicMock,
@@ -1926,7 +1926,7 @@ class TestOrderByParsing:
 class TestConfirmationPrompts:
     """Tests for confirmation prompt behavior."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_delete_many_prompt_cancelled(
         self,
         mock_init_db: MagicMock,
@@ -1944,7 +1944,7 @@ class TestConfirmationPrompts:
         assert "cancelled" in result.output
         mock_sync_ops.delete_rows.assert_not_called()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_delete_many_prompt_confirmed(
         self,
         mock_init_db: MagicMock,
@@ -1963,7 +1963,7 @@ class TestConfirmationPrompts:
         assert result.exit_code == 0
         mock_sync_ops.delete_rows.assert_called_once()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_bulk_delete_prompt_with_warning(
         self,
         mock_init_db: MagicMock,
@@ -1986,7 +1986,7 @@ class TestConfirmationPrompts:
 class TestComplexFilterScenarios:
     """Tests for complex filtering scenarios."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_filter_multiple_operators(
         self,
         mock_init_db: MagicMock,
@@ -2024,7 +2024,7 @@ class TestComplexFilterScenarios:
         assert filters[2].op == FilterOp.LT
         assert filters[3].op == FilterOp.IN
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_filter_with_all_options(
         self,
         mock_init_db: MagicMock,
@@ -2070,7 +2070,7 @@ class TestComplexFilterScenarios:
 class TestValueParsingEdgeCases:
     """Tests for edge cases in value parsing."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_create_with_empty_string(
         self,
         mock_init_db: MagicMock,
@@ -2090,7 +2090,7 @@ class TestValueParsingEdgeCases:
         call_args = mock_sync_ops.create_row.call_args
         assert call_args.kwargs["name"] == ""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_create_with_equals_in_value(
         self,
         mock_init_db: MagicMock,
@@ -2110,7 +2110,7 @@ class TestValueParsingEdgeCases:
         call_args = mock_sync_ops.create_row.call_args
         assert call_args.kwargs["name"] == "a=b"
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_filter_with_special_characters(
         self,
         mock_init_db: MagicMock,
@@ -2136,7 +2136,7 @@ class TestValueParsingEdgeCases:
 class TestBatchSizeValidation:
     """Tests for batch size validation."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_create_batched_default_batch_size(
         self,
         mock_init_db: MagicMock,
@@ -2163,7 +2163,7 @@ class TestBatchSizeValidation:
         finally:
             Path(temp_path).unlink()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_create_batched_custom_batch_size(
         self,
         mock_init_db: MagicMock,
@@ -2195,7 +2195,7 @@ class TestBatchSizeValidation:
 class TestSuccessMessages:
     """Tests for success message output."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_create_success_message(
         self,
         mock_init_db: MagicMock,
@@ -2215,7 +2215,7 @@ class TestSuccessMessages:
         assert "Created" in result.output
         assert "successfully" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_update_success_message(
         self,
         mock_init_db: MagicMock,
@@ -2234,7 +2234,7 @@ class TestSuccessMessages:
         assert result.exit_code == 0
         assert "Successfully updated" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     def test_delete_success_message(
         self,
         mock_init_db: MagicMock,

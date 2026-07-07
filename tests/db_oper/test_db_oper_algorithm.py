@@ -1,10 +1,10 @@
 """Unit tests for Algorithm table operations."""
 
 import pytest
+from macon.db_oper.base import TableContext
 
 from rail_svc.db import Algorithm
 from rail_svc.db_oper.algorithm import AlgorithmOperations, algorithm
-from rail_svc.db_oper.base import TableContext
 from rail_svc.models import Algorithm as AlgorithmModel
 
 # ============================================================================
@@ -25,7 +25,7 @@ async def test_algorithm_operations_inherits_crud_methods(session, sample_algori
 @pytest.mark.asyncio
 async def test_algorithm_operations_inherits_filter_methods(session, multiple_algorithms):
     """Test that AlgorithmOperations inherits filter methods from base."""
-    from rail_svc.models.filtering import Filter, FilterOp
+    from macon.models.filtering import Filter, FilterOp
 
     context = TableContext.from_db_class(Algorithm)
     ops = AlgorithmOperations(context)
@@ -80,7 +80,7 @@ async def test_module_singleton_create_row(session):
 @pytest.mark.asyncio
 async def test_module_singleton_filter_rows(session, multiple_algorithms):
     """Test that module singleton can filter rows."""
-    from rail_svc.models.filtering import Filter, FilterOp
+    from macon.models.filtering import Filter, FilterOp
 
     filters = [Filter(field="name", op=FilterOp.IN, value=["knn", "xgboost"])]
     results = await algorithm.filter_rows(session, filters=filters)

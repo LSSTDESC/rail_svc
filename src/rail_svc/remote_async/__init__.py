@@ -19,13 +19,13 @@ Examples
 """
 
 from .. import models
-from ..client.base import (
+from ..client.rail_svc import (
     RemoteDatasetOperations,
     RemoteEstimatesOperations,
     RemoteModelOperations,
 )
-from ..config import config as global_config
-from .base import (
+from macon.config import config as global_config
+from .rail_svc import (
     AsyncRemoteDatasetOperations,
     AsyncRemoteEstimatesOperations,
     AsyncRemoteModelOperations,

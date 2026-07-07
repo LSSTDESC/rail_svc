@@ -1,6 +1,6 @@
 from .. import local_async
 from . import funcs
-from .base import (
+from .rail_svc import (
     AlgorithmSyncOperations,
     BandSyncOperations,
     CatalogBandAssocOperations,

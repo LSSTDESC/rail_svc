@@ -11,9 +11,9 @@ import pytest
 from click.testing import CliRunner
 from pydantic import BaseModel, ValidationError
 
-from rail_svc.cli.remote.base import CliRemoteOperations
+from rail_svc.cli.remote.rail_svc import CliRemoteOperations
 from rail_svc.models import FilterOp
-from rail_svc.remote_sync.base import SyncRemoteOperations
+from rail_svc.remote_sync.rail_svc import SyncRemoteOperations
 
 
 # Test models

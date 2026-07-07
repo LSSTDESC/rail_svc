@@ -16,7 +16,7 @@ Examples
 from typing import Any
 
 from .. import remote_async
-from .base import (
+from .rail_svc import (
     AlgorithmSyncRemoteOperations,
     BandSyncRemoteOperations,
     CatalogBandAssocSyncRemoteOperations,

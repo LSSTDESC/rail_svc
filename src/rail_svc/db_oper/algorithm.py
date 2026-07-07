@@ -4,8 +4,9 @@ Algorithm table operations.
 Provides CRUD operations and Pydantic conversions for the Algorithm table.
 """
 
+from macon.db_oper.base import TableContext, TableOperations
+
 from .. import db, models
-from .base import TableContext, TableOperations
 
 
 class AlgorithmOperations(TableOperations[db.Algorithm, models.Algorithm, models.AlgorithmCreate]):

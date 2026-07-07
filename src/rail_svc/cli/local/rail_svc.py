@@ -6,14 +6,14 @@ from typing import Any, TypeVar, cast
 
 import aiofiles
 import click
+from macon.common import unexpected
+from macon.db.base import Base
+from macon.db.session import init_db
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.exc import IntegrityError
 
 from ... import local_sync
-from ...common import unexpected
-from ...db.base import Base
-from ...db.session import init_db
-from ...local_sync.base import SyncOperations
+from ...local_sync.rail_svc import SyncOperations
 from ...models import Filter, FilterOp, OrderBy
 from ...models.utils import OutputEnum, output_pydantic
 from .. import common_options

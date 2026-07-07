@@ -1,9 +1,9 @@
 """Unit tests for CatalogBandAssoc table operations."""
 
 import pytest
+from macon.db_oper.base import TableContext
 
 from rail_svc.db import CatalogBandAssoc
-from rail_svc.db_oper.base import TableContext
 from rail_svc.db_oper.catalog_band_assoc import CatalogBandAssocOperations, catalog_band_assoc
 from rail_svc.models import CatalogBandAssoc as CatalogBandAssocModel
 
@@ -25,7 +25,7 @@ async def test_catalog_band_assoc_operations_inherits_crud_methods(session, samp
 @pytest.mark.asyncio
 async def test_catalog_band_assoc_operations_inherits_filter_methods(session, multiple_catalog_band_assocs):
     """Test that CatalogBandAssocOperations inherits filter methods from base."""
-    from rail_svc.models.filtering import Filter, FilterOp
+    from macon.models.filtering import Filter, FilterOp
 
     context = TableContext.from_db_class(CatalogBandAssoc)
     ops = CatalogBandAssocOperations(context)
@@ -186,7 +186,7 @@ async def test_get_create_kwargs_nonexistent_catalog_tag_name(session, sample_ba
     context = TableContext.from_db_class(CatalogBandAssoc)
     ops = CatalogBandAssocOperations(context)
 
-    with pytest.raises(KeyError, match="CatalogTag 'nonexistent' not found"):
+    with pytest.raises(ValueError, match="CatalogTag with name 'nonexistent' not found"):
         await ops.get_create_kwargs(
             session,
             mag_column_name="g_mag",
@@ -202,7 +202,7 @@ async def test_get_create_kwargs_nonexistent_band_name(session, sample_catalog_t
     context = TableContext.from_db_class(CatalogBandAssoc)
     ops = CatalogBandAssocOperations(context)
 
-    with pytest.raises(KeyError, match="Band 'nonexistent' not found"):
+    with pytest.raises(ValueError, match="Band with name 'nonexistent' not found"):
         await ops.get_create_kwargs(
             session,
             mag_column_name="g_mag",

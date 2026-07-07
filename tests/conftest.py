@@ -1,7 +1,9 @@
 """Shared test fixtures for database tests"""
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from macon.db.base import Base
+from macon.db.session import close_db, init_db
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 from rail_svc.db import (
@@ -17,7 +19,24 @@ from rail_svc.db import (
     Model,
     Sed,
 )
-from rail_svc.db.base import Base
+
+
+async def create(session, obj):
+    """Add, commit, and refresh a single ORM object."""
+    session.add(obj)
+    await session.commit()
+    await session.refresh(obj)
+    return obj
+
+
+async def create_all(session, objs):
+    """Add, commit, and refresh multiple ORM objects."""
+    session.add_all(objs)
+    await session.commit()
+    for obj in objs:
+        await session.refresh(obj)
+    return objs
+
 
 # ============================================================================
 # Database Fixtures
@@ -27,24 +46,21 @@ from rail_svc.db.base import Base
 @pytest.fixture
 async def engine():
     """Create an in-memory SQLite database engine for testing."""
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        echo=False,
-    )
+    init_db("sqlite+aiosqlite:///:memory:", echo=False)
 
+    from macon.db import session as macon_session
+
+    engine = macon_session._engine
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-
     yield engine
-
-    await engine.dispose()
+    await close_db()
 
 
 @pytest.fixture
 async def session(engine):
     """Create a database session for testing."""
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-
     async with async_session() as session:
         yield session
 
@@ -56,30 +72,19 @@ async def session(engine):
 
 @pytest.fixture
 async def sample_algorithm(session):
-    """Create a sample algorithm for testing."""
-    algo = Algorithm(name="test_algorithm", class_name="rail.estimation.SOMEstimator")
-    session.add(algo)
-    await session.commit()
-    await session.refresh(algo)
-    return algo
+    return await create(session, Algorithm(name="test_algorithm", class_name="rail.estimation.SOMEstimator"))
 
 
 @pytest.fixture
 async def multiple_algorithms(session):
-    """Create multiple algorithms for testing."""
-    algorithms = [
-        Algorithm(name="knn", class_name="sklearn.neighbors.KNeighborsClassifier"),
-        Algorithm(name="random_forest", class_name="sklearn.ensemble.RandomForestClassifier"),
-        Algorithm(name="xgboost", class_name="xgboost.XGBClassifier"),
-    ]
-    for algo in algorithms:
-        session.add(algo)
-    await session.commit()
-
-    for algo in algorithms:
-        await session.refresh(algo)
-
-    return algorithms
+    return await create_all(
+        session,
+        [
+            Algorithm(name="knn", class_name="sklearn.neighbors.KNeighborsClassifier"),
+            Algorithm(name="random_forest", class_name="sklearn.ensemble.RandomForestClassifier"),
+            Algorithm(name="xgboost", class_name="xgboost.XGBClassifier"),
+        ],
+    )
 
 
 # ============================================================================
@@ -89,30 +94,22 @@ async def multiple_algorithms(session):
 
 @pytest.fixture
 async def sample_band(session):
-    """Create a sample band for testing."""
-    band = Band(name="g_band", band_wavelengths=[400.0, 500.0, 600.0], band_transmission=[0.1, 0.9, 0.2])
-    session.add(band)
-    await session.commit()
-    await session.refresh(band)
-    return band
+    return await create(
+        session,
+        Band(name="g_band", band_wavelengths=[400.0, 500.0, 600.0], band_transmission=[0.1, 0.9, 0.2]),
+    )
 
 
 @pytest.fixture
 async def multiple_bands(session):
-    """Create multiple bands for testing."""
-    bands = [
-        Band(name="u_band", band_wavelengths=[300.0, 350.0, 400.0], band_transmission=[0.05, 0.85, 0.15]),
-        Band(name="r_band", band_wavelengths=[550.0, 650.0, 750.0], band_transmission=[0.2, 0.95, 0.25]),
-        Band(name="i_band", band_wavelengths=[650.0, 750.0, 850.0], band_transmission=[0.15, 0.9, 0.2]),
-    ]
-    for band in bands:
-        session.add(band)
-    await session.commit()
-
-    for band in bands:
-        await session.refresh(band)
-
-    return bands
+    return await create_all(
+        session,
+        [
+            Band(name="u_band", band_wavelengths=[300.0, 350.0, 400.0], band_transmission=[0.05, 0.85, 0.15]),
+            Band(name="r_band", band_wavelengths=[550.0, 650.0, 750.0], band_transmission=[0.2, 0.95, 0.25]),
+            Band(name="i_band", band_wavelengths=[650.0, 750.0, 850.0], band_transmission=[0.15, 0.9, 0.2]),
+        ],
+    )
 
 
 # ============================================================================
@@ -122,30 +119,19 @@ async def multiple_bands(session):
 
 @pytest.fixture
 async def sample_catalog_tag(session):
-    """Create a sample catalog tag for testing."""
-    tag = CatalogTag(name="lsst_dp02")
-    session.add(tag)
-    await session.commit()
-    await session.refresh(tag)
-    return tag
+    return await create(session, CatalogTag(name="lsst_dp02"))
 
 
 @pytest.fixture
 async def multiple_catalog_tags(session):
-    """Create multiple catalog tags for testing."""
-    tags = [
-        CatalogTag(name="roman"),
-        CatalogTag(name="rubin"),
-        CatalogTag(name="hsc_pdr3"),
-    ]
-    for tag in tags:
-        session.add(tag)
-    await session.commit()
-
-    for tag in tags:
-        await session.refresh(tag)
-
-    return tags
+    return await create_all(
+        session,
+        [
+            CatalogTag(name="roman"),
+            CatalogTag(name="rubin"),
+            CatalogTag(name="hsc_pdr3"),
+        ],
+    )
 
 
 # ============================================================================
@@ -155,50 +141,31 @@ async def multiple_catalog_tags(session):
 
 @pytest.fixture
 async def sample_catalog_band_assoc(session, sample_catalog_tag, sample_band):
-    """Create a sample catalog band association for testing."""
-    assoc = CatalogBandAssoc(
-        catalog_tag_id=sample_catalog_tag.id_,
-        band_id=sample_band.id_,
-        mag_column_name="g_mag",
-        mag_err_column_name="g_mag_err",
+    return await create(
+        session,
+        CatalogBandAssoc(
+            catalog_tag_id=sample_catalog_tag.id_,
+            band_id=sample_band.id_,
+            mag_column_name="g_mag",
+            mag_err_column_name="g_mag_err",
+        ),
     )
-    session.add(assoc)
-    await session.commit()
-    await session.refresh(assoc)
-    return assoc
 
 
 @pytest.fixture
 async def multiple_catalog_band_assocs(session, sample_catalog_tag, multiple_bands):
-    """Create multiple catalog band associations for testing."""
-    assocs = [
-        CatalogBandAssoc(
-            catalog_tag_id=sample_catalog_tag.id_,
-            band_id=multiple_bands[0].id_,
-            mag_column_name="r_mag",
-            mag_err_column_name="r_mag_err",
-        ),
-        CatalogBandAssoc(
-            catalog_tag_id=sample_catalog_tag.id_,
-            band_id=multiple_bands[1].id_,
-            mag_column_name="i_mag",
-            mag_err_column_name="i_mag_err",
-        ),
-        CatalogBandAssoc(
-            catalog_tag_id=sample_catalog_tag.id_,
-            band_id=multiple_bands[2].id_,
-            mag_column_name="z_mag",
-            mag_err_column_name="z_mag_err",
-        ),
-    ]
-    for assoc in assocs:
-        session.add(assoc)
-    await session.commit()
-
-    for assoc in assocs:
-        await session.refresh(assoc)
-
-    return assocs
+    return await create_all(
+        session,
+        [
+            CatalogBandAssoc(
+                catalog_tag_id=sample_catalog_tag.id_,
+                band_id=multiple_bands[i].id_,
+                mag_column_name=f"{name}_mag",
+                mag_err_column_name=f"{name}_mag_err",
+            )
+            for i, name in enumerate(["r", "i", "z"])
+        ],
+    )
 
 
 # ============================================================================
@@ -208,54 +175,46 @@ async def multiple_catalog_band_assocs(session, sample_catalog_tag, multiple_ban
 
 @pytest.fixture
 async def sample_dataset(session, sample_catalog_tag):
-    """Create a sample dataset for testing."""
-    dataset = Dataset(
-        name="test_dataset",
-        n_objects=10000,
-        path="/data/test_dataset.hdf5",
-        is_collection=False,
-        catalog_tag_id=sample_catalog_tag.id_,
+    return await create(
+        session,
+        Dataset(
+            name="test_dataset",
+            n_objects=10000,
+            path="/data/test_dataset.hdf5",
+            is_collection=False,
+            catalog_tag_id=sample_catalog_tag.id_,
+        ),
     )
-    session.add(dataset)
-    await session.commit()
-    await session.refresh(dataset)
-    return dataset
 
 
 @pytest.fixture
 async def multiple_datasets(session, sample_catalog_tag):
-    """Create multiple datasets for testing."""
-    datasets = [
-        Dataset(
-            name="photometric_data",
-            n_objects=50000,
-            path="/data/photometric.hdf5",
-            is_collection=False,
-            catalog_tag_id=sample_catalog_tag.id_,
-        ),
-        Dataset(
-            name="spectroscopic_data",
-            n_objects=5000,
-            path="/data/spectroscopic.hdf5",
-            is_collection=False,
-            catalog_tag_id=sample_catalog_tag.id_,
-        ),
-        Dataset(
-            name="combined_collection",
-            n_objects=55000,
-            path="/data/combined/",
-            is_collection=True,
-            catalog_tag_id=sample_catalog_tag.id_,
-        ),
-    ]
-    for dataset in datasets:
-        session.add(dataset)
-    await session.commit()
-
-    for dataset in datasets:
-        await session.refresh(dataset)
-
-    return datasets
+    return await create_all(
+        session,
+        [
+            Dataset(
+                name="photometric_data",
+                n_objects=50000,
+                path="/data/photometric.hdf5",
+                is_collection=False,
+                catalog_tag_id=sample_catalog_tag.id_,
+            ),
+            Dataset(
+                name="spectroscopic_data",
+                n_objects=5000,
+                path="/data/spectroscopic.hdf5",
+                is_collection=False,
+                catalog_tag_id=sample_catalog_tag.id_,
+            ),
+            Dataset(
+                name="combined_collection",
+                n_objects=55000,
+                path="/data/combined/",
+                is_collection=True,
+                catalog_tag_id=sample_catalog_tag.id_,
+            ),
+        ],
+    )
 
 
 # ============================================================================
@@ -265,89 +224,75 @@ async def multiple_datasets(session, sample_catalog_tag):
 
 @pytest.fixture
 async def matched_dataset(session, sample_catalog_tag):
-    """Create a matched dataset for testing."""
-    dataset = Dataset(
-        name="matched_catalog",
-        n_objects=10000,
-        path="/data/matched.hdf5",
-        is_collection=False,
-        catalog_tag_id=sample_catalog_tag.id_,
+    return await create(
+        session,
+        Dataset(
+            name="matched_catalog",
+            n_objects=10000,
+            path="/data/matched.hdf5",
+            is_collection=False,
+            catalog_tag_id=sample_catalog_tag.id_,
+        ),
     )
-    session.add(dataset)
-    await session.commit()
-    await session.refresh(dataset)
-    return dataset
 
 
 @pytest.fixture
 async def component_dataset_1(session, sample_catalog_tag):
-    """Create first component dataset for testing."""
-    dataset = Dataset(
-        name="gaia_dr3",
-        n_objects=5000,
-        path="/data/gaia.hdf5",
-        is_collection=False,
-        catalog_tag_id=sample_catalog_tag.id_,
+    return await create(
+        session,
+        Dataset(
+            name="gaia_dr3",
+            n_objects=5000,
+            path="/data/gaia.hdf5",
+            is_collection=False,
+            catalog_tag_id=sample_catalog_tag.id_,
+        ),
     )
-    session.add(dataset)
-    await session.commit()
-    await session.refresh(dataset)
-    return dataset
 
 
 @pytest.fixture
 async def component_dataset_2(session, sample_catalog_tag):
-    """Create second component dataset for testing."""
-    dataset = Dataset(
-        name="sdss_dr17",
-        n_objects=6000,
-        path="/data/sdss.hdf5",
-        is_collection=False,
-        catalog_tag_id=sample_catalog_tag.id_,
+    return await create(
+        session,
+        Dataset(
+            name="sdss_dr17",
+            n_objects=6000,
+            path="/data/sdss.hdf5",
+            is_collection=False,
+            catalog_tag_id=sample_catalog_tag.id_,
+        ),
     )
-    session.add(dataset)
-    await session.commit()
-    await session.refresh(dataset)
-    return dataset
 
 
 @pytest.fixture
 async def sample_dataset_assoc(session, matched_dataset, component_dataset_1):
-    """Create a sample dataset association for testing."""
-    assoc = DatasetAssoc(
-        name="gaia_to_matched",
-        matched_dataset_id=matched_dataset.id_,
-        component_dataset_id=component_dataset_1.id_,
+    return await create(
+        session,
+        DatasetAssoc(
+            name="gaia_to_matched",
+            matched_dataset_id=matched_dataset.id_,
+            component_dataset_id=component_dataset_1.id_,
+        ),
     )
-    session.add(assoc)
-    await session.commit()
-    await session.refresh(assoc)
-    return assoc
 
 
 @pytest.fixture
 async def multiple_dataset_assocs(session, matched_dataset, component_dataset_1, component_dataset_2):
-    """Create multiple dataset associations for testing."""
-    assocs = [
-        DatasetAssoc(
-            name="gaia_to_match",
-            matched_dataset_id=matched_dataset.id_,
-            component_dataset_id=component_dataset_1.id_,
-        ),
-        DatasetAssoc(
-            name="sdss_to_match",
-            matched_dataset_id=matched_dataset.id_,
-            component_dataset_id=component_dataset_2.id_,
-        ),
-    ]
-    for assoc in assocs:
-        session.add(assoc)
-    await session.commit()
-
-    for assoc in assocs:
-        await session.refresh(assoc)
-
-    return assocs
+    return await create_all(
+        session,
+        [
+            DatasetAssoc(
+                name="gaia_to_match",
+                matched_dataset_id=matched_dataset.id_,
+                component_dataset_id=component_dataset_1.id_,
+            ),
+            DatasetAssoc(
+                name="sdss_to_match",
+                matched_dataset_id=matched_dataset.id_,
+                component_dataset_id=component_dataset_2.id_,
+            ),
+        ],
+    )
 
 
 # ============================================================================
@@ -357,54 +302,33 @@ async def multiple_dataset_assocs(session, matched_dataset, component_dataset_1,
 
 @pytest.fixture
 async def sample_estimates(session, sample_dataset, sample_estimator):
-    """Create a sample estimates for testing."""
-    estimates = Estimates(
-        name="test_estimates",
-        n_objects=10000,
-        path="/results/test_estimates.hdf5",
-        dataset_id=sample_dataset.id_,
-        estimator_id=sample_estimator.id_,
+    return await create(
+        session,
+        Estimates(
+            name="test_estimates",
+            n_objects=10000,
+            path="/results/test_estimates.hdf5",
+            dataset_id=sample_dataset.id_,
+            estimator_id=sample_estimator.id_,
+        ),
     )
-    session.add(estimates)
-    await session.commit()
-    await session.refresh(estimates)
-    return estimates
 
 
 @pytest.fixture
 async def multiple_estimates(session, sample_dataset, sample_estimator):
-    """Create multiple estimates for testing."""
-    estimates_list = [
-        Estimates(
-            name="estimates_v1",
-            n_objects=5000,
-            path="/results/estimates_v1.hdf5",
-            dataset_id=sample_dataset.id_,
-            estimator_id=sample_estimator.id_,
-        ),
-        Estimates(
-            name="estimates_v2",
-            n_objects=5000,
-            path="/results/estimates_v2.hdf5",
-            dataset_id=sample_dataset.id_,
-            estimator_id=sample_estimator.id_,
-        ),
-        Estimates(
-            name="estimates_v3",
-            n_objects=5000,
-            path="/results/estimates_v3.hdf5",
-            dataset_id=sample_dataset.id_,
-            estimator_id=sample_estimator.id_,
-        ),
-    ]
-    for est in estimates_list:
-        session.add(est)
-    await session.commit()
-
-    for est in estimates_list:
-        await session.refresh(est)
-
-    return estimates_list
+    return await create_all(
+        session,
+        [
+            Estimates(
+                name=f"estimates_v{i}",
+                n_objects=5000,
+                path=f"/results/estimates_v{i}.hdf5",
+                dataset_id=sample_dataset.id_,
+                estimator_id=sample_estimator.id_,
+            )
+            for i in range(1, 4)
+        ],
+    )
 
 
 # ============================================================================
@@ -414,32 +338,25 @@ async def multiple_estimates(session, sample_dataset, sample_estimator):
 
 @pytest.fixture
 async def sample_estimator(session, sample_model):
-    """Create a sample estimator for testing."""
-    estimator = Estimator(
-        name="knn_estimator", config={"n_neighbors": 5, "weights": "distance"}, model_id=sample_model.id_
+    return await create(
+        session,
+        Estimator(
+            name="knn_estimator",
+            config={"n_neighbors": 5, "weights": "distance"},
+            model_id=sample_model.id_,
+        ),
     )
-    session.add(estimator)
-    await session.commit()
-    await session.refresh(estimator)
-    return estimator
 
 
 @pytest.fixture
 async def multiple_estimators(session, sample_model):
-    """Create multiple estimators for testing."""
-    estimators = [
-        Estimator(name="estimator_v1", config={"n_neighbors": 3}, model_id=sample_model.id_),
-        Estimator(name="estimator_v2", config={"n_neighbors": 5}, model_id=sample_model.id_),
-        Estimator(name="estimator_v3", config={"n_neighbors": 10}, model_id=sample_model.id_),
-    ]
-    for est in estimators:
-        session.add(est)
-    await session.commit()
-
-    for est in estimators:
-        await session.refresh(est)
-
-    return estimators
+    return await create_all(
+        session,
+        [
+            Estimator(name=f"estimator_v{i}", config={"n_neighbors": n}, model_id=sample_model.id_)
+            for i, n in [(1, 3), (2, 5), (3, 10)]
+        ],
+    )
 
 
 # ============================================================================
@@ -449,50 +366,31 @@ async def multiple_estimators(session, sample_model):
 
 @pytest.fixture
 async def sample_model(session, sample_algorithm, sample_catalog_tag):
-    """Create a sample model for testing."""
-    model = Model(
-        name="knn_model",
-        path="/models/knn.pkl",
-        algo_id=sample_algorithm.id_,
-        catalog_tag_id=sample_catalog_tag.id_,
+    return await create(
+        session,
+        Model(
+            name="knn_model",
+            path="/models/knn.pkl",
+            algo_id=sample_algorithm.id_,
+            catalog_tag_id=sample_catalog_tag.id_,
+        ),
     )
-    session.add(model)
-    await session.commit()
-    await session.refresh(model)
-    return model
 
 
 @pytest.fixture
 async def multiple_models(session, sample_algorithm, sample_catalog_tag):
-    """Create multiple models for testing."""
-    models = [
-        Model(
-            name="model_v1",
-            path="/models/model_v1.pkl",
-            algo_id=sample_algorithm.id_,
-            catalog_tag_id=sample_catalog_tag.id_,
-        ),
-        Model(
-            name="model_v2",
-            path="/models/model_v2.pkl",
-            algo_id=sample_algorithm.id_,
-            catalog_tag_id=sample_catalog_tag.id_,
-        ),
-        Model(
-            name="model_v3",
-            path="/models/model_v3.pkl",
-            algo_id=sample_algorithm.id_,
-            catalog_tag_id=sample_catalog_tag.id_,
-        ),
-    ]
-    for model in models:
-        session.add(model)
-    await session.commit()
-
-    for model in models:
-        await session.refresh(model)
-
-    return models
+    return await create_all(
+        session,
+        [
+            Model(
+                name=f"model_v{i}",
+                path=f"/models/model_v{i}.pkl",
+                algo_id=sample_algorithm.id_,
+                catalog_tag_id=sample_catalog_tag.id_,
+            )
+            for i in range(1, 4)
+        ],
+    )
 
 
 # ============================================================================
@@ -502,46 +400,38 @@ async def multiple_models(session, sample_algorithm, sample_catalog_tag):
 
 @pytest.fixture
 async def sample_sed(session):
-    """Create a sample SED for testing."""
-    sed = Sed(
-        name="elliptical_01",
-        sed_wavelengths=[300.0, 400.0, 500.0, 600.0, 700.0],
-        sed_values=[0.1, 0.3, 0.5, 0.4, 0.2],
+    return await create(
+        session,
+        Sed(
+            name="elliptical_01",
+            sed_wavelengths=[300.0, 400.0, 500.0, 600.0, 700.0],
+            sed_values=[0.1, 0.3, 0.5, 0.4, 0.2],
+        ),
     )
-    session.add(sed)
-    await session.commit()
-    await session.refresh(sed)
-    return sed
 
 
 @pytest.fixture
 async def multiple_seds(session):
-    """Create multiple SEDs for testing."""
-    seds = [
-        Sed(
-            name="spiral_01",
-            sed_wavelengths=[300.0, 400.0, 500.0, 600.0],
-            sed_values=[0.2, 0.5, 0.8, 0.6],
-        ),
-        Sed(
-            name="starburst_01",
-            sed_wavelengths=[300.0, 400.0, 500.0, 600.0],
-            sed_values=[0.8, 0.6, 0.3, 0.1],
-        ),
-        Sed(
-            name="quiescent_01",
-            sed_wavelengths=[300.0, 400.0, 500.0, 600.0],
-            sed_values=[0.05, 0.1, 0.3, 0.5],
-        ),
-    ]
-    for sed in seds:
-        session.add(sed)
-    await session.commit()
-
-    for sed in seds:
-        await session.refresh(sed)
-
-    return seds
+    return await create_all(
+        session,
+        [
+            Sed(
+                name="spiral_01",
+                sed_wavelengths=[300.0, 400.0, 500.0, 600.0],
+                sed_values=[0.2, 0.5, 0.8, 0.6],
+            ),
+            Sed(
+                name="starburst_01",
+                sed_wavelengths=[300.0, 400.0, 500.0, 600.0],
+                sed_values=[0.8, 0.6, 0.3, 0.1],
+            ),
+            Sed(
+                name="quiescent_01",
+                sed_wavelengths=[300.0, 400.0, 500.0, 600.0],
+                sed_values=[0.05, 0.1, 0.3, 0.5],
+            ),
+        ],
+    )
 
 
 # ============================================================================
@@ -551,51 +441,30 @@ async def multiple_seds(session):
 
 @pytest.fixture
 async def sample_filter_ab(session, sample_band, sample_sed):
-    """Create a sample FilterAB for testing."""
-    filter_ab = FilterAB(
-        name="g_band_elliptical_01",
-        band_id=sample_band.id_,
-        sed_id=sample_sed.id_,
-        redshifts=[0.0, 0.5, 1.0, 1.5, 2.0],
-        fluxes=[1.0, 0.8, 0.5, 0.3, 0.1],
+    return await create(
+        session,
+        FilterAB(
+            name="g_band_elliptical_01",
+            band_id=sample_band.id_,
+            sed_id=sample_sed.id_,
+            redshifts=[0.0, 0.5, 1.0, 1.5, 2.0],
+            fluxes=[1.0, 0.8, 0.5, 0.3, 0.1],
+        ),
     )
-    session.add(filter_ab)
-    await session.commit()
-    await session.refresh(filter_ab)
-    return filter_ab
 
 
 @pytest.fixture
 async def multiple_filter_abs(session, sample_band, multiple_seds):
-    """Create multiple FilterABs for testing."""
-    filter_abs = [
-        FilterAB(
-            name="g_band_spiral_01",
-            band_id=sample_band.id_,
-            sed_id=multiple_seds[0].id_,
-            redshifts=[0.0, 0.5, 1.0],
-            fluxes=[1.2, 0.9, 0.4],
-        ),
-        FilterAB(
-            name="g_band_starburst_01",
-            band_id=sample_band.id_,
-            sed_id=multiple_seds[1].id_,
-            redshifts=[0.0, 0.5, 1.0],
-            fluxes=[2.0, 1.5, 0.8],
-        ),
-        FilterAB(
-            name="g_band_quiescent_01",
-            band_id=sample_band.id_,
-            sed_id=multiple_seds[2].id_,
-            redshifts=[0.0, 0.5, 1.0],
-            fluxes=[0.5, 0.3, 0.1],
-        ),
-    ]
-    for fab in filter_abs:
-        session.add(fab)
-    await session.commit()
-
-    for fab in filter_abs:
-        await session.refresh(fab)
-
-    return filter_abs
+    return await create_all(
+        session,
+        [
+            FilterAB(
+                name=f"g_band_{multiple_seds[i].name}",
+                band_id=sample_band.id_,
+                sed_id=multiple_seds[i].id_,
+                redshifts=[0.0, 0.5, 1.0],
+                fluxes=fluxes,
+            )
+            for i, fluxes in enumerate([[1.2, 0.9, 0.4], [2.0, 1.5, 0.8], [0.5, 0.3, 0.1]])
+        ],
+    )

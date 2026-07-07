@@ -2,8 +2,7 @@
 
 from typing import ClassVar
 
-from pydantic import (BaseModel, ConfigDict, Field, ValidationInfo,
-                      field_validator)
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 
 
 class SedBase(BaseModel):
