@@ -11,7 +11,7 @@ from sqlalchemy.schema import CreateSchema
 from ... import __version__, db
 from macon.config import config
 from macon.db.base import Base
-from .base import all_table_groups
+from .rail_svc import all_table_groups
 from .funcs import funcs_group
 
 T = TypeVar("T", bound=Base)

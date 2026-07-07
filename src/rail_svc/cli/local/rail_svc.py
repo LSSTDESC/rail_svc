@@ -13,7 +13,7 @@ from ... import local_sync
 from macon.common import unexpected
 from macon.db.base import Base
 from macon.db.session import init_db
-from ...local_sync.base import SyncOperations
+from ...local_sync.rail_svc import SyncOperations
 from ...models import Filter, FilterOp, OrderBy
 from ...models.utils import OutputEnum, output_pydantic
 from .. import common_options

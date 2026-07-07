@@ -13,7 +13,7 @@ from ... import remote_sync
 from ...models.utils import OutputEnum, output_pydantic
 from ... import models
 from .. import common_options
-from .base import handle_error
+from .rail_svc import handle_error
 
 logger = logging.getLogger(__name__)
 

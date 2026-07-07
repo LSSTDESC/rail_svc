@@ -12,7 +12,7 @@ from macon.local_sync.base import SyncOperations, sync_wrapper
 __all__ = ["SyncOperations", "sync_wrapper"]
 
 from .. import db, models
-from ..local_async.base import (
+from ..local_async.rail_svc import (
     DatasetLocalOperations,
     EstimatesLocalOperations,
     ModelLocalOperations,

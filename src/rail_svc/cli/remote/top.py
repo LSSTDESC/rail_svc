@@ -3,7 +3,7 @@
 import click
 
 from ... import __version__
-from .base import all_table_groups
+from .rail_svc import all_table_groups
 from .funcs import funcs_group
 
 

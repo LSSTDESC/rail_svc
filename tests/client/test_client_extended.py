@@ -10,7 +10,7 @@ import httpx
 import pytest
 
 from rail_svc import models
-from rail_svc.client.base import RemoteDatasetOperations, RemoteEstimatesOperations, RemoteModelOperations
+from rail_svc.client.rail_svc import RemoteDatasetOperations, RemoteEstimatesOperations, RemoteModelOperations
 from macon.common import LoadType
 
 

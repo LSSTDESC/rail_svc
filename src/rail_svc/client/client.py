@@ -7,7 +7,7 @@ from typing import Final
 from pydantic import BaseModel
 
 from .. import models
-from .base import (
+from .rail_svc import (
     RemoteAPI,
     RemoteDatasetOperations,
     RemoteEstimatesOperations,

@@ -10,7 +10,7 @@ from pydantic import BaseModel, ValidationError
 from macon.common import unexpected
 from ...models import Filter, FilterOp, OrderBy
 from ...models.utils import OutputEnum, output_pydantic
-from ...remote_sync.base import SyncRemoteOperations
+from ...remote_sync.rail_svc import SyncRemoteOperations
 from ... import remote_sync
 from ..load_commands import make_load_command, make_read_slice_command, make_download_command
 from .. import common_options

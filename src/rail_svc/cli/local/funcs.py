@@ -13,7 +13,7 @@ from macon.db.session import init_db
 from ...models.utils import OutputEnum, output_pydantic
 from ... import models
 from .. import common_options
-from .base import handle_database_error
+from .rail_svc import handle_database_error
 
 logger = logging.getLogger(__name__)
 

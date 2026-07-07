@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import db_oper, models
 from ..rail_funcs.wrappers import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
-from .base import with_session, with_session_transaction
+from .rail_svc import with_session, with_session_transaction
 
 
 @with_session

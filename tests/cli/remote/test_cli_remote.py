@@ -9,7 +9,7 @@ import pytest
 from click.testing import CliRunner
 
 from rail_svc.cli.remote.top import cli
-from rail_svc.cli.remote.base import make_table_group
+from rail_svc.cli.remote.rail_svc import make_table_group
 
 
 class TestMakeTableGroup:

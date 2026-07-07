@@ -10,7 +10,7 @@ import pytest
 from click.testing import CliRunner
 
 from rail_svc import models
-from rail_svc.cli.local.base import dataset_group, estimates_group, model_group
+from rail_svc.cli.local.rail_svc import dataset_group, estimates_group, model_group
 
 
 @pytest.fixture
@@ -22,7 +22,7 @@ class TestDatasetLoad:
     """Test dataset load CLI command."""
 
     @patch("macon.db.session.init_db")
-    @patch("rail_svc.cli.local.base.local_sync")
+    @patch("rail_svc.cli.local.rail_svc.local_sync")
     def test_load_with_fields(self, mock_local_sync, mock_init, runner, tmp_path):
         """Test loading a dataset with KEY=VALUE fields."""
         data_file = tmp_path / "catalog.hdf5"
@@ -44,7 +44,7 @@ class TestDatasetLoad:
         mock_local_sync.dataset.load.assert_called_once()
 
     @patch("macon.db.session.init_db")
-    @patch("rail_svc.cli.local.base.local_sync")
+    @patch("rail_svc.cli.local.rail_svc.local_sync")
     def test_load_from_json(self, mock_local_sync, mock_init, runner, tmp_path):
         """Test loading a dataset from a JSON file."""
         data_file = tmp_path / "catalog.hdf5"
@@ -68,7 +68,7 @@ class TestDatasetLoad:
         assert "Successfully loaded dataset" in result.output
 
     @patch("macon.db.session.init_db")
-    @patch("rail_svc.cli.local.base.local_sync")
+    @patch("rail_svc.cli.local.rail_svc.local_sync")
     def test_load_no_validate(self, mock_local_sync, mock_init, runner, tmp_path):
         """Test loading a dataset with --no-validate."""
         data_file = tmp_path / "catalog.hdf5"
@@ -99,7 +99,7 @@ class TestDatasetLoad:
         assert call_kwargs[1]["validate"] is False
 
     @patch("macon.db.session.init_db")
-    @patch("rail_svc.cli.local.base.local_sync")
+    @patch("rail_svc.cli.local.rail_svc.local_sync")
     def test_load_error(self, mock_local_sync, mock_init, runner, tmp_path):
         """Test load error handling."""
         data_file = tmp_path / "bad.hdf5"
@@ -120,7 +120,7 @@ class TestDatasetReadSlice:
     """Test dataset read-slice CLI command."""
 
     @patch("macon.db.session.init_db")
-    @patch("rail_svc.cli.local.base.local_sync")
+    @patch("rail_svc.cli.local.rail_svc.local_sync")
     def test_read_slice_json(self, mock_local_sync, mock_init, runner):
         """Test reading a dataset slice with JSON output."""
         mock_local_sync.dataset.read_slice.return_value = {"mag_g": [22.5, 23.1]}
@@ -132,7 +132,7 @@ class TestDatasetReadSlice:
         assert "mag_g" in output
 
     @patch("macon.db.session.init_db")
-    @patch("rail_svc.cli.local.base.local_sync")
+    @patch("rail_svc.cli.local.rail_svc.local_sync")
     def test_read_slice_with_slice(self, mock_local_sync, mock_init, runner):
         """Test reading a dataset slice with --slice option."""
         mock_local_sync.dataset.read_slice.return_value = {"flux": [1.0, 2.0]}
@@ -142,7 +142,7 @@ class TestDatasetReadSlice:
         assert result.exit_code == 0
 
     @patch("macon.db.session.init_db")
-    @patch("rail_svc.cli.local.base.local_sync")
+    @patch("rail_svc.cli.local.rail_svc.local_sync")
     def test_read_slice_error(self, mock_local_sync, mock_init, runner):
         """Test read_slice error handling."""
         mock_local_sync.dataset.read_slice.side_effect = FileNotFoundError("Dataset file not found")
@@ -156,7 +156,7 @@ class TestEstimatesLoad:
     """Test estimates load CLI command."""
 
     @patch("macon.db.session.init_db")
-    @patch("rail_svc.cli.local.base.local_sync")
+    @patch("rail_svc.cli.local.rail_svc.local_sync")
     def test_load_with_fields(self, mock_local_sync, mock_init, runner, tmp_path):
         """Test loading estimates with KEY=VALUE fields."""
         data_file = tmp_path / "estimates.hdf5"
@@ -177,7 +177,7 @@ class TestEstimatesLoad:
         assert "Successfully loaded estimates" in result.output
 
     @patch("macon.db.session.init_db")
-    @patch("rail_svc.cli.local.base.local_sync")
+    @patch("rail_svc.cli.local.rail_svc.local_sync")
     def test_load_error(self, mock_local_sync, mock_init, runner, tmp_path):
         """Test estimates load error handling."""
         data_file = tmp_path / "bad.hdf5"
@@ -198,7 +198,7 @@ class TestEstimatesReadSlice:
     """Test estimates read-slice CLI command."""
 
     @patch("macon.db.session.init_db")
-    @patch("rail_svc.cli.local.base.local_sync")
+    @patch("rail_svc.cli.local.rail_svc.local_sync")
     def test_read_slice_json(self, mock_local_sync, mock_init, runner):
         """Test reading estimates slice with JSON output."""
         mock_local_sync.estimates.read_slice.return_value = {"z_pdf": [0.1, 0.5, 0.3]}
@@ -208,7 +208,7 @@ class TestEstimatesReadSlice:
         assert result.exit_code == 0
 
     @patch("macon.db.session.init_db")
-    @patch("rail_svc.cli.local.base.local_sync")
+    @patch("rail_svc.cli.local.rail_svc.local_sync")
     def test_read_slice_error(self, mock_local_sync, mock_init, runner):
         """Test read_slice error handling."""
         mock_local_sync.estimates.read_slice.side_effect = FileNotFoundError("File not found")
@@ -222,7 +222,7 @@ class TestModelLoad:
     """Test model load CLI command."""
 
     @patch("macon.db.session.init_db")
-    @patch("rail_svc.cli.local.base.local_sync")
+    @patch("rail_svc.cli.local.rail_svc.local_sync")
     def test_load_with_fields(self, mock_local_sync, mock_init, runner, tmp_path):
         """Test loading a model with KEY=VALUE fields."""
         model_file = tmp_path / "model.pkl"
@@ -249,7 +249,7 @@ class TestModelLoad:
         assert "Successfully loaded model" in result.output
 
     @patch("macon.db.session.init_db")
-    @patch("rail_svc.cli.local.base.local_sync")
+    @patch("rail_svc.cli.local.rail_svc.local_sync")
     def test_load_with_link(self, mock_local_sync, mock_init, runner, tmp_path):
         """Test loading a model with --load-type link."""
         model_file = tmp_path / "model.pkl"
@@ -279,7 +279,7 @@ class TestModelLoad:
         assert result.exit_code == 0
 
     @patch("macon.db.session.init_db")
-    @patch("rail_svc.cli.local.base.local_sync")
+    @patch("rail_svc.cli.local.rail_svc.local_sync")
     def test_load_error(self, mock_local_sync, mock_init, runner, tmp_path):
         """Test model load error handling."""
         model_file = tmp_path / "bad.pkl"

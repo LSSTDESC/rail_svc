@@ -10,7 +10,7 @@ from macon.remote_async.base import AsyncRemoteOperations, with_client
 __all__ = ["AsyncRemoteOperations", "with_client"]
 
 from .. import models
-from ..client.base import (
+from ..client.rail_svc import (
     RemoteDatasetOperations,
     RemoteEstimatesOperations,
     RemoteModelOperations,

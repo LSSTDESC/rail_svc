@@ -14,8 +14,8 @@ from click.testing import CliRunner
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.exc import IntegrityError
 
-from rail_svc.cli.local.base import CliOperations, handle_database_error
-from rail_svc.local_sync.base import SyncOperations
+from rail_svc.cli.local.rail_svc import CliOperations, handle_database_error
+from rail_svc.local_sync.rail_svc import SyncOperations
 from rail_svc.models import FilterOp
 from rail_svc.models.utils import OutputEnum
 
@@ -1386,7 +1386,7 @@ class TestOutputFormats:
     """Tests for different output format options."""
 
     @patch("macon.db.session.init_db")
-    @patch("rail_svc.cli.local.base.output_pydantic")
+    @patch("rail_svc.cli.local.rail_svc.output_pydantic")
     def test_get_rows_json_output(
         self,
         mock_output: MagicMock,
@@ -1409,7 +1409,7 @@ class TestOutputFormats:
         assert mock_output.call_args[0][1] == OutputEnum.json
 
     @patch("macon.db.session.init_db")
-    @patch("rail_svc.cli.local.base.output_pydantic")
+    @patch("rail_svc.cli.local.rail_svc.output_pydantic")
     def test_get_rows_table_output(
         self,
         mock_output: MagicMock,
@@ -1431,7 +1431,7 @@ class TestOutputFormats:
         assert mock_output.call_args[0][1] == OutputEnum.table
 
     @patch("macon.db.session.init_db")
-    @patch("rail_svc.cli.local.base.output_pydantic")
+    @patch("rail_svc.cli.local.rail_svc.output_pydantic")
     def test_get_rows_yaml_output(
         self,
         mock_output: MagicMock,

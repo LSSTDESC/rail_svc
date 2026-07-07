@@ -26,7 +26,7 @@ Examples
 
 from .. import db_oper
 from . import funcs
-from .base import (
+from .rail_svc import (
     AlgorithmLocalOperations,
     BandLocalOperations,
     CatalogBandAssocLocalOperations,

@@ -6,7 +6,7 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Any, TypeVar
 
-from ..client.base import RemoteAPI
+from ..client.rail_svc import RemoteAPI
 from ..client.funcs import RemoteFuncsOperations
 from .. import models
 
