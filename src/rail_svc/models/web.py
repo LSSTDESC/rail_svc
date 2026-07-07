@@ -1,64 +1,41 @@
-"""Responsex model for load_catalog_yaml function."""
+"""Request/response models for the rail_svc API."""
 
-from typing import Any, TypeVar
+from typing import Any
 
 from pydantic import BaseModel
 
-from .filtering import Filter, OrderBy
+from macon.models.web import (
+    AsyncRouteError,
+    CountResponse,
+    DeleteResponse,
+    FilterRequest,
+    FindRequest,
+    LookupResponse,
+    RemoteAPIError,
+)
+
 from .dataset import Dataset
 from .estimates import Estimates
 
-ResponseT = TypeVar("ResponseT", bound=BaseModel)  # Response schema type
-
-
-class AsyncRouteError(Exception):
-    """Custom exception for async route handling errors."""
-
-
-class RemoteAPIError(Exception):
-    """Custom exception for remote API errors."""
-
-
-class CountResponse(BaseModel):
-    """Response model for count operations."""
-
-    count: int
-
-
-class LookupResponse[ResponseT](BaseModel):
-    """Response model for lookup operations."""
-
-    id: int
-    data: ResponseT
-
-
-class DeleteResponse(BaseModel):
-    """Response model for delete operations."""
-
-    deleted: bool = True
-
-
-class FilterRequest(BaseModel):
-    """Request model for filter operations."""
-
-    filters: list[Filter] = []
-    logical_op: str = "and"
-    order_by: OrderBy | list[OrderBy] | None = None
-    skip: int = 0
-    limit: int | None = None
-
-
-class FindRequest(BaseModel):
-    """Request model for find operations."""
-
-    order_by: OrderBy | list[OrderBy] | None = None
-    skip: int = 0
-    limit: int | None = None
-
-    class ConfigDict:
-        """pydantic config"""
-
-        extra = "allow"  # Allow additional fields for query params
+__all__ = [
+    "AsyncRouteError",
+    "CountResponse",
+    "DeleteResponse",
+    "FilterRequest",
+    "FindRequest",
+    "LookupResponse",
+    "RemoteAPIError",
+    "EstimatePdfRequest",
+    "EstimateEnsembleRequest",
+    "EstimateEnsembleResponse",
+    "LoadCatalogYamlRequest",
+    "LoadCatalogYamlResponse",
+    "GetDatasetAndEstimatesResponse",
+    "GetDataAndEstimatesDataResponse",
+    "CreateMatchedDatasetRequest",
+    "EstimatePdfForSliceRequest",
+    "EstimateDatasetRequest",
+]
 
 
 class EstimatePdfRequest(BaseModel):
@@ -128,7 +105,7 @@ class EstimatePdfForSliceRequest(BaseModel):
 
     estimator_id: int
     dataset_id: int
-    the_slice: str | None = None  # Will be parsed into slice
+    the_slice: str | None = None
     recompute_if_exists: bool = False
 
 

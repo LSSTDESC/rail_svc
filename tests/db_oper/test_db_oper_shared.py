@@ -15,7 +15,7 @@ from rail_svc.db_oper import (
     dataset_assoc,
     estimator,
 )
-from rail_svc.db_oper.base import TableOperations
+from macon.db_oper.base import TableOperations
 
 OPER_CONFIGS = [
     {

@@ -3,7 +3,7 @@
 import pytest
 
 from rail_svc.db import CatalogTag
-from rail_svc.db_oper.base import TableContext
+from macon.db_oper.base import TableContext
 from rail_svc.db_oper.catalog_tag import CatalogTagOperations, catalog_tag
 from rail_svc.models import CatalogTag as CatalogTagModel
 
@@ -25,7 +25,7 @@ async def test_catalog_tag_operations_inherits_crud_methods(session, sample_cata
 @pytest.mark.asyncio
 async def test_catalog_tag_operations_inherits_filter_methods(session, multiple_catalog_tags):
     """Test that CatalogTagOperations inherits filter methods from base."""
-    from rail_svc.models.filtering import Filter, FilterOp
+    from macon.models.filtering import Filter, FilterOp
 
     context = TableContext.from_db_class(CatalogTag)
     ops = CatalogTagOperations(context)
@@ -77,7 +77,7 @@ async def test_module_singleton_create_row(session):
 @pytest.mark.asyncio
 async def test_module_singleton_filter_rows(session, multiple_catalog_tags):
     """Test that module singleton can filter rows."""
-    from rail_svc.models.filtering import Filter, FilterOp
+    from macon.models.filtering import Filter, FilterOp
 
     filters = [Filter(field="name", op=FilterOp.IN, value=["roman", "rubin"])]
     results = await catalog_tag.filter_rows(session, filters=filters)

@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, status
 from pydantic import ValidationError
 
-from ..common import str_to_slice
+from macon.common import str_to_slice
 from .. import local_async
 from ..models import (
     Dataset,

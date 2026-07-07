@@ -9,7 +9,7 @@ from collections.abc import Sequence
 import click
 
 from ... import local_sync
-from ...db.session import init_db
+from macon.db.session import init_db
 from ...models.utils import OutputEnum, output_pydantic
 from ... import models
 from .. import common_options

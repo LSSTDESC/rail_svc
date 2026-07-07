@@ -7,7 +7,7 @@ from sqlalchemy import JSON, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .. import models
-from .base import Base
+from macon.db.base import Base
 
 if TYPE_CHECKING:
     from .filter_ab import FilterAB

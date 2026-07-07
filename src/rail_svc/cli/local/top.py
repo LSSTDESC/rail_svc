@@ -9,8 +9,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.schema import CreateSchema
 
 from ... import __version__, db
-from ...config import config
-from ...db.base import Base
+from macon.config import config
+from macon.db.base import Base
 from .base import all_table_groups
 from .funcs import funcs_group
 

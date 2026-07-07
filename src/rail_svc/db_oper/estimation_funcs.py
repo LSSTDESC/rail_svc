@@ -6,7 +6,7 @@ import qp
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import db, rail_funcs
-from ..config import config as global_config
+from macon.config import config as global_config
 from ..rail_funcs.wrappers import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
 from . import catalog_funcs
 from .wrappers import build_pdf_estimation_wrapper, build_ensemble_estimation_wrapper

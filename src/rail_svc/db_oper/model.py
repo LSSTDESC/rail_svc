@@ -16,10 +16,11 @@ import anyio
 from rail.core.model import Model as RailModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .. import db, db_funcs, models
-from ..common import LoadType, handle_file
-from ..db.session import get_session
-from .base import TableContext, TableOperations
+from macon import db_funcs
+from .. import db, models
+from macon.common import LoadType, handle_file
+from macon.db.session import get_session
+from macon.db_oper.base import TableContext, TableOperations
 
 logger = logging.getLogger(__name__)
 

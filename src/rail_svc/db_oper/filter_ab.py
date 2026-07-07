@@ -9,8 +9,9 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .. import db, db_funcs, models
-from .base import TableContext, TableOperations
+from macon import db_funcs
+from .. import db, models
+from macon.db_oper.base import TableContext, TableOperations
 
 logger = logging.getLogger(__name__)
 

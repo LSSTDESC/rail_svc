@@ -7,7 +7,7 @@ import anyio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import db
-from ..config import config as global_config
+from macon.config import config as global_config
 from ..rail_funcs.wrappers import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
 from .algorithm import algorithm
 from .catalog_tag import catalog_tag

@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 
 from rail_svc.db import Estimates
-from rail_svc.db_oper.base import FileValidatedOperations, TableContext
+from macon.db_oper.base import FileValidatedOperations, TableContext
 from rail_svc.db_oper.estimates import EstimatesOperations, estimates
 from rail_svc.models import Estimates as EstimatesModel
 
@@ -70,7 +70,7 @@ async def test_estimates_operations_inherits_crud_methods(session, sample_estima
 @pytest.mark.asyncio
 async def test_estimates_operations_inherits_filter_methods(session, multiple_estimates):
     """Test that EstimatesOperations inherits filter methods from base."""
-    from rail_svc.models.filtering import Filter, FilterOp
+    from macon.models.filtering import Filter, FilterOp
 
     context = TableContext.from_db_class(Estimates)
     ops = EstimatesOperations(context)
@@ -113,7 +113,7 @@ async def test_module_singleton_get_row(session, sample_estimates):
 @pytest.mark.asyncio
 async def test_module_singleton_filter_rows(session, multiple_estimates):
     """Test that module singleton can filter rows."""
-    from rail_svc.models.filtering import Filter, FilterOp
+    from macon.models.filtering import Filter, FilterOp
 
     filters = [Filter(field="n_objects", op=FilterOp.EQ, value=5000)]
     results = await estimates.filter_rows(session, filters=filters)

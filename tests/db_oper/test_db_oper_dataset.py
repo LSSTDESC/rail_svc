@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 
 from rail_svc.db import Dataset
-from rail_svc.db_oper.base import FileValidatedOperations, TableContext
+from macon.db_oper.base import FileValidatedOperations, TableContext
 from rail_svc.db_oper.dataset import DatasetOperations, dataset
 from rail_svc.models import Dataset as DatasetModel
 
@@ -70,7 +70,7 @@ async def test_dataset_operations_inherits_crud_methods(session, sample_dataset)
 @pytest.mark.asyncio
 async def test_dataset_operations_inherits_filter_methods(session, multiple_datasets):
     """Test that DatasetOperations inherits filter methods from base."""
-    from rail_svc.models.filtering import Filter, FilterOp
+    from macon.models.filtering import Filter, FilterOp
 
     context = TableContext.from_db_class(Dataset)
     ops = DatasetOperations(context)
@@ -113,7 +113,7 @@ async def test_module_singleton_get_row(session, sample_dataset):
 @pytest.mark.asyncio
 async def test_module_singleton_filter_rows(session, multiple_datasets):
     """Test that module singleton can filter rows."""
-    from rail_svc.models.filtering import Filter, FilterOp
+    from macon.models.filtering import Filter, FilterOp
 
     filters = [Filter(field="is_collection", op=FilterOp.EQ, value=False)]
     results = await dataset.filter_rows(session, filters=filters)
@@ -229,7 +229,7 @@ async def test_get_create_kwargs_nonexistent_catalog_tag_name(session):
     context = TableContext.from_db_class(Dataset)
     ops = DatasetOperations(context)
 
-    with pytest.raises(KeyError, match="CatalogTag 'nonexistent' not found"):
+    with pytest.raises(ValueError, match="CatalogTag with name 'nonexistent' not found"):
         await ops.get_create_kwargs(
             session, path="data/test.h5", catalog_tag_name="nonexistent", n_objects=100, validate_file=False
         )

@@ -14,7 +14,7 @@ import qp
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import db, rail_funcs
-from ..config import config as global_config
+from macon.config import config as global_config
 from .band import band
 from .catalog_band_assoc import catalog_band_assoc
 from .catalog_tag import catalog_tag
@@ -270,9 +270,7 @@ async def load_seds(
     list[db.Sed]
         The created Sed ORM objects.
     """
-    sed_creates = rail_funcs.catalog_funcs.make_sed_create_models(
-        sed_dir, names=names, names_file=names_file
-    )
+    sed_creates = rail_funcs.catalog_funcs.make_sed_create_models(sed_dir, names=names, names_file=names_file)
     seds = await sed.create_rows(session, [s.model_dump() for s in sed_creates])
     return seds
 
@@ -304,10 +302,6 @@ async def load_filter_abs(
     list[db.FilterAB]
         The created FilterAB ORM objects.
     """
-    fab_creates = rail_funcs.catalog_funcs.make_filter_ab_create_models(
-        filter_ab_dir, names=names
-    )
-    filter_abs_list = await filter_ab.create_rows(
-        session, [f.model_dump() for f in fab_creates]
-    )
+    fab_creates = rail_funcs.catalog_funcs.make_filter_ab_create_models(filter_ab_dir, names=names)
+    filter_abs_list = await filter_ab.create_rows(session, [f.model_dump() for f in fab_creates])
     return filter_abs_list

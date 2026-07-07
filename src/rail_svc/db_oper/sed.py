@@ -5,7 +5,7 @@ Provides CRUD operations and Pydantic conversions for the Sed table.
 """
 
 from .. import db, models
-from .base import TableContext, TableOperations
+from macon.db_oper.base import TableContext, TableOperations
 
 
 class SedOperations(TableOperations[db.Sed, models.Sed, models.SedCreate]):

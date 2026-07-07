@@ -5,6 +5,7 @@ Requirements
 ------------
 
 - Python 3.13+
+- `macon <https://github.com/KIPAC/macon>`_ (installed automatically as dependency)
 - SQLite (for local mode) or PostgreSQL (for production)
 
 Install from source
@@ -18,12 +19,12 @@ Install from source
 
 Optional dependency groups:
 
-- ``[db]`` — Database support (SQLAlchemy, aiosqlite)
-- ``[server]`` — FastAPI server (includes ``[db]``)
-- ``[client]`` — HTTP client (httpx)
+- ``[all]`` — Everything (recommended for development)
 - ``[dev]`` — Development tools (pytest, ruff, mypy)
 - ``[docs]`` — Documentation (sphinx)
-- ``[all]`` — Everything
+
+The core dependencies (database, server, client) are provided transitively
+through ``macon[db,server,client]``.
 
 Configuration
 -------------

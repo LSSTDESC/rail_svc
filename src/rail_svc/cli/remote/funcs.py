@@ -8,7 +8,7 @@ from collections.abc import Sequence
 
 import click
 
-from ...common import slice_to_str
+from macon.common import slice_to_str
 from ... import remote_sync
 from ...models.utils import OutputEnum, output_pydantic
 from ... import models

@@ -12,7 +12,7 @@ from sqlalchemy.schema import ForeignKey
 
 from .. import models
 from .algorithm import Algorithm
-from .base import Base
+from macon.db.base import Base
 from .catalog_tag import CatalogTag
 
 if TYPE_CHECKING:

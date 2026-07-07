@@ -21,7 +21,7 @@ def runner():
 class TestDatasetLoad:
     """Test dataset load CLI command."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.cli.local.base.local_sync")
     def test_load_with_fields(self, mock_local_sync, mock_init, runner, tmp_path):
         """Test loading a dataset with KEY=VALUE fields."""
@@ -43,7 +43,7 @@ class TestDatasetLoad:
         assert "Successfully loaded dataset" in result.output
         mock_local_sync.dataset.load.assert_called_once()
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.cli.local.base.local_sync")
     def test_load_from_json(self, mock_local_sync, mock_init, runner, tmp_path):
         """Test loading a dataset from a JSON file."""
@@ -67,7 +67,7 @@ class TestDatasetLoad:
         assert result.exit_code == 0
         assert "Successfully loaded dataset" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.cli.local.base.local_sync")
     def test_load_no_validate(self, mock_local_sync, mock_init, runner, tmp_path):
         """Test loading a dataset with --no-validate."""
@@ -98,7 +98,7 @@ class TestDatasetLoad:
         call_kwargs = mock_local_sync.dataset.load.call_args
         assert call_kwargs[1]["validate"] is False
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.cli.local.base.local_sync")
     def test_load_error(self, mock_local_sync, mock_init, runner, tmp_path):
         """Test load error handling."""
@@ -119,7 +119,7 @@ class TestDatasetLoad:
 class TestDatasetReadSlice:
     """Test dataset read-slice CLI command."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.cli.local.base.local_sync")
     def test_read_slice_json(self, mock_local_sync, mock_init, runner):
         """Test reading a dataset slice with JSON output."""
@@ -131,7 +131,7 @@ class TestDatasetReadSlice:
         output = json.loads(result.output)
         assert "mag_g" in output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.cli.local.base.local_sync")
     def test_read_slice_with_slice(self, mock_local_sync, mock_init, runner):
         """Test reading a dataset slice with --slice option."""
@@ -141,7 +141,7 @@ class TestDatasetReadSlice:
 
         assert result.exit_code == 0
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.cli.local.base.local_sync")
     def test_read_slice_error(self, mock_local_sync, mock_init, runner):
         """Test read_slice error handling."""
@@ -155,7 +155,7 @@ class TestDatasetReadSlice:
 class TestEstimatesLoad:
     """Test estimates load CLI command."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.cli.local.base.local_sync")
     def test_load_with_fields(self, mock_local_sync, mock_init, runner, tmp_path):
         """Test loading estimates with KEY=VALUE fields."""
@@ -176,7 +176,7 @@ class TestEstimatesLoad:
         assert result.exit_code == 0
         assert "Successfully loaded estimates" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.cli.local.base.local_sync")
     def test_load_error(self, mock_local_sync, mock_init, runner, tmp_path):
         """Test estimates load error handling."""
@@ -197,7 +197,7 @@ class TestEstimatesLoad:
 class TestEstimatesReadSlice:
     """Test estimates read-slice CLI command."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.cli.local.base.local_sync")
     def test_read_slice_json(self, mock_local_sync, mock_init, runner):
         """Test reading estimates slice with JSON output."""
@@ -207,7 +207,7 @@ class TestEstimatesReadSlice:
 
         assert result.exit_code == 0
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.cli.local.base.local_sync")
     def test_read_slice_error(self, mock_local_sync, mock_init, runner):
         """Test read_slice error handling."""
@@ -221,7 +221,7 @@ class TestEstimatesReadSlice:
 class TestModelLoad:
     """Test model load CLI command."""
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.cli.local.base.local_sync")
     def test_load_with_fields(self, mock_local_sync, mock_init, runner, tmp_path):
         """Test loading a model with KEY=VALUE fields."""
@@ -248,7 +248,7 @@ class TestModelLoad:
         assert result.exit_code == 0
         assert "Successfully loaded model" in result.output
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.cli.local.base.local_sync")
     def test_load_with_link(self, mock_local_sync, mock_init, runner, tmp_path):
         """Test loading a model with --load-type link."""
@@ -278,7 +278,7 @@ class TestModelLoad:
 
         assert result.exit_code == 0
 
-    @patch("rail_svc.db.session.init_db")
+    @patch("macon.db.session.init_db")
     @patch("rail_svc.cli.local.base.local_sync")
     def test_load_error(self, mock_local_sync, mock_init, runner, tmp_path):
         """Test model load error handling."""

@@ -24,11 +24,7 @@ authors = [
 ]
 
 dependencies = [
-    "pydantic",
-    "pydantic_settings",
-    "python-dotenv",
-    "tabulate",
-    "pyyaml",
+    "macon[db,server,client]",
     "numpy",
     "qp-prob",
     "tables-io",
@@ -124,11 +120,9 @@ source = ["src"]
 show_missing = true
 exclude_lines = [
     "pragma: no cover",
-    "unexpected",
     "as uexc:",
     "def __repr__",
     "if settings.DEBUG",
-    "forward_to_db_funcs",
     "raise AssertionError",
     "raise NotImplementedError",
     "if __name__ == .__main__.:",

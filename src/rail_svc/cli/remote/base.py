@@ -7,7 +7,7 @@ from typing import TypeVar, Any
 import click
 from pydantic import BaseModel, ValidationError
 
-from ...common import unexpected
+from macon.common import unexpected
 from ...models import Filter, FilterOp, OrderBy
 from ...models.utils import OutputEnum, output_pydantic
 from ...remote_sync.base import SyncRemoteOperations

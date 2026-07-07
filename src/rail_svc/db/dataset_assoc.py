@@ -31,7 +31,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.schema import ForeignKey
 
 from .. import models
-from .base import Base
+from macon.db.base import Base
 
 if TYPE_CHECKING:
     from .dataset import Dataset

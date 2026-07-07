@@ -5,7 +5,7 @@ Provides CRUD operations and Pydantic conversions for the CatalogTag table.
 """
 
 from .. import db, models
-from .base import TableContext, TableOperations
+from macon.db_oper.base import TableContext, TableOperations
 
 
 class CatalogTagOperations(TableOperations[db.CatalogTag, models.CatalogTag, models.CatalogTagCreate]):

@@ -20,9 +20,10 @@ import numpy as np
 import qp
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .. import db, db_funcs, models
+from macon import db_funcs
+from .. import db, models
 from ..rail_funcs.catalog_funcs import read_estimates_slice
-from .base import FileValidatedOperations, TableContext
+from macon.db_oper.base import FileValidatedOperations, TableContext
 
 __all__ = ["EstimatesOperations", "estimates"]
 
@@ -133,10 +134,18 @@ class EstimatesOperations(FileValidatedOperations[db.Estimates, models.Estimates
             estimator_name,
         )
 
-        # 2. Process path and determine n_objects
-        n_objects = await self._process_path(
-            path, dataset_obj, validate_file=validate_file, extra_kwargs=extra_kwargs
-        )
+        # 2. Determine n_objects
+        if path is None:
+            n_objects = extra_kwargs.get("n_objects")
+            if n_objects is None:
+                raise ValueError("Either 'path' or 'n_objects' must be provided")
+        elif not validate_file:
+            n_objects = extra_kwargs.get("n_objects")
+            if n_objects is None:
+                raise ValueError("When validate_file=False, 'n_objects' must be provided")
+        else:
+            fullpath = self._validate_path_security(path)
+            n_objects = await self.validate_data_for_path(fullpath, dataset_obj)
 
         # 3. Build final kwargs
         result = {

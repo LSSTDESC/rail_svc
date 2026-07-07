@@ -24,7 +24,7 @@ from ..client.base import (
     RemoteEstimatesOperations,
     RemoteModelOperations,
 )
-from ..config import config as global_config
+from macon.config import config as global_config
 from .base import (
     AsyncRemoteDatasetOperations,
     AsyncRemoteEstimatesOperations,

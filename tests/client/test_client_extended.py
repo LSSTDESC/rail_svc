@@ -11,7 +11,7 @@ import pytest
 
 from rail_svc import models
 from rail_svc.client.base import RemoteDatasetOperations, RemoteEstimatesOperations, RemoteModelOperations
-from rail_svc.common import LoadType
+from macon.common import LoadType
 
 
 def make_dataset_ops(handler) -> tuple[httpx.AsyncClient, RemoteDatasetOperations]:
@@ -109,7 +109,7 @@ class TestDatasetDownload:
             )
 
         client, ops = make_dataset_ops(handler)
-        with patch("rail_svc.client.base.global_config.storage.download_area", str(tmp_path)):
+        with patch("macon.client.base.global_config.storage.download_area", str(tmp_path)):
             async with client:
                 result = await ops.download(row_id=1)
                 assert result.exists()
@@ -174,7 +174,7 @@ class TestEstimatesDownload:
             )
 
         client, ops = make_estimates_ops(handler)
-        with patch("rail_svc.client.base.global_config.storage.download_area", str(tmp_path)):
+        with patch("macon.client.base.global_config.storage.download_area", str(tmp_path)):
             async with client:
                 result = await ops.download(row_id=1)
                 assert result.exists()
@@ -222,7 +222,7 @@ class TestModelDownload:
             )
 
         client, ops = make_model_ops(handler)
-        with patch("rail_svc.client.base.global_config.storage.download_area", str(tmp_path)):
+        with patch("macon.client.base.global_config.storage.download_area", str(tmp_path)):
             async with client:
                 result = await ops.download(row_id=1)
                 assert result.exists()

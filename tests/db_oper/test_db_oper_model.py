@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from rail_svc.db import Model
-from rail_svc.db_oper.base import TableContext
+from macon.db_oper.base import TableContext
 from rail_svc.db_oper.model import ModelOperations, model
 from rail_svc.models import Model as ModelModel
 
@@ -65,7 +65,7 @@ async def test_model_operations_inherits_crud_methods(session, sample_model):
 @pytest.mark.asyncio
 async def test_model_operations_inherits_filter_methods(session, multiple_models):
     """Test that ModelOperations inherits filter methods from base."""
-    from rail_svc.models.filtering import Filter, FilterOp
+    from macon.models.filtering import Filter, FilterOp
 
     context = TableContext.from_db_class(Model)
     ops = ModelOperations(context)
@@ -108,7 +108,7 @@ async def test_module_singleton_get_row(session, sample_model):
 @pytest.mark.asyncio
 async def test_module_singleton_filter_rows(session, multiple_models):
     """Test that module singleton can filter rows."""
-    from rail_svc.models.filtering import Filter, FilterOp
+    from macon.models.filtering import Filter, FilterOp
 
     filters = [Filter(field="name", op=FilterOp.IN, value=["model_v1", "model_v2"])]
     results = await model.filter_rows(session, filters=filters)
