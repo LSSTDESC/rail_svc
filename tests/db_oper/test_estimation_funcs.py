@@ -1,7 +1,6 @@
 """Integration tests for rail_svc.db_oper.estimation_funcs"""
 
 import logging
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -39,9 +38,7 @@ class TestGetEstimatorsForDataset:
             await estimation_funcs.get_estimators_for_dataest(session, 99999)
 
     @pytest.mark.asyncio
-    async def test_multiple_estimators(
-        self, session, sample_dataset, sample_model, multiple_estimators
-    ):
+    async def test_multiple_estimators(self, session, sample_dataset, sample_model, multiple_estimators):
         result = await estimation_funcs.get_estimators_for_dataest(session, sample_dataset.id_)
 
         assert len(result) == 3
@@ -227,9 +224,7 @@ class TestBuildWrapperLists:
         assert result[0] == mock_wrapper
 
     @pytest.mark.asyncio
-    async def test_builds_ensemble_wrappers(
-        self, session, sample_dataset, sample_model, sample_estimator
-    ):
+    async def test_builds_ensemble_wrappers(self, session, sample_dataset, sample_model, sample_estimator):
         mock_wrapper = Mock(spec=CatEstimatorEnsembleWrapper)
 
         with patch(
@@ -279,9 +274,7 @@ class TestEstimateDataset:
     """Tests for estimate_dataset — real DB, mock ensemble estimation."""
 
     @pytest.mark.asyncio
-    async def test_creates_estimates_record(
-        self, session, sample_dataset, sample_estimator, tmp_path
-    ):
+    async def test_creates_estimates_record(self, session, sample_dataset, sample_estimator, tmp_path):
         estimates_name = f"{sample_dataset.name}__{sample_estimator.name}"
         estimates_rel = f"estimates/{estimates_name}.hdf5"
         estimates_path = tmp_path / estimates_rel
@@ -293,15 +286,15 @@ class TestEstimateDataset:
                 "rail_svc.db_oper.estimation_funcs.estimate_ensemble",
                 return_value=estimates_path,
             ),
-            patch(
-                "rail_svc.db_oper.estimation_funcs.global_config.storage.archive", str(tmp_path)
-            ),
+            patch("rail_svc.db_oper.estimation_funcs.global_config.storage.archive", str(tmp_path)),
             patch.object(
-                estimation_funcs.estimates, "_validate_path_security",
+                estimation_funcs.estimates,
+                "_validate_path_security",
                 return_value=estimates_path,
             ),
             patch.object(
-                estimation_funcs.estimates, "validate_data_for_path",
+                estimation_funcs.estimates,
+                "validate_data_for_path",
                 return_value=sample_dataset.n_objects,
             ),
         ):

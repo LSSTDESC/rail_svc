@@ -1,9 +1,9 @@
 """Unit tests for DatasetAssoc table operations."""
 
 import pytest
+from macon.db_oper.base import TableContext
 
 from rail_svc.db import DatasetAssoc
-from macon.db_oper.base import TableContext
 from rail_svc.db_oper.dataset_assoc import DatasetAssocOperations, dataset_assoc
 from rail_svc.models import DatasetAssoc as DatasetAssocModel
 

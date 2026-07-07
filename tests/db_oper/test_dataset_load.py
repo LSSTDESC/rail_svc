@@ -5,11 +5,11 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
+from macon.common import LoadType
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 from rail_svc import db, models
-from macon.common import LoadType
 from rail_svc.db_oper.dataset import dataset
 
 

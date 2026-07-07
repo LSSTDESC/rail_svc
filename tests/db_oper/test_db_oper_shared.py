@@ -5,6 +5,7 @@ across all entity operation modules.
 """
 
 import pytest
+from macon.db_oper.base import TableOperations
 
 from rail_svc import db
 from rail_svc.db_oper import (
@@ -15,7 +16,6 @@ from rail_svc.db_oper import (
     dataset_assoc,
     estimator,
 )
-from macon.db_oper.base import TableOperations
 
 OPER_CONFIGS = [
     {

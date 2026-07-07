@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import structlog
+from macon.db.base import Base
 from pydantic import BaseModel
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -12,7 +13,6 @@ from sqlalchemy.schema import ForeignKey
 
 from .. import models
 from .algorithm import Algorithm
-from macon.db.base import Base
 from .catalog_tag import CatalogTag
 
 if TYPE_CHECKING:

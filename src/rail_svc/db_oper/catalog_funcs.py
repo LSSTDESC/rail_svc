@@ -11,10 +11,10 @@ from pathlib import Path
 import anyio
 import numpy as np
 import qp
+from macon.config import config as global_config
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import db, rail_funcs
-from macon.config import config as global_config
 from .band import band
 from .catalog_band_assoc import catalog_band_assoc
 from .catalog_tag import catalog_tag

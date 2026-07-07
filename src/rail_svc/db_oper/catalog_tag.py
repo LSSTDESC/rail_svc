@@ -4,8 +4,9 @@ CatalogTag table operations.
 Provides CRUD operations and Pydantic conversions for the CatalogTag table.
 """
 
-from .. import db, models
 from macon.db_oper.base import TableContext, TableOperations
+
+from .. import db, models
 
 
 class CatalogTagOperations(TableOperations[db.CatalogTag, models.CatalogTag, models.CatalogTagCreate]):

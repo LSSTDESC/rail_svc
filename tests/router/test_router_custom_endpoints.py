@@ -49,9 +49,10 @@ class TestDatasetReadSlice:
     """Test /dataset/read_slice endpoint."""
 
     def test_success(self, client):
-
         with (
-            patch("rail_svc.router.rail_svc.local_async.dataset.read_slice", new_callable=AsyncMock) as mock_read,
+            patch(
+                "rail_svc.router.rail_svc.local_async.dataset.read_slice", new_callable=AsyncMock
+            ) as mock_read,
             patch("rail_svc.router.rail_svc.tables_io.convert", return_value='{"mag_g": [22.5]}'),
         ):
             mock_read.return_value = {"mag_g": [22.5]}
@@ -63,7 +64,9 @@ class TestDatasetReadSlice:
 
     def test_no_slice(self, client):
         with (
-            patch("rail_svc.router.rail_svc.local_async.dataset.read_slice", new_callable=AsyncMock) as mock_read,
+            patch(
+                "rail_svc.router.rail_svc.local_async.dataset.read_slice", new_callable=AsyncMock
+            ) as mock_read,
             patch("rail_svc.router.rail_svc.tables_io.convert", return_value='{"flux": [1.0]}'),
         ):
             mock_read.return_value = {"flux": [1.0]}
@@ -126,7 +129,9 @@ class TestEstimatesReadSlice:
         mock_ensemble = MagicMock()
         mock_ensemble.to_json.return_value = {"class": "qp.Ensemble", "data": []}
 
-        with patch("rail_svc.router.rail_svc.local_async.estimates.read_slice", new_callable=AsyncMock) as mock:
+        with patch(
+            "rail_svc.router.rail_svc.local_async.estimates.read_slice", new_callable=AsyncMock
+        ) as mock:
             mock.return_value = mock_ensemble
 
             response = client.get("/api/v1/estimates/read_slice/1", params={"read_slice": "0:5"})
@@ -145,7 +150,9 @@ class TestEstimatesDownload:
         mock_result.path = str(data_file)
 
         with (
-            patch("rail_svc.router.rail_svc.local_async.estimates.get_row", new_callable=AsyncMock) as mock_get,
+            patch(
+                "rail_svc.router.rail_svc.local_async.estimates.get_row", new_callable=AsyncMock
+            ) as mock_get,
             patch("rail_svc.router.rail_svc.global_config.storage.archive", str(tmp_path)),
         ):
             mock_get.return_value = mock_result

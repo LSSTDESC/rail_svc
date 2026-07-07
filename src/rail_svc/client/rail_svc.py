@@ -7,7 +7,6 @@ from typing import Any, cast
 
 import numpy as np
 import qp
-
 from macon.client.base import (
     RemoteAPI,
     RemoteFileOperations,
@@ -23,8 +22,9 @@ __all__ = [
     "RemoteModelOperations",
 ]
 
-from .. import models
 from macon.common import slice_to_str
+
+from .. import models
 
 
 class RemoteDatasetOperations(RemoteFileOperations[models.Dataset, models.DatasetCreate]):

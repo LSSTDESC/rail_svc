@@ -4,9 +4,9 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from macon.db_oper.base import FileValidatedOperations, TableContext
 
 from rail_svc.db import Estimates
-from macon.db_oper.base import FileValidatedOperations, TableContext
 from rail_svc.db_oper.estimates import EstimatesOperations, estimates
 from rail_svc.models import Estimates as EstimatesModel
 

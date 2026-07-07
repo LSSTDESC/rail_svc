@@ -34,7 +34,7 @@ class TestContextManager:
         funcs = AsyncRemoteFuncs(base_url="http://test:8000")
 
         # Patch the RemoteAPI to use mock transport
-        from unittest.mock import patch, AsyncMock
+        from unittest.mock import AsyncMock, patch
 
         with patch("rail_svc.remote_async.funcs.RemoteAPI") as MockAPI:
             mock_api = AsyncMock()
@@ -61,7 +61,7 @@ class TestEstimatePdf:
             assert "/funcs/estimate-pdf" in str(request.url)
             return httpx.Response(200, json=expected)
 
-        from unittest.mock import patch, AsyncMock
+        from unittest.mock import AsyncMock, patch
 
         funcs = AsyncRemoteFuncs(base_url="http://test:8000")
 
@@ -83,7 +83,7 @@ class TestEstimateEnsemble:
         def handler(request: httpx.Request) -> httpx.Response:
             return httpx.Response(200, json={"output_file": "/out.hdf5", "message": "Done"})
 
-        from unittest.mock import patch, AsyncMock
+        from unittest.mock import AsyncMock, patch
 
         funcs = AsyncRemoteFuncs(base_url="http://test:8000")
 
@@ -109,7 +109,7 @@ class TestGetEstimatorsForDataset:
         def handler(request: httpx.Request) -> httpx.Response:
             return httpx.Response(200, json=expected)
 
-        from unittest.mock import patch, AsyncMock
+        from unittest.mock import AsyncMock, patch
 
         funcs = AsyncRemoteFuncs(base_url="http://test:8000")
 
@@ -133,7 +133,7 @@ class TestCreateMatchedDataset:
         def handler(request: httpx.Request) -> httpx.Response:
             return httpx.Response(200, json=expected)
 
-        from unittest.mock import patch, AsyncMock
+        from unittest.mock import AsyncMock, patch
 
         funcs = AsyncRemoteFuncs(base_url="http://test:8000")
 

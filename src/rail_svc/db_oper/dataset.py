@@ -18,12 +18,12 @@ from typing import Any
 
 import numpy as np
 import tables_io
+from macon import db_funcs
+from macon.db_oper.base import FileValidatedOperations, TableContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from macon import db_funcs
 from .. import db, models
 from ..rail_funcs.catalog_funcs import read_multi_catalog_slice, read_single_catalog_slice
-from macon.db_oper.base import FileValidatedOperations, TableContext
 from .dataset_assoc import dataset_assoc
 
 logger = logging.getLogger(__name__)
@@ -174,7 +174,6 @@ class DatasetOperations(FileValidatedOperations[db.Dataset, models.Dataset, mode
         row: int,
         the_slice: slice | int | None = None,
     ) -> dict[str, np.ndarray]:
-
         the_dataset = await self.get_row(session, row)
         the_compontent_paths: dict[str, str | Path] = {}
         if the_dataset.is_collection:

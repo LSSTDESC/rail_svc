@@ -1,10 +1,10 @@
 """Unit tests for Band table operations."""
 
 import pytest
+from macon.db_oper.base import TableContext
 
 from rail_svc.db import Band
 from rail_svc.db_oper.band import BandOperations, band
-from macon.db_oper.base import TableContext
 from rail_svc.models import Band as BandModel
 
 # ============================================================================

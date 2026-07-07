@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from click.testing import CliRunner
 
-from rail_svc.cli.remote.funcs import funcs_group
 from rail_svc import models
+from rail_svc.cli.remote.funcs import funcs_group
 
 
 @pytest.fixture

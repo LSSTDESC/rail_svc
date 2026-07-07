@@ -1,11 +1,9 @@
 """Integration tests for rail_svc.db_oper.catalog_funcs"""
 
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import numpy as np
 import pytest
-import qp
 
 from rail_svc.db_oper import catalog_funcs
 from rail_svc.models import BandCreate, CatalogBandAssocCreate, CatalogTagCreate
@@ -16,9 +14,7 @@ class TestGetDatasetAndEstimates:
 
     @pytest.mark.asyncio
     async def test_returns_dataset_and_estimates(self, session, sample_dataset, sample_estimates):
-        dataset, estimates_list = await catalog_funcs.get_dataset_and_estimates(
-            session, sample_dataset.id_
-        )
+        dataset, estimates_list = await catalog_funcs.get_dataset_and_estimates(session, sample_dataset.id_)
 
         assert dataset.id_ == sample_dataset.id_
         assert len(estimates_list) == 1
@@ -26,9 +22,7 @@ class TestGetDatasetAndEstimates:
 
     @pytest.mark.asyncio
     async def test_no_estimates(self, session, sample_dataset):
-        dataset, estimates_list = await catalog_funcs.get_dataset_and_estimates(
-            session, sample_dataset.id_
-        )
+        dataset, estimates_list = await catalog_funcs.get_dataset_and_estimates(session, sample_dataset.id_)
 
         assert dataset.id_ == sample_dataset.id_
         assert estimates_list == []
@@ -62,9 +56,7 @@ class TestCreateMatchedDataset:
         assert len(assoc_list) == 2
 
     @pytest.mark.asyncio
-    async def test_association_naming(
-        self, session, sample_catalog_tag, component_dataset_1
-    ):
+    async def test_association_naming(self, session, sample_catalog_tag, component_dataset_1):
         dataset, assoc_list = await catalog_funcs.create_matched_dataset(
             session,
             matched_dataset_name="matched-v2",
@@ -181,9 +173,7 @@ class TestGetDataAndEstimatesData:
             mock_anyio_instance.absolute = AsyncMock(return_value=str(tmp_path))
             mock_anyio_path.return_value = mock_anyio_instance
 
-            data, est_dict = await catalog_funcs.get_data_and_estimates_data(
-                session, sample_dataset.id_, 0
-            )
+            data, est_dict = await catalog_funcs.get_data_and_estimates_data(session, sample_dataset.id_, 0)
 
             assert data == catalog_data
             assert sample_estimator.name in est_dict
@@ -203,9 +193,7 @@ class TestGetDataAndEstimatesData:
             mock_anyio_instance.absolute = AsyncMock(return_value=str(tmp_path))
             mock_anyio_path.return_value = mock_anyio_instance
 
-            data, est_dict = await catalog_funcs.get_data_and_estimates_data(
-                session, sample_dataset.id_, 0
-            )
+            data, est_dict = await catalog_funcs.get_data_and_estimates_data(session, sample_dataset.id_, 0)
 
             assert data == catalog_data
             assert est_dict == {}
@@ -219,9 +207,7 @@ class TestLoadCatalogYaml:
         yaml_path = tmp_path / "catalog.yaml"
         yaml_path.write_text("# placeholder")
 
-        band_creates = [
-            BandCreate(name="g", band_wavelengths=[400.0, 500.0], band_transmission=[0.5, 0.8])
-        ]
+        band_creates = [BandCreate(name="g", band_wavelengths=[400.0, 500.0], band_transmission=[0.5, 0.8])]
         tag_creates = [CatalogTagCreate(name="test_catalog")]
         assoc_creates = [
             CatalogBandAssocCreate(
@@ -251,9 +237,7 @@ class TestLoadCatalogYaml:
         yaml_path.write_text("# placeholder")
         filter_dir = tmp_path / "filters"
 
-        band_creates = [
-            BandCreate(name="r", band_wavelengths=[600.0], band_transmission=[0.9])
-        ]
+        band_creates = [BandCreate(name="r", band_wavelengths=[600.0], band_transmission=[0.9])]
         tag_creates = [CatalogTagCreate(name="filter_test_tag")]
         assoc_creates = [
             CatalogBandAssocCreate(

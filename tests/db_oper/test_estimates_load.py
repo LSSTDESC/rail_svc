@@ -6,11 +6,11 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 import qp
+from macon.common import LoadType
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 from rail_svc import models
-from macon.common import LoadType
 from rail_svc.db_oper.estimates import estimates
 
 

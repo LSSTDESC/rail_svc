@@ -8,13 +8,12 @@ from pathlib import Path
 import tables_io
 from fastapi import Body, HTTPException, Query, status
 from fastapi.responses import FileResponse
-from pydantic import ValidationError
-
-from macon.router.base import create_table_router
-
-from .. import local_async, models
 from macon.common import LoadType, str_to_slice, unexpected
 from macon.config import config as global_config
+from macon.router.base import create_table_router
+from pydantic import ValidationError
+
+from .. import local_async, models
 
 logger = logging.getLogger(__name__)
 

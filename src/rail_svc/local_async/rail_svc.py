@@ -6,7 +6,6 @@ from typing import Any, cast
 
 import numpy as np
 import qp
-
 from macon.local_async.base import (
     LocalOperations,
     to_pydantic,

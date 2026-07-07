@@ -1,10 +1,10 @@
 """Unit tests for Algorithm table operations."""
 
 import pytest
+from macon.db_oper.base import TableContext
 
 from rail_svc.db import Algorithm
 from rail_svc.db_oper.algorithm import AlgorithmOperations, algorithm
-from macon.db_oper.base import TableContext
 from rail_svc.models import Algorithm as AlgorithmModel
 
 # ============================================================================

@@ -18,12 +18,12 @@ from typing import Any
 
 import numpy as np
 import qp
+from macon import db_funcs
+from macon.db_oper.base import FileValidatedOperations, TableContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from macon import db_funcs
 from .. import db, models
 from ..rail_funcs.catalog_funcs import read_estimates_slice
-from macon.db_oper.base import FileValidatedOperations, TableContext
 
 __all__ = ["EstimatesOperations", "estimates"]
 
@@ -187,7 +187,6 @@ class EstimatesOperations(FileValidatedOperations[db.Estimates, models.Estimates
         row: int,
         the_slice: slice | int | None = None,
     ) -> dict[str, np.ndarray]:
-
         the_estimates = await self.get_row(session, row)
         return read_estimates_slice(the_estimates.path, the_slice)
 

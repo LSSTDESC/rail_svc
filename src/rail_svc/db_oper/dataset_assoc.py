@@ -7,11 +7,11 @@ matched datasets with their component datasets.
 import logging
 from typing import Any
 
+from macon import db_funcs
+from macon.db_oper.base import TableContext, TableOperations
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from macon import db_funcs
 from .. import db, models
-from macon.db_oper.base import TableContext, TableOperations
 
 logger = logging.getLogger(__name__)
 

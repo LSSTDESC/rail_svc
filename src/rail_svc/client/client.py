@@ -7,6 +7,7 @@ from typing import Final
 from pydantic import BaseModel
 
 from .. import models
+from .funcs import RemoteFuncsOperations
 from .rail_svc import (
     RemoteAPI,
     RemoteDatasetOperations,
@@ -14,7 +15,6 @@ from .rail_svc import (
     RemoteModelOperations,
     RemoteTableOperations,
 )
-from .funcs import RemoteFuncsOperations
 
 # Configure logging
 logger = logging.getLogger(__name__)

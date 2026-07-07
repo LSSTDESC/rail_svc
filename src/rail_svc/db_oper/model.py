@@ -13,14 +13,14 @@ from pathlib import Path
 from typing import Any, override
 
 import anyio
-from rail.core.model import Model as RailModel
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from macon import db_funcs
-from .. import db, models
 from macon.common import LoadType, handle_file
 from macon.db.session import get_session
 from macon.db_oper.base import TableContext, TableOperations
+from rail.core.model import Model as RailModel
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .. import db, models
 
 logger = logging.getLogger(__name__)
 

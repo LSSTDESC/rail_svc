@@ -3,18 +3,18 @@ from pathlib import Path
 
 import anyio
 import qp
+from macon.config import config as global_config
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import db, rail_funcs
-from macon.config import config as global_config
 from ..rail_funcs.wrappers import CatEstimatorEnsembleWrapper, CatEstimatorPdfWrapper
 from . import catalog_funcs
-from .wrappers import build_pdf_estimation_wrapper, build_ensemble_estimation_wrapper
 from .catalog_tag import catalog_tag
 from .dataset import dataset
-from .estimator import estimator
 from .estimates import estimates
+from .estimator import estimator
 from .model import model
+from .wrappers import build_ensemble_estimation_wrapper, build_pdf_estimation_wrapper
 
 logger = logging.getLogger(__name__)
 
@@ -217,7 +217,6 @@ async def get_estimators_for_dataest(
     session: AsyncSession,
     dataset_id: int,
 ) -> list[db.Estimator]:
-
     all_estimators: list[db.Estimator] = []
 
     try:
@@ -281,7 +280,6 @@ async def estimate_pdf_for_slice(
     *,
     recompute_if_exists: bool = False,
 ) -> qp.Ensemble:
-
     existing = await estimates.find_by(session, estimator_id=estimator_id, dataset_id=dataset_id)
     if existing and not recompute_if_exists:
         return rail_funcs.catalog_funcs.read_estimates_slice(existing[0].path, the_slice)
@@ -317,7 +315,6 @@ async def estimate_dataset(
     *,
     raise_if_exists: bool = False,
 ) -> db.Estimates:
-
     existing = await estimates.find_by(session, estimator_id=estimator_id, dataset_id=dataset_id)
     if existing and raise_if_exists:
         raise ValueError(

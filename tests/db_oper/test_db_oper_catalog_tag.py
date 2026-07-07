@@ -1,9 +1,9 @@
 """Unit tests for CatalogTag table operations."""
 
 import pytest
+from macon.db_oper.base import TableContext
 
 from rail_svc.db import CatalogTag
-from macon.db_oper.base import TableContext
 from rail_svc.db_oper.catalog_tag import CatalogTagOperations, catalog_tag
 from rail_svc.models import CatalogTag as CatalogTagModel
 

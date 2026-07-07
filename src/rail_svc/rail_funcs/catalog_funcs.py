@@ -4,10 +4,10 @@ from pathlib import Path
 import numpy as np
 import qp
 import tables_io
-from rail.utils import catalog_utils
-
 from macon.common import unexpected
 from macon.config import config as global_config
+from rail.utils import catalog_utils
+
 from ..models import BandCreate, CatalogBandAssocCreate, CatalogTagCreate, FilterABCreate, SedCreate
 
 logger = logging.getLogger(__name__)

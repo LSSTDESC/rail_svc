@@ -8,10 +8,10 @@ from unittest.mock import patch
 
 import httpx
 import pytest
+from macon.common import LoadType
 
 from rail_svc import models
 from rail_svc.client.rail_svc import RemoteDatasetOperations, RemoteEstimatesOperations, RemoteModelOperations
-from macon.common import LoadType
 
 
 def make_dataset_ops(handler) -> tuple[httpx.AsyncClient, RemoteDatasetOperations]:

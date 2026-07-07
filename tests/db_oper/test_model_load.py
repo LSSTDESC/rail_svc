@@ -4,11 +4,11 @@ from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from macon.common import LoadType
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 from rail_svc import models
-from macon.common import LoadType
 from rail_svc.db_oper.model import model
 
 

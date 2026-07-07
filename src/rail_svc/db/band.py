@@ -2,12 +2,12 @@
 
 from typing import TYPE_CHECKING
 
+from macon.db.base import Base
 from pydantic import BaseModel
 from sqlalchemy import JSON, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .. import models
-from macon.db.base import Base
 
 if TYPE_CHECKING:
     from .catalog_band_assoc import CatalogBandAssoc

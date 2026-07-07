@@ -2,16 +2,15 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Sequence
 from pathlib import Path
 from typing import cast
-from collections.abc import Sequence
 
 import click
-
-from ... import local_sync
 from macon.db.session import init_db
+
+from ... import local_sync, models
 from ...models.utils import OutputEnum, output_pydantic
-from ... import models
 from .. import common_options
 from .rail_svc import handle_database_error
 
@@ -62,7 +61,6 @@ def estimate_ensemble(
     dataset_id: int,
     output_path: str | Path,
 ) -> None:
-
     # Ensure database engine is initialized
     init_db()
 
@@ -85,7 +83,6 @@ def get_estimators_for_dataest(
     dataset_id: int,
     output: OutputEnum,
 ) -> None:
-
     # Ensure database engine is initialized
     init_db()
 

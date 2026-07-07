@@ -2,8 +2,6 @@
 
 from typing import Any
 
-from pydantic import BaseModel
-
 from macon.models.web import (
     AsyncRouteError,
     CountResponse,
@@ -13,6 +11,7 @@ from macon.models.web import (
     LookupResponse,
     RemoteAPIError,
 )
+from pydantic import BaseModel
 
 from .dataset import Dataset
 from .estimates import Estimates

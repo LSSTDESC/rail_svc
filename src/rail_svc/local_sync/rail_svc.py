@@ -6,7 +6,6 @@ from typing import Any, cast
 
 import numpy as np
 import qp
-
 from macon.local_sync.base import SyncOperations, sync_wrapper
 
 __all__ = ["SyncOperations", "sync_wrapper"]

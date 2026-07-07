@@ -4,15 +4,15 @@ import asyncio
 from typing import TypeVar
 
 import click
+from macon.config import config
+from macon.db.base import Base
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.schema import CreateSchema
 
 from ... import __version__, db
-from macon.config import config
-from macon.db.base import Base
-from .rail_svc import all_table_groups
 from .funcs import funcs_group
+from .rail_svc import all_table_groups
 
 T = TypeVar("T", bound=Base)
 ResponseT = TypeVar("ResponseT", bound=BaseModel)
