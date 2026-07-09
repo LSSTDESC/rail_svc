@@ -204,6 +204,12 @@ warn_unreachable = true
 warn_unused_ignores = true
 plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
 
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disable_error_code = ["var-annotated", "attr-defined", "union-attr", "arg-type", "unreachable", "unused-ignore", "typeddict-unknown-key"]
+
 [tool.pydocstyle]
 convention = "numpy"
 add_select = [

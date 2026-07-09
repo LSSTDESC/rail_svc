@@ -411,6 +411,8 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
                 # Validate the original model file before any operations
                 validation_path = Path(await anyio.Path(orig_path).resolve())
                 logger.info(f"Validating model file before loading: {validation_path}")
+                assert algo_obj is not None
+                assert catalog_tag_obj is not None
                 await self.validate_model(validation_path, algo_obj, catalog_tag_obj)
                 logger.info("Model validation successful, proceeding with load")
 

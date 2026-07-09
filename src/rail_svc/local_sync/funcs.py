@@ -13,6 +13,7 @@ def __getattr__(name: str) -> Any:
     async_func = getattr(local_async.funcs, name, None)
     if unexpected(async_func is None):
         raise AttributeError(f"module 'rail_svc.local_sync.funcs' has no attribute {name!r}")
+    assert async_func is not None
 
     def sync_func(*args: Any, **kwargs: Any) -> Any:  # pragma: no cover
         return asyncio.run(async_func(*args, **kwargs))
