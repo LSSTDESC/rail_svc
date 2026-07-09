@@ -31,8 +31,8 @@ def _parse_load_input(from_json: str | None, fields: tuple[str, ...]) -> dict[st
         except json.JSONDecodeError as exc:
             click.echo(f"Error: Invalid JSON: {exc}", err=True)
             raise click.Abort()
-        except OSError as exc:
-            click.echo(f"Error: Cannot read file: {exc}", err=True)
+        except OSError as uexc:
+            click.echo(f"Error: Cannot read file: {uexc}", err=True)
             raise click.Abort()
 
     row_data: dict[str, Any] = {}

@@ -255,3 +255,76 @@ class TestLoadCatalogYaml:
             await catalog_funcs.load_catalog_yaml(session, yaml_path, filter_dir=filter_dir)
 
         mock_parser.assert_called_once_with(yaml_path, filter_dir)
+
+
+class TestLoadSeds:
+    """Tests for load_seds — real DB, real SED files in tmp_path."""
+
+    @pytest.mark.asyncio
+    async def test_loads_sed_files_into_db(self, session, tmp_path):
+        sed_dir = tmp_path / "seds"
+        sed_dir.mkdir()
+        (sed_dir / "spiral.sed").write_text("100.0 0.1\n200.0 0.5\n300.0 0.3\n")
+        (sed_dir / "elliptical.sed").write_text("100.0 0.2\n200.0 0.6\n300.0 0.4\n")
+
+        result = await catalog_funcs.load_seds(session, sed_dir)
+
+        assert len(result) == 2
+        names = {s.name for s in result}
+        assert names == {"spiral", "elliptical"}
+        for sed_obj in result:
+            assert sed_obj.id_ is not None
+            assert len(sed_obj.sed_wavelengths) == 3
+            assert len(sed_obj.sed_values) == 3
+
+    @pytest.mark.asyncio
+    async def test_loads_with_names_filter(self, session, tmp_path):
+        sed_dir = tmp_path / "seds"
+        sed_dir.mkdir()
+        (sed_dir / "spiral.sed").write_text("100.0 0.1\n200.0 0.5\n")
+        (sed_dir / "elliptical.sed").write_text("100.0 0.2\n200.0 0.6\n")
+        (sed_dir / "irregular.sed").write_text("100.0 0.3\n200.0 0.7\n")
+
+        result = await catalog_funcs.load_seds(session, sed_dir, names=["spiral", "elliptical"])
+
+        assert len(result) == 2
+        names = {s.name for s in result}
+        assert names == {"spiral", "elliptical"}
+
+    @pytest.mark.asyncio
+    async def test_empty_directory_raises(self, session, tmp_path):
+        sed_dir = tmp_path / "empty_seds"
+        sed_dir.mkdir()
+
+        with pytest.raises(ValueError, match="cannot be empty"):
+            await catalog_funcs.load_seds(session, sed_dir)
+
+
+class TestLoadFilterAbs:
+    """Tests for load_filter_abs — real DB, real .AB files in tmp_path."""
+
+    @pytest.mark.asyncio
+    async def test_loads_filter_ab_files_into_db(self, session, sample_band, sample_sed, tmp_path):
+        ab_dir = tmp_path / "filters"
+        ab_dir.mkdir()
+        # Filename format: {sed_name}.{band_name}.AB
+        (ab_dir / f"{sample_sed.name}.{sample_band.name}.AB").write_text("0.0 1.5\n0.5 2.3\n1.0 3.1\n")
+
+        result = await catalog_funcs.load_filter_abs(session, ab_dir)
+
+        assert len(result) == 1
+        fab = result[0]
+        assert fab.id_ is not None
+        assert fab.name == f"{sample_sed.name}.{sample_band.name}"
+        assert fab.band_id == sample_band.id_
+        assert fab.sed_id == sample_sed.id_
+        assert fab.redshifts == [0.0, 0.5, 1.0]
+        assert fab.fluxes == [1.5, 2.3, 3.1]
+
+    @pytest.mark.asyncio
+    async def test_empty_directory_raises(self, session, tmp_path):
+        ab_dir = tmp_path / "empty_filters"
+        ab_dir.mkdir()
+
+        with pytest.raises(ValueError, match="cannot be empty"):
+            await catalog_funcs.load_filter_abs(session, ab_dir)

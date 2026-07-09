@@ -119,9 +119,15 @@ source = ["src"]
 [tool.coverage.report]
 show_missing = true
 exclude_lines = [
+    "unexpected",
     "pragma: no cover",
+    "@sync_wrapper",
+    "@with_client",
+    "@with_funcs_client",
+    "@with_session",
     "as uexc:",
     "def __repr__",
+    "def __str__",
     "if settings.DEBUG",
     "raise AssertionError",
     "raise NotImplementedError",

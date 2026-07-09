@@ -294,3 +294,72 @@ class TestModelLoad:
 
         assert result.exit_code != 0
         assert "Error loading model" in result.output
+
+
+class TestLoadCommandErrorPaths:
+    """Test _parse_load_input error paths in load commands."""
+
+    @patch("macon.db.session.init_db")
+    @patch("rail_svc.cli.local.rail_svc.local_sync")
+    def test_invalid_json_file(self, mock_local_sync, mock_init, runner, tmp_path):
+        """Test error when --from-json contains invalid JSON."""
+        data_file = tmp_path / "catalog.hdf5"
+        data_file.write_bytes(b"data")
+        bad_json = tmp_path / "bad.json"
+        bad_json.write_text("not valid json {{{")
+
+        result = runner.invoke(
+            dataset_group,
+            ["load", "--path", str(data_file), "--from-json", str(bad_json)],
+        )
+
+        assert result.exit_code != 0
+        assert "Invalid JSON" in result.output
+
+    @patch("macon.db.session.init_db")
+    @patch("rail_svc.cli.local.rail_svc.local_sync")
+    def test_missing_json_file_caught_by_click(self, mock_local_sync, mock_init, runner, tmp_path):
+        """Test that Click validates --from-json path existence."""
+        data_file = tmp_path / "catalog.hdf5"
+        data_file.write_bytes(b"data")
+
+        result = runner.invoke(
+            dataset_group,
+            ["load", "--path", str(data_file), "--from-json", "/nonexistent/file.json"],
+        )
+
+        assert result.exit_code != 0
+
+    @patch("macon.db.session.init_db")
+    @patch("rail_svc.cli.local.rail_svc.local_sync")
+    def test_invalid_field_format(self, mock_local_sync, mock_init, runner, tmp_path):
+        """Test error when field doesn't contain '='."""
+        data_file = tmp_path / "catalog.hdf5"
+        data_file.write_bytes(b"data")
+
+        result = runner.invoke(
+            dataset_group,
+            ["load", "--path", str(data_file), "--output", "json", "badfield"],
+        )
+
+        assert result.exit_code != 0
+        assert "Invalid field format" in result.output
+
+    @patch("macon.db.session.init_db")
+    @patch("rail_svc.cli.local.rail_svc.local_sync")
+    def test_read_slice_table_output(self, mock_local_sync, mock_init, runner):
+        """Test read_slice with table output (non-json)."""
+        mock_local_sync.dataset.read_slice.return_value = {"mag_g": [22.5, 23.1]}
+
+        result = runner.invoke(dataset_group, ["read-slice", "--output", "table", "1"])
+
+        assert result.exit_code == 0
+
+    @patch("macon.db.session.init_db")
+    @patch("rail_svc.cli.local.rail_svc.local_sync")
+    def test_read_slice_invalid_slice_format(self, mock_local_sync, mock_init, runner):
+        """Test error when --slice has invalid format."""
+        result = runner.invoke(dataset_group, ["read-slice", "--slice", "not:a:valid:slice", "1"])
+
+        assert result.exit_code != 0
+        assert "Invalid slice format" in result.output

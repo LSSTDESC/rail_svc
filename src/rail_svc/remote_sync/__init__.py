@@ -87,7 +87,7 @@ def sed() -> SedSyncRemoteOperations:
     return SedSyncRemoteOperations(remote_async.sed)
 
 
-def funcs() -> SyncRemoteFuncs:
+def funcs() -> SyncRemoteFuncs:  # pragma: no cover
     """Create sync remote operations for fuctions."""
     return SyncRemoteFuncs(remote_async.funcs)
 

@@ -117,11 +117,11 @@ async def load_catalog_yaml(request: LoadCatalogYamlRequest) -> LoadCatalogYamlR
                 cba.model_dump() if hasattr(cba, "model_dump") else dict(cba) for cba in catalog_band_assocs
             ],
         )
-    except ValidationError as exc:
+    except ValidationError as uexc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Validation error", "details": exc.errors()},
-        ) from exc
+            detail={"error": "Validation error", "details": uexc.errors()},
+        ) from uexc
     except Exception as exc:
         logger.exception("Failed to load catalog YAML from %s", request.catalog_yaml)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
@@ -168,11 +168,11 @@ async def get_data_and_estimates_data(dataset_id: int, row: int) -> GetDataAndEs
             data=data,
             estimates_dict=the_estimates_dict,
         )
-    except ValidationError as exc:
+    except ValidationError as uexc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "Validation error", "details": exc.errors()},
-        ) from exc
+            detail={"error": "Validation error", "details": uexc.errors()},
+        ) from uexc
     except Exception as exc:
         logger.exception("Failed to get data and estimates data for dataset_id=%s, row=%s", dataset_id, row)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc

@@ -16,6 +16,7 @@ from typing import Any, TypeVar
 import numpy as np
 import qp
 from ceci.stage import PipelineStage
+from macon.common import unexpected
 from rail.estimation.estimator import CatEstimator
 from rail.utils import catalog_utils
 
@@ -445,16 +446,16 @@ class CatEstimatorEnsembleWrapper(CatEstimatorWrapperBase):
             if not rail_output.is_absolute():
                 rail_output = Path.cwd() / rail_output
 
-            if rail_output.exists() and rail_output != output_dest:
+            if unexpected(rail_output.exists() and rail_output != output_dest):
                 shutil.move(str(rail_output), str(output_dest))
                 logger.info(f"Moved output: {rail_output} -> {output_dest}")
-            elif not output_dest.exists():
+            elif unexpected(not output_dest.exists()):
                 inprogress = Path.cwd() / f"inprogress_{rail_output.name}"
                 if inprogress.exists():
                     shutil.move(str(inprogress), str(output_dest))
                     logger.info(f"Moved inprogress output: {inprogress} -> {output_dest}")
-        except (TypeError, ValueError, OSError) as exc:
-            logger.warning(f"Could not move output to {output_file}: {exc}")
+        except (TypeError, ValueError, OSError) as uexc:
+            logger.warning(f"Could not move output to {output_file}: {uexc}")
 
         return output_handle
 

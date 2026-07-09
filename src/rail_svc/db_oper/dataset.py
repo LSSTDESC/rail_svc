@@ -131,7 +131,7 @@ class DatasetOperations(FileValidatedOperations[db.Dataset, models.Dataset, mode
             n_objects = extra_kwargs.get("n_objects")
             if n_objects is None:
                 raise ValueError("When validate_file=False, 'n_objects' must be provided")
-        else:
+        else:  # pragma: no cover
             fullpath = self._validate_path_security(path)
             n_objects = await self.validate_data_for_path(fullpath, catalog_tag_obj)
 

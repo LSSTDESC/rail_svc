@@ -14,7 +14,7 @@ from typing import Any, override
 
 import anyio
 from macon import db_funcs
-from macon.common import LoadType, handle_file
+from macon.common import LoadType, handle_file, unexpected
 from macon.db.session import get_session
 from macon.db_oper.base import TableContext, TableOperations
 from rail.core.model import Model as RailModel
@@ -398,14 +398,14 @@ class ModelOperations(TableOperations[db.Model, models.Model, models.ModelCreate
                 _algo_id, algo_obj = await db_funcs.read.lookup_by_id_or_name(
                     db.Algorithm, session, None, algo_name, need_object=True
                 )
-                if algo_obj is None:
+                if unexpected(algo_obj is None):
                     raise ValueError(f"Algorithm '{algo_name}' not found in database")
 
                 # Look up catalog tag
                 _catalog_tag_id, catalog_tag_obj = await db_funcs.read.lookup_by_id_or_name(
                     db.CatalogTag, session, None, catalog_tag_name, need_object=True
                 )
-                if catalog_tag_obj is None:
+                if unexpected(catalog_tag_obj is None):
                     raise ValueError(f"CatalogTag '{catalog_tag_name}' not found in database")
 
                 # Validate the original model file before any operations

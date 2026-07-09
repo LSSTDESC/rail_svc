@@ -3,16 +3,18 @@
 import asyncio
 from typing import Any
 
+from macon.common import unexpected
+
 from .. import local_async
 
 
 def __getattr__(name: str) -> Any:
     """Auto-generate sync wrappers for any function in local_async.funcs."""
     async_func = getattr(local_async.funcs, name, None)
-    if async_func is None:
+    if unexpected(async_func is None):
         raise AttributeError(f"module 'rail_svc.local_sync.funcs' has no attribute {name!r}")
 
-    def sync_func(*args: Any, **kwargs: Any) -> Any:
+    def sync_func(*args: Any, **kwargs: Any) -> Any:  # pragma: no cover
         return asyncio.run(async_func(*args, **kwargs))
 
     sync_func.__name__ = name

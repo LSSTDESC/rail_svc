@@ -235,8 +235,6 @@ async def get_estimators_for_dataest(
 
         return all_estimators
 
-    except ValueError:
-        raise
     except Exception as uexc:
         logger.error(f"Failed to get estimators: {uexc}")
         raise
@@ -301,8 +299,6 @@ async def estimate_pdf_for_slice(
 
         return pdf_result
 
-    except (OSError, ValueError, FileNotFoundError):
-        raise
     except Exception as uexc:
         logger.error(f"Failed to estimate PDF: {uexc}")
         raise

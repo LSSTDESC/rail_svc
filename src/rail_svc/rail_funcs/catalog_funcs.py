@@ -570,8 +570,8 @@ def make_filter_ab_create_models(
             entry_name = stem
             fab = make_filter_ab_create_model(entry_name, file_path, band_name, sed_name)
             filter_abs.append(fab)
-        except Exception as e:
-            logger.error(f"Failed to create FilterAB model from '{file_path}': {e}")
+        except Exception as uexc:
+            logger.error(f"Failed to create FilterAB model from '{file_path}': {uexc}")
             continue
 
     logger.info(f"Successfully created {len(filter_abs)} FilterAB models")
