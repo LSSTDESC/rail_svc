@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 
-from rail_svc.models import BandCreate, CatalogBandAssocCreate, CatalogTagCreate
+from rail_svc.models import BandCreate, CatalogBandAssocCreate, CatalogTagCreate, FilterABCreate, SedCreate
 from rail_svc.rail_funcs import catalog_funcs
 
 
@@ -1015,3 +1015,593 @@ class TestIntegration:
             assert tags[0].name == "test_catalog"
         finally:
             yaml_path.unlink()
+
+
+# ============================================================================
+# SED Functions
+# ============================================================================
+
+
+class TestReadSedFile:
+    """Tests for read_sed_file function"""
+
+    def test_successful_read(self, tmp_path):
+        sed_file = tmp_path / "test.sed"
+        sed_file.write_text("100.0 0.1\n200.0 0.5\n300.0 0.3\n")
+
+        result = catalog_funcs.read_sed_file(sed_file)
+
+        assert result.shape == (3, 2)
+        np.testing.assert_array_almost_equal(result[:, 0], [100.0, 200.0, 300.0])
+        np.testing.assert_array_almost_equal(result[:, 1], [0.1, 0.5, 0.3])
+
+    def test_string_path(self, tmp_path):
+        sed_file = tmp_path / "test.sed"
+        sed_file.write_text("100.0 0.1\n200.0 0.5\n")
+
+        result = catalog_funcs.read_sed_file(str(sed_file))
+
+        assert result.shape == (2, 2)
+
+    def test_file_not_found(self):
+        with pytest.raises(FileNotFoundError, match="SED file not found"):
+            catalog_funcs.read_sed_file(Path("/nonexistent/test.sed"))
+
+    def test_invalid_data_format(self, tmp_path):
+        sed_file = tmp_path / "bad.sed"
+        sed_file.write_text("not a number\n")
+
+        with pytest.raises(ValueError, match="Invalid data format"):
+            catalog_funcs.read_sed_file(sed_file)
+
+    def test_wrong_shape_single_column(self, tmp_path):
+        sed_file = tmp_path / "one_col.sed"
+        sed_file.write_text("100.0\n200.0\n300.0\n")
+
+        with pytest.raises(ValueError, match="Invalid data shape"):
+            catalog_funcs.read_sed_file(sed_file)
+
+    def test_wrong_shape_three_columns(self, tmp_path):
+        sed_file = tmp_path / "three_col.sed"
+        sed_file.write_text("100.0 0.1 0.2\n200.0 0.5 0.6\n")
+
+        with pytest.raises(ValueError, match="Invalid data shape"):
+            catalog_funcs.read_sed_file(sed_file)
+
+
+class TestMakeSedCreateModel:
+    """Tests for make_sed_create_model function"""
+
+    def test_successful_creation(self, tmp_path):
+        sed_file = tmp_path / "elliptical.sed"
+        sed_file.write_text("100.0 0.1\n200.0 0.5\n300.0 0.3\n")
+
+        result = catalog_funcs.make_sed_create_model("elliptical", sed_file)
+
+        assert isinstance(result, SedCreate)
+        assert result.name == "elliptical"
+        assert result.sed_wavelengths == [100.0, 200.0, 300.0]
+        assert result.sed_values == [0.1, 0.5, 0.3]
+
+    def test_empty_name(self, tmp_path):
+        sed_file = tmp_path / "test.sed"
+        sed_file.write_text("100.0 0.1\n")
+
+        with pytest.raises(ValueError, match="name must be a non-empty string"):
+            catalog_funcs.make_sed_create_model("", sed_file)
+
+    def test_whitespace_name(self, tmp_path):
+        sed_file = tmp_path / "test.sed"
+        sed_file.write_text("100.0 0.1\n")
+
+        with pytest.raises(ValueError, match="name must be a non-empty string"):
+            catalog_funcs.make_sed_create_model("   ", sed_file)
+
+    def test_file_not_found(self):
+        with pytest.raises(FileNotFoundError):
+            catalog_funcs.make_sed_create_model("test", Path("/nonexistent/test.sed"))
+
+
+class TestMakeSedCreateModels:
+    """Tests for make_sed_create_models function"""
+
+    def test_glob_all_files(self, tmp_path):
+        (tmp_path / "spiral.sed").write_text("100.0 0.1\n200.0 0.5\n")
+        (tmp_path / "elliptical.sed").write_text("100.0 0.2\n200.0 0.6\n")
+
+        result = catalog_funcs.make_sed_create_models(tmp_path)
+
+        assert len(result) == 2
+        names = {s.name for s in result}
+        assert names == {"spiral", "elliptical"}
+
+    def test_filter_by_names(self, tmp_path):
+        (tmp_path / "spiral.sed").write_text("100.0 0.1\n200.0 0.5\n")
+        (tmp_path / "elliptical.sed").write_text("100.0 0.2\n200.0 0.6\n")
+        (tmp_path / "irregular.sed").write_text("100.0 0.3\n200.0 0.7\n")
+
+        result = catalog_funcs.make_sed_create_models(tmp_path, names=["spiral", "elliptical"])
+
+        assert len(result) == 2
+        names = {s.name for s in result}
+        assert names == {"spiral", "elliptical"}
+
+    def test_filter_by_names_file(self, tmp_path):
+        (tmp_path / "spiral.sed").write_text("100.0 0.1\n200.0 0.5\n")
+        (tmp_path / "elliptical.sed").write_text("100.0 0.2\n200.0 0.6\n")
+        names_file = tmp_path / "names.txt"
+        names_file.write_text("# comment\nspiral.sed\n\nelliptical.sed\n")
+
+        result = catalog_funcs.make_sed_create_models(tmp_path, names_file=names_file)
+
+        assert len(result) == 2
+
+    def test_names_takes_precedence_over_names_file(self, tmp_path):
+        (tmp_path / "spiral.sed").write_text("100.0 0.1\n200.0 0.5\n")
+        (tmp_path / "elliptical.sed").write_text("100.0 0.2\n200.0 0.6\n")
+        names_file = tmp_path / "names.txt"
+        names_file.write_text("elliptical.sed\n")
+
+        result = catalog_funcs.make_sed_create_models(tmp_path, names=["spiral"], names_file=names_file)
+
+        assert len(result) == 1
+        assert result[0].name == "spiral"
+
+    def test_empty_directory(self, tmp_path):
+        result = catalog_funcs.make_sed_create_models(tmp_path)
+        assert result == []
+
+    def test_missing_directory(self):
+        with pytest.raises(FileNotFoundError, match="SED directory not found"):
+            catalog_funcs.make_sed_create_models(Path("/nonexistent/seds"))
+
+    def test_missing_names_file(self, tmp_path):
+        with pytest.raises(FileNotFoundError, match="SED names file not found"):
+            catalog_funcs.make_sed_create_models(tmp_path, names_file=Path("/nonexistent/names.txt"))
+
+    def test_string_path_for_sed_dir(self, tmp_path):
+        (tmp_path / "spiral.sed").write_text("100.0 0.1\n200.0 0.5\n")
+
+        result = catalog_funcs.make_sed_create_models(str(tmp_path))
+
+        assert len(result) == 1
+
+    def test_string_path_for_names_file(self, tmp_path):
+        (tmp_path / "spiral.sed").write_text("100.0 0.1\n200.0 0.5\n")
+        names_file = tmp_path / "names.txt"
+        names_file.write_text("spiral.sed\n")
+
+        result = catalog_funcs.make_sed_create_models(str(tmp_path), names_file=str(names_file))
+
+        assert len(result) == 1
+
+    def test_partial_failure_skips_bad_files(self, tmp_path):
+        (tmp_path / "good.sed").write_text("100.0 0.1\n200.0 0.5\n")
+        (tmp_path / "bad.sed").write_text("not valid data\n")
+
+        result = catalog_funcs.make_sed_create_models(tmp_path)
+
+        assert len(result) == 1
+        assert result[0].name == "good"
+
+
+# ============================================================================
+# FilterAB Functions
+# ============================================================================
+
+
+class TestReadFilterAbFile:
+    """Tests for read_filter_ab_file function"""
+
+    def test_successful_read(self, tmp_path):
+        ab_file = tmp_path / "test.AB"
+        ab_file.write_text("0.0 1.5\n0.5 2.3\n1.0 3.1\n")
+
+        result = catalog_funcs.read_filter_ab_file(ab_file)
+
+        assert result.shape == (3, 2)
+        np.testing.assert_array_almost_equal(result[:, 0], [0.0, 0.5, 1.0])
+        np.testing.assert_array_almost_equal(result[:, 1], [1.5, 2.3, 3.1])
+
+    def test_string_path(self, tmp_path):
+        ab_file = tmp_path / "test.AB"
+        ab_file.write_text("0.0 1.5\n0.5 2.3\n")
+
+        result = catalog_funcs.read_filter_ab_file(str(ab_file))
+
+        assert result.shape == (2, 2)
+
+    def test_file_not_found(self):
+        with pytest.raises(FileNotFoundError, match="FilterAB file not found"):
+            catalog_funcs.read_filter_ab_file(Path("/nonexistent/test.AB"))
+
+    def test_invalid_data_format(self, tmp_path):
+        ab_file = tmp_path / "bad.AB"
+        ab_file.write_text("not a number\n")
+
+        with pytest.raises(ValueError, match="Invalid data format"):
+            catalog_funcs.read_filter_ab_file(ab_file)
+
+    def test_wrong_shape_single_column(self, tmp_path):
+        ab_file = tmp_path / "one_col.AB"
+        ab_file.write_text("0.0\n0.5\n1.0\n")
+
+        with pytest.raises(ValueError, match="Invalid data shape"):
+            catalog_funcs.read_filter_ab_file(ab_file)
+
+    def test_wrong_shape_three_columns(self, tmp_path):
+        ab_file = tmp_path / "three_col.AB"
+        ab_file.write_text("0.0 1.5 0.1\n0.5 2.3 0.2\n")
+
+        with pytest.raises(ValueError, match="Invalid data shape"):
+            catalog_funcs.read_filter_ab_file(ab_file)
+
+
+class TestMakeFilterAbCreateModel:
+    """Tests for make_filter_ab_create_model function"""
+
+    def test_successful_creation(self, tmp_path):
+        ab_file = tmp_path / "elliptical.g.AB"
+        ab_file.write_text("0.0 1.5\n0.5 2.3\n1.0 3.1\n")
+
+        result = catalog_funcs.make_filter_ab_create_model("elliptical.g", ab_file, "g", "elliptical")
+
+        assert isinstance(result, FilterABCreate)
+        assert result.name == "elliptical.g"
+        assert result.redshifts == [0.0, 0.5, 1.0]
+        assert result.fluxes == [1.5, 2.3, 3.1]
+        assert result.band_name == "g"
+        assert result.sed_name == "elliptical"
+
+    def test_empty_name(self, tmp_path):
+        ab_file = tmp_path / "test.AB"
+        ab_file.write_text("0.0 1.5\n")
+
+        with pytest.raises(ValueError, match="name must be a non-empty string"):
+            catalog_funcs.make_filter_ab_create_model("", ab_file, "g", "elliptical")
+
+    def test_empty_band_name(self, tmp_path):
+        ab_file = tmp_path / "test.AB"
+        ab_file.write_text("0.0 1.5\n")
+
+        with pytest.raises(ValueError, match="band_name must be a non-empty string"):
+            catalog_funcs.make_filter_ab_create_model("test", ab_file, "", "elliptical")
+
+    def test_empty_sed_name(self, tmp_path):
+        ab_file = tmp_path / "test.AB"
+        ab_file.write_text("0.0 1.5\n")
+
+        with pytest.raises(ValueError, match="sed_name must be a non-empty string"):
+            catalog_funcs.make_filter_ab_create_model("test", ab_file, "g", "")
+
+    def test_file_not_found(self):
+        with pytest.raises(FileNotFoundError):
+            catalog_funcs.make_filter_ab_create_model("test", Path("/nonexistent/test.AB"), "g", "elliptical")
+
+
+class TestMakeFilterAbCreateModels:
+    """Tests for make_filter_ab_create_models function"""
+
+    def test_glob_all_files(self, tmp_path):
+        (tmp_path / "elliptical.g.AB").write_text("0.0 1.5\n0.5 2.3\n")
+        (tmp_path / "spiral.r.AB").write_text("0.0 1.1\n0.5 2.0\n")
+
+        result = catalog_funcs.make_filter_ab_create_models(tmp_path)
+
+        assert len(result) == 2
+        names = {f.name for f in result}
+        assert names == {"elliptical.g", "spiral.r"}
+
+    def test_parses_filename_correctly(self, tmp_path):
+        (tmp_path / "elliptical.g.AB").write_text("0.0 1.5\n0.5 2.3\n")
+
+        result = catalog_funcs.make_filter_ab_create_models(tmp_path)
+
+        assert len(result) == 1
+        assert result[0].sed_name == "elliptical"
+        assert result[0].band_name == "g"
+        assert result[0].name == "elliptical.g"
+
+    def test_filter_by_names(self, tmp_path):
+        (tmp_path / "elliptical.g.AB").write_text("0.0 1.5\n0.5 2.3\n")
+        (tmp_path / "spiral.r.AB").write_text("0.0 1.1\n0.5 2.0\n")
+        (tmp_path / "irregular.i.AB").write_text("0.0 0.9\n0.5 1.8\n")
+
+        result = catalog_funcs.make_filter_ab_create_models(tmp_path, names=["elliptical.g", "spiral.r"])
+
+        assert len(result) == 2
+
+    def test_invalid_filename_pattern_skipped(self, tmp_path):
+        (tmp_path / "nodot.AB").write_text("0.0 1.5\n0.5 2.3\n")
+        (tmp_path / "elliptical.g.AB").write_text("0.0 1.5\n0.5 2.3\n")
+
+        result = catalog_funcs.make_filter_ab_create_models(tmp_path)
+
+        assert len(result) == 1
+        assert result[0].name == "elliptical.g"
+
+    def test_empty_directory(self, tmp_path):
+        result = catalog_funcs.make_filter_ab_create_models(tmp_path)
+        assert result == []
+
+    def test_missing_directory(self):
+        with pytest.raises(FileNotFoundError, match="FilterAB directory not found"):
+            catalog_funcs.make_filter_ab_create_models(Path("/nonexistent/filters"))
+
+    def test_string_path_for_filter_ab_dir(self, tmp_path):
+        (tmp_path / "elliptical.g.AB").write_text("0.0 1.5\n0.5 2.3\n")
+
+        result = catalog_funcs.make_filter_ab_create_models(str(tmp_path))
+
+        assert len(result) == 1
+
+
+# ============================================================================
+# Multi-Catalog and Slice Functions
+# ============================================================================
+
+
+class TestGetMultiCatalogRow:
+    """Tests for get_multi_catalog_row function"""
+
+    @patch("rail_svc.rail_funcs.catalog_funcs.tables_io.read")
+    @patch("rail_svc.rail_funcs.catalog_funcs.global_config")
+    def test_successful_read(self, mock_config, mock_read, tmp_path):
+        archive_dir = tmp_path / "archive"
+        archive_dir.mkdir()
+        matched_file = archive_dir / "matched.hdf5"
+        matched_file.write_text("mock")
+        comp_file = archive_dir / "component.hdf5"
+        comp_file.write_text("mock")
+
+        mock_config.storage.archive = str(archive_dir)
+
+        match_data = {
+            "spec_idx": np.array([5]),
+            "mag_g": np.array([20.1]),
+        }
+        component_data = Mock()
+        component_data.__getitem__ = Mock(return_value={"ra": np.array([180.0]), "dec": np.array([45.0])})
+
+        mock_read.side_effect = [match_data, component_data]
+
+        result = catalog_funcs.get_multi_catalog_row(
+            "matched.hdf5",
+            {"spec_idx": "component.hdf5"},
+            row=3,
+        )
+
+        assert "spec_idx" in result
+        assert "mag_g" in result
+        mock_read.assert_any_call(matched_file, slice_dict=3)
+
+    @patch("rail_svc.rail_funcs.catalog_funcs.global_config")
+    def test_matched_file_not_found(self, mock_config, tmp_path):
+        mock_config.storage.archive = str(tmp_path)
+
+        with pytest.raises(FileNotFoundError, match="Matched dataset not found"):
+            catalog_funcs.get_multi_catalog_row("nonexistent.hdf5", {"key": "comp.hdf5"}, row=0)
+
+    @patch("rail_svc.rail_funcs.catalog_funcs.tables_io.read")
+    @patch("rail_svc.rail_funcs.catalog_funcs.global_config")
+    def test_component_file_not_found(self, mock_config, mock_read, tmp_path):
+        archive_dir = tmp_path / "archive"
+        archive_dir.mkdir()
+        matched_file = archive_dir / "matched.hdf5"
+        matched_file.write_text("mock")
+
+        mock_config.storage.archive = str(archive_dir)
+        mock_read.return_value = {"spec_idx": np.array([5])}
+
+        with pytest.raises(FileNotFoundError, match="Component dataset not found"):
+            catalog_funcs.get_multi_catalog_row("matched.hdf5", {"spec_idx": "nonexistent.hdf5"}, row=0)
+
+    @patch("rail_svc.rail_funcs.catalog_funcs.tables_io.read")
+    @patch("rail_svc.rail_funcs.catalog_funcs.global_config")
+    def test_key_not_in_match_set(self, mock_config, mock_read, tmp_path):
+        archive_dir = tmp_path / "archive"
+        archive_dir.mkdir()
+        matched_file = archive_dir / "matched.hdf5"
+        matched_file.write_text("mock")
+        comp_file = archive_dir / "component.hdf5"
+        comp_file.write_text("mock")
+
+        mock_config.storage.archive = str(archive_dir)
+        mock_read.return_value = {"mag_g": np.array([20.1])}
+
+        with pytest.raises(KeyError, match="Match key 'missing_key' not found"):
+            catalog_funcs.get_multi_catalog_row("matched.hdf5", {"missing_key": "component.hdf5"}, row=0)
+
+
+class TestReadSingleCatalogSlice:
+    """Tests for read_single_catalog_slice function"""
+
+    @patch("rail_svc.rail_funcs.catalog_funcs.tables_io.read")
+    @patch("rail_svc.rail_funcs.catalog_funcs.global_config")
+    def test_successful_read_with_slice(self, mock_config, mock_read, tmp_path):
+        archive_dir = tmp_path / "archive"
+        archive_dir.mkdir()
+        ds_file = archive_dir / "catalog.hdf5"
+        ds_file.write_text("mock")
+
+        mock_config.storage.archive = str(archive_dir)
+        mock_data = {"mag_g": np.array([20.1, 20.2, 20.3])}
+        mock_read.return_value = mock_data
+
+        result = catalog_funcs.read_single_catalog_slice("catalog.hdf5", slice(0, 3))
+
+        assert result is mock_data
+        mock_read.assert_called_once_with(ds_file, slice_dict=slice(0, 3))
+
+    @patch("rail_svc.rail_funcs.catalog_funcs.tables_io.read")
+    @patch("rail_svc.rail_funcs.catalog_funcs.global_config")
+    def test_successful_read_with_int(self, mock_config, mock_read, tmp_path):
+        archive_dir = tmp_path / "archive"
+        archive_dir.mkdir()
+        ds_file = archive_dir / "catalog.hdf5"
+        ds_file.write_text("mock")
+
+        mock_config.storage.archive = str(archive_dir)
+        mock_data = {"mag_g": np.array([20.1])}
+        mock_read.return_value = mock_data
+
+        catalog_funcs.read_single_catalog_slice("catalog.hdf5", 5)
+
+        mock_read.assert_called_once_with(ds_file, slice_dict=5)
+
+    @patch("rail_svc.rail_funcs.catalog_funcs.tables_io.read")
+    @patch("rail_svc.rail_funcs.catalog_funcs.global_config")
+    def test_successful_read_with_none(self, mock_config, mock_read, tmp_path):
+        archive_dir = tmp_path / "archive"
+        archive_dir.mkdir()
+        ds_file = archive_dir / "catalog.hdf5"
+        ds_file.write_text("mock")
+
+        mock_config.storage.archive = str(archive_dir)
+        mock_data = {"mag_g": np.array([20.1, 20.2])}
+        mock_read.return_value = mock_data
+
+        catalog_funcs.read_single_catalog_slice("catalog.hdf5", None)
+
+        mock_read.assert_called_once_with(ds_file, slice_dict=None)
+
+    @patch("rail_svc.rail_funcs.catalog_funcs.global_config")
+    def test_file_not_found(self, mock_config, tmp_path):
+        mock_config.storage.archive = str(tmp_path)
+
+        with pytest.raises(FileNotFoundError, match="Dataset not found"):
+            catalog_funcs.read_single_catalog_slice("nonexistent.hdf5")
+
+
+class TestReadMultiCatalogSlice:
+    """Tests for read_multi_catalog_slice function"""
+
+    @patch("rail_svc.rail_funcs.catalog_funcs.tables_io.read")
+    @patch("rail_svc.rail_funcs.catalog_funcs.global_config")
+    def test_successful_read(self, mock_config, mock_read, tmp_path):
+        archive_dir = tmp_path / "archive"
+        archive_dir.mkdir()
+        matched_file = archive_dir / "matched.hdf5"
+        matched_file.write_text("mock")
+        comp_file = archive_dir / "component.hdf5"
+        comp_file.write_text("mock")
+
+        mock_config.storage.archive = str(archive_dir)
+
+        match_data = {
+            "spec_idx": np.array([2, 5, 8]),
+            "mag_g": np.array([20.1, 20.2, 20.3]),
+        }
+        component_data = Mock()
+        component_data.__getitem__ = Mock(return_value={"ra": np.array([180.0, 181.0, 182.0])})
+
+        mock_read.side_effect = [match_data, component_data]
+
+        result = catalog_funcs.read_multi_catalog_slice(
+            "matched.hdf5",
+            {"spec_idx": "component.hdf5"},
+            the_slice=slice(0, 3),
+        )
+
+        assert "spec_idx" in result
+        assert "mag_g" in result
+        mock_read.assert_any_call(matched_file, slice_dict=slice(0, 3))
+
+    @patch("rail_svc.rail_funcs.catalog_funcs.global_config")
+    def test_matched_file_not_found(self, mock_config, tmp_path):
+        mock_config.storage.archive = str(tmp_path)
+
+        with pytest.raises(FileNotFoundError, match="Matched dataset not found"):
+            catalog_funcs.read_multi_catalog_slice("nonexistent.hdf5", {"key": "comp.hdf5"})
+
+    @patch("rail_svc.rail_funcs.catalog_funcs.tables_io.read")
+    @patch("rail_svc.rail_funcs.catalog_funcs.global_config")
+    def test_component_file_not_found(self, mock_config, mock_read, tmp_path):
+        archive_dir = tmp_path / "archive"
+        archive_dir.mkdir()
+        matched_file = archive_dir / "matched.hdf5"
+        matched_file.write_text("mock")
+
+        mock_config.storage.archive = str(archive_dir)
+        mock_read.return_value = {"spec_idx": np.array([2, 5])}
+
+        with pytest.raises(FileNotFoundError, match="Component dataset not found"):
+            catalog_funcs.read_multi_catalog_slice(
+                "matched.hdf5", {"spec_idx": "nonexistent.hdf5"}, slice(0, 2)
+            )
+
+    @patch("rail_svc.rail_funcs.catalog_funcs.tables_io.read")
+    @patch("rail_svc.rail_funcs.catalog_funcs.global_config")
+    def test_key_not_in_match_set(self, mock_config, mock_read, tmp_path):
+        archive_dir = tmp_path / "archive"
+        archive_dir.mkdir()
+        matched_file = archive_dir / "matched.hdf5"
+        matched_file.write_text("mock")
+        comp_file = archive_dir / "component.hdf5"
+        comp_file.write_text("mock")
+
+        mock_config.storage.archive = str(archive_dir)
+        mock_read.return_value = {"mag_g": np.array([20.1])}
+
+        with pytest.raises(KeyError, match="Match key 'missing_key' not found"):
+            catalog_funcs.read_multi_catalog_slice("matched.hdf5", {"missing_key": "component.hdf5"})
+
+
+class TestReadEstimatesSlice:
+    """Tests for read_estimates_slice function"""
+
+    @patch("rail_svc.rail_funcs.catalog_funcs.qp.read")
+    @patch("rail_svc.rail_funcs.catalog_funcs.global_config")
+    def test_successful_read_with_slice(self, mock_config, mock_qp_read, tmp_path):
+        archive_dir = tmp_path / "archive"
+        archive_dir.mkdir()
+        est_file = archive_dir / "estimates.hdf5"
+        est_file.write_text("mock")
+
+        mock_config.storage.archive = str(archive_dir)
+        mock_ensemble = Mock()
+        mock_qp_read.return_value = mock_ensemble
+
+        result = catalog_funcs.read_estimates_slice("estimates.hdf5", slice(0, 10))
+
+        assert result is mock_ensemble
+        mock_qp_read.assert_called_once_with(est_file, read_slice=slice(0, 10))
+
+    @patch("rail_svc.rail_funcs.catalog_funcs.qp.read")
+    @patch("rail_svc.rail_funcs.catalog_funcs.global_config")
+    def test_successful_read_with_int(self, mock_config, mock_qp_read, tmp_path):
+        archive_dir = tmp_path / "archive"
+        archive_dir.mkdir()
+        est_file = archive_dir / "estimates.hdf5"
+        est_file.write_text("mock")
+
+        mock_config.storage.archive = str(archive_dir)
+        mock_ensemble = Mock()
+        mock_qp_read.return_value = mock_ensemble
+
+        catalog_funcs.read_estimates_slice("estimates.hdf5", 5)
+
+        mock_qp_read.assert_called_once_with(est_file, read_slice=5)
+
+    @patch("rail_svc.rail_funcs.catalog_funcs.qp.read")
+    @patch("rail_svc.rail_funcs.catalog_funcs.global_config")
+    def test_successful_read_with_none(self, mock_config, mock_qp_read, tmp_path):
+        archive_dir = tmp_path / "archive"
+        archive_dir.mkdir()
+        est_file = archive_dir / "estimates.hdf5"
+        est_file.write_text("mock")
+
+        mock_config.storage.archive = str(archive_dir)
+        mock_ensemble = Mock()
+        mock_qp_read.return_value = mock_ensemble
+
+        catalog_funcs.read_estimates_slice("estimates.hdf5", None)
+
+        mock_qp_read.assert_called_once_with(est_file, read_slice=None)
+
+    @patch("rail_svc.rail_funcs.catalog_funcs.global_config")
+    def test_file_not_found(self, mock_config, tmp_path):
+        mock_config.storage.archive = str(tmp_path)
+
+        with pytest.raises(FileNotFoundError, match="Estimates file not found"):
+            catalog_funcs.read_estimates_slice("nonexistent.hdf5")

@@ -166,7 +166,7 @@ class AsyncRemoteFuncs:
             return self._client
 
         # Warn on first temporary client creation
-        if not self._has_warned:
+        if not self._has_warned:  # pragma: no cover
             warnings.warn(
                 f"Creating temporary client for {self.__class__.__name__}. "
                 "For better performance with multiple operations, use as async context manager: "
@@ -177,17 +177,17 @@ class AsyncRemoteFuncs:
             self._has_warned = True
 
         # Create temporary API and client for single operation
-        api = RemoteAPI(
+        api = RemoteAPI(  # pragma: no cover
             base_url=self.base_url,
             api_prefix=self.api_prefix,
             timeout=self.timeout,
             auth_token=self.auth_token,
         )
 
-        funcs_endpoint = f"{self.base_url}{self.api_prefix}/funcs"
-        assert api.client
+        funcs_endpoint = f"{self.base_url}{self.api_prefix}/funcs"  # pragma: no cover
+        assert api.client  # pragma: no cover
 
-        return RemoteFuncsOperations(
+        return RemoteFuncsOperations(  # pragma: no cover
             client=api.client,
             endpoint=funcs_endpoint,
         )

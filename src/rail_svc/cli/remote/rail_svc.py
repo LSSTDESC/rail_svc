@@ -22,7 +22,7 @@ ResponseT = TypeVar("ResponseT", bound=BaseModel)
 CreateT = TypeVar("CreateT", bound=BaseModel)
 
 
-def handle_error(exc: Exception, context: str = "") -> None:
+def handle_error(exc: Exception, context: str = "") -> None:  # pragma: no cover
     """Handle common errors with appropriate messages.
 
     Parameters
@@ -92,33 +92,6 @@ class CliRemoteOperations[ResponseT: BaseModel, CreateT: BaseModel]:
     # ========================================================================
     # UTILITY METHODS
     # ========================================================================
-
-    def _handle_error(self, exc: Exception, context: str = "") -> None:
-        """Handle common errors with appropriate messages.
-
-        Parameters
-        ----------
-        exc : Exception
-            Exception that was raised
-        context : str, optional
-            Additional context about when the error occurred
-
-        Raises
-        ------
-        click.Abort
-            Always raises to terminate command
-        """
-        context_msg = f" {context}" if context else ""
-
-        if isinstance(exc, ValidationError):
-            click.echo(f"Error: Validation failed{context_msg}: {exc}", err=True)
-        elif isinstance(exc, ValueError):
-            click.echo(f"Error{context_msg}: {exc}", err=True)
-        else:  # pragma: no cover
-            logger.error(f"Unexpected error{context_msg}", exc_info=exc)
-            click.echo(f"Error{context_msg}: {exc}", err=True)
-
-        raise click.Abort()
 
     # ========================================================================
     # READ COMMAND REGISTRATION

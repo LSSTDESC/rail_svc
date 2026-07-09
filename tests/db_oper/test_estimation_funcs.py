@@ -328,3 +328,127 @@ class TestEstimateDataset:
                 dataset_id=sample_dataset.id_,
                 raise_if_exists=True,
             )
+
+
+class TestEstimateEnsembleAbsolutePath:
+    """Test estimate_ensemble with absolute output_file_path."""
+
+    @pytest.mark.asyncio
+    async def test_absolute_output_path(self, session, sample_estimator, tmp_path):
+        archive_dir = tmp_path / "archive"
+        archive_dir.mkdir()
+        dataset_rel = "datasets/test.hdf5"
+        input_path = archive_dir / dataset_rel
+        input_path.parent.mkdir(parents=True, exist_ok=True)
+        input_path.write_text("mock dataset")
+
+        absolute_output = tmp_path / "output" / "estimates.hdf5"
+
+        mock_dataset_obj = Mock()
+        mock_dataset_obj.path = dataset_rel
+
+        mock_wrapper = Mock(spec=CatEstimatorEnsembleWrapper)
+
+        def create_output(*args):
+            absolute_output.parent.mkdir(parents=True, exist_ok=True)
+            absolute_output.write_text("mock estimates")
+
+        mock_wrapper.side_effect = create_output
+
+        with (
+            patch(
+                "rail_svc.db_oper.estimation_funcs.build_ensemble_estimation_wrapper",
+                return_value=mock_wrapper,
+            ),
+            patch("rail_svc.db_oper.estimation_funcs.dataset.get_row", return_value=mock_dataset_obj),
+            patch("rail_svc.db_oper.estimation_funcs.global_config.storage.archive", str(archive_dir)),
+            patch("anyio.Path.absolute", return_value=archive_dir),
+        ):
+            result = await estimation_funcs.estimate_ensemble(
+                session,
+                estimator_id=sample_estimator.id_,
+                dataset_id=1,
+                output_file_path=absolute_output,
+            )
+
+        assert result == absolute_output
+        assert absolute_output.exists()
+
+
+class TestEstimatePdfForSlice:
+    """Tests for estimate_pdf_for_slice — mock wrapper, real DB."""
+
+    @pytest.mark.asyncio
+    async def test_returns_cached_estimates(
+        self, session, sample_dataset, sample_estimator, sample_estimates
+    ):
+        mock_ensemble = Mock(spec=qp.Ensemble)
+
+        with patch(
+            "rail_svc.db_oper.estimation_funcs.rail_funcs.catalog_funcs.read_estimates_slice",
+            return_value=mock_ensemble,
+        ):
+            result = await estimation_funcs.estimate_pdf_for_slice(
+                session,
+                estimator_id=sample_estimator.id_,
+                dataset_id=sample_dataset.id_,
+                the_slice=slice(0, 10),
+            )
+
+        assert result is mock_ensemble
+
+    @pytest.mark.asyncio
+    async def test_computes_when_no_existing(self, session, sample_dataset, sample_estimator):
+        mock_wrapper = Mock(spec=CatEstimatorPdfWrapper)
+        mock_pdf = Mock(spec=qp.Ensemble)
+        mock_wrapper.return_value = mock_pdf
+        catalog_data = {"mag_g": [20.0, 20.1], "mag_r": [19.5, 19.6]}
+
+        with (
+            patch(
+                "rail_svc.db_oper.estimation_funcs.build_pdf_estimation_wrapper",
+                return_value=mock_wrapper,
+            ),
+            patch(
+                "rail_svc.db_oper.estimation_funcs.dataset.read_slice",
+                return_value=catalog_data,
+            ),
+        ):
+            result = await estimation_funcs.estimate_pdf_for_slice(
+                session,
+                estimator_id=sample_estimator.id_,
+                dataset_id=sample_dataset.id_,
+                the_slice=slice(0, 2),
+            )
+
+        assert result is mock_pdf
+        mock_wrapper.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_recomputes_when_flag_set(
+        self, session, sample_dataset, sample_estimator, sample_estimates
+    ):
+        mock_wrapper = Mock(spec=CatEstimatorPdfWrapper)
+        mock_pdf = Mock(spec=qp.Ensemble)
+        mock_wrapper.return_value = mock_pdf
+        catalog_data = {"mag_g": [20.0]}
+
+        with (
+            patch(
+                "rail_svc.db_oper.estimation_funcs.build_pdf_estimation_wrapper",
+                return_value=mock_wrapper,
+            ),
+            patch(
+                "rail_svc.db_oper.estimation_funcs.dataset.read_slice",
+                return_value=catalog_data,
+            ),
+        ):
+            result = await estimation_funcs.estimate_pdf_for_slice(
+                session,
+                estimator_id=sample_estimator.id_,
+                dataset_id=sample_dataset.id_,
+                the_slice=slice(0, 1),
+                recompute_if_exists=True,
+            )
+
+        assert result is mock_pdf

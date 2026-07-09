@@ -57,14 +57,14 @@ def estimate_pdf(
 def estimate_ensemble(
     estimator_id: int,
     dataset_id: int,
-    output_file_path: str | Path,
+    output_path: str | Path,
 ) -> None:
     try:
         sync_funcs = remote_sync.funcs()
         result = sync_funcs.estimate_ensemble(
             estimator_id=estimator_id,
             dataset_id=dataset_id,
-            output_file_path=str(output_file_path),
+            output_file_path=str(output_path),
         )
         print(result.message)
 

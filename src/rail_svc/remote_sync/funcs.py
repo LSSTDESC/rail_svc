@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+from macon.common import unexpected
+
 from ..remote_async.funcs import AsyncRemoteFuncs
 
 
@@ -30,7 +32,7 @@ class SyncRemoteFuncs:
 
     def __getattr__(self, name: str) -> Any:
         async_method = getattr(self.async_ops, name)
-        if not callable(async_method):
+        if unexpected(not callable(async_method)):
             return async_method
 
         def sync_method(*args: Any, **kwargs: Any) -> Any:

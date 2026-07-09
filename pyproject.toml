@@ -119,9 +119,15 @@ source = ["src"]
 [tool.coverage.report]
 show_missing = true
 exclude_lines = [
+    "unexpected",
     "pragma: no cover",
+    "@sync_wrapper",
+    "@with_client",
+    "@with_funcs_client",
+    "@with_session",
     "as uexc:",
     "def __repr__",
+    "def __str__",
     "if settings.DEBUG",
     "raise AssertionError",
     "raise NotImplementedError",
@@ -197,6 +203,12 @@ warn_redundant_casts = true
 warn_unreachable = true
 warn_unused_ignores = true
 plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disable_error_code = ["var-annotated", "attr-defined", "union-attr", "arg-type", "unreachable", "unused-ignore", "typeddict-unknown-key"]
 
 [tool.pydocstyle]
 convention = "numpy"

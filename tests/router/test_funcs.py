@@ -214,6 +214,82 @@ class TestEstimatePdfForSlice:
             assert response.status_code == 200
 
 
+class TestLoadCatalogYaml:
+    """Test /funcs/load-catalog-yaml endpoint."""
+
+    def test_success(self, client):
+        """Test successful catalog YAML loading."""
+        mock_bands = [models.Band(id_=1, name="g", band_wavelengths=[400.0], band_transmission=[0.9])]
+        mock_tags = [models.CatalogTag(id_=1, name="lsst")]
+        mock_assocs = [
+            models.CatalogBandAssoc(
+                id_=1, catalog_tag_id=1, band_id=1, mag_column_name="mag_g", mag_err_column_name="err_g"
+            )
+        ]
+
+        with patch(
+            "rail_svc.router.funcs.local_async.funcs.load_catalog_yaml", new_callable=AsyncMock
+        ) as mock:
+            mock.return_value = (mock_bands, mock_tags, mock_assocs)
+
+            response = client.post(
+                "/api/v1/funcs/load-catalog-yaml",
+                json={"catalog_yaml": "/path/to/catalog.yaml", "filter_dir": "/path/to/filters"},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data["bands"]) == 1
+            assert len(data["catalog_tags"]) == 1
+            assert len(data["catalog_band_assocs"]) == 1
+
+    def test_error(self, client):
+        """Test error propagation."""
+        with patch(
+            "rail_svc.router.funcs.local_async.funcs.load_catalog_yaml", new_callable=AsyncMock
+        ) as mock:
+            mock.side_effect = FileNotFoundError("YAML not found")
+
+            response = client.post(
+                "/api/v1/funcs/load-catalog-yaml",
+                json={"catalog_yaml": "/nonexistent.yaml"},
+            )
+
+            assert response.status_code == 500
+
+
+class TestGetDataAndEstimatesData:
+    """Test /funcs/get-data-and-estimates-data endpoint."""
+
+    def test_success(self, client):
+        """Test successful data + estimates retrieval."""
+        mock_data = {"mag_g": [20.1], "mag_r": [19.5]}
+        mock_estimates_dict = {"bpz": {"z": [0.1, 0.2], "pdf": [0.6, 0.4]}}
+
+        with patch(
+            "rail_svc.router.funcs.local_async.funcs.get_data_and_estimates_data", new_callable=AsyncMock
+        ) as mock:
+            mock.return_value = (mock_data, mock_estimates_dict)
+
+            response = client.get("/api/v1/funcs/get-data-and-estimates-data/1/42")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["data"] == mock_data
+            assert data["estimates_dict"] == mock_estimates_dict
+
+    def test_error(self, client):
+        """Test error propagation."""
+        with patch(
+            "rail_svc.router.funcs.local_async.funcs.get_data_and_estimates_data", new_callable=AsyncMock
+        ) as mock:
+            mock.side_effect = FileNotFoundError("Dataset not found")
+
+            response = client.get("/api/v1/funcs/get-data-and-estimates-data/999/0")
+
+            assert response.status_code == 500
+
+
 class TestEstimateDataset:
     """Test /funcs/estimate-dataset endpoint."""
 
